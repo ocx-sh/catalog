@@ -1,0 +1,253 @@
+<script setup lang="ts">
+import { computed } from 'vue'
+import { useData, useRoute } from 'vitepress'
+import Logo from './Logo.vue'
+import ThemeToggle from './ThemeToggle.vue'
+// WP-E additive edit: header-level ⌘K trigger, so the global palette is
+// discoverable from every page (not just the catalog's own inline
+// SearchInput, which is WP-C scope).
+import { useCommandPalette } from '../../composables/useCommandPalette'
+import ExternalIcon from '../shared/ExternalIcon.vue'
+
+// WP-10: the fixed skeleton (brand, search, theme toggle) always renders;
+// its CONTENT is consumer-config-driven — the wordmark and logo from C-002
+// `brand`, the docs link from `docsPresent` (auto), the rest from `nav[]`.
+// No dedicated
+// `githubUrl` config field — a repo link is just an external `nav[]` entry
+// (config_gen.ts bakes `theme.nav`/`theme.docsPresent` verbatim from the
+// consumer's `catalog.config.json`).
+interface HeaderNavItem {
+  text: string
+  link: string
+}
+
+const { theme } = useData()
+const route = useRoute()
+const { open: openPalette } = useCommandPalette()
+
+const docsPresent = computed(() => Boolean(theme.value.docsPresent))
+const navItems = computed(() => (theme.value.nav ?? []) as HeaderNavItem[])
+
+// Header wordmark: C-002's `brand.wordmark`, falling back to `brand.title`.
+// The two are deliberately separate config keys — a deployment's
+// `<title>`/`og:site_name` reads as prose ("OCX Index") while its header
+// wordmark is usually the host it is served from ("index.ocx.sh"). The
+// fallback lives HERE rather than in `config_gen.ts` so a hand-written
+// `themeConfig` behaves the same as a generated one.
+const wordmark = computed(() => (theme.value.brand?.wordmark ?? theme.value.brand?.title ?? '') as string)
+
+function isActive(prefix: string): boolean {
+  if (prefix === '/docs/') return route.path.startsWith('/docs/')
+  return !route.path.startsWith('/docs/')
+}
+
+// Same heuristic VitePress's own DefaultTheme nav uses: a link carrying an
+// absolute URI scheme (or protocol-relative `//`) is external.
+function isExternal(link: string): boolean {
+  return /^([a-z][a-z\d+.-]*:|\/\/)/i.test(link)
+}
+</script>
+
+<template>
+  <header class="site-header">
+    <a href="/" class="brand">
+      <Logo class="brand-logo" />
+      <span class="brand-name">{{ wordmark }}</span>
+    </a>
+    <!-- Search sits centered and reads like a real input (dimmed
+         placeholder + kbd hint) — a bare icon+⌘K in the corner was too
+         easy to miss (owner finding). Still a button: it only opens the
+         ⌘K palette. -->
+    <button type="button" class="search-trigger" aria-label="Search (Ctrl+K)" @click="openPalette">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <circle cx="11" cy="11" r="7" />
+        <line x1="21" y1="21" x2="16.65" y2="16.65" />
+      </svg>
+      <span class="search-trigger-text">search packages, docs…</span>
+      <span class="search-trigger-kbd">⌘K</span>
+    </button>
+    <span class="header-right">
+      <nav class="site-nav">
+        <a href="/" class="nav-link" :class="{ active: isActive('/') }">catalog</a>
+        <a v-if="docsPresent" href="/docs/" class="nav-link" :class="{ active: isActive('/docs/') }">docs</a>
+        <a
+          v-for="item in navItems"
+          :key="item.link"
+          :href="item.link"
+          class="nav-link"
+          :class="{ 'nav-link-external': isExternal(item.link) }"
+          :target="isExternal(item.link) ? '_blank' : undefined"
+          :rel="isExternal(item.link) ? 'noopener noreferrer' : undefined"
+        >
+          {{ item.text }}
+          <ExternalIcon v-if="isExternal(item.link)" :size="11" />
+        </a>
+      </nav>
+      <span class="nav-divider" />
+      <ThemeToggle />
+    </span>
+  </header>
+</template>
+
+<style scoped>
+.site-header {
+  height: 54px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 0 24px;
+  border-bottom: 1px solid var(--c-line);
+  background: var(--c-surface);
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--c-text-1);
+}
+
+.brand-logo {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.brand-name {
+  font-family: var(--font-mono);
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--c-text-1);
+}
+
+/* brand (flex 1) | centered search | right zone (flex 1) — equal wings
+ * keep the search optically centered. */
+.brand {
+  flex: 1;
+}
+
+.header-right {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 24px;
+}
+
+.site-nav {
+  display: inline-flex;
+  gap: 22px;
+  align-items: center;
+}
+
+.nav-link {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--c-text-2);
+  padding: 16px 1px 14px;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+}
+
+/* Proper external-link glyph instead of the "↗" text char (which also
+ * line-broke away from "github" on narrow widths). */
+.nav-link-external {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.nav-link-external svg {
+  color: var(--c-text-3);
+  flex-shrink: 0;
+}
+
+.nav-link-external:hover svg {
+  color: var(--c-text-1);
+}
+
+.nav-link:hover {
+  color: var(--c-text-1);
+}
+
+.nav-link.active {
+  color: var(--c-accent);
+  border-bottom-color: var(--c-accent);
+}
+
+.nav-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--c-line);
+  flex-shrink: 0;
+}
+
+.search-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: clamp(220px, 30vw, 360px);
+  height: 32px;
+  color: var(--c-text-3);
+  border: 1px solid var(--c-line);
+  border-radius: var(--radius-md);
+  padding: 0 10px;
+  background: var(--c-surface-2);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.search-trigger:hover {
+  color: var(--c-text-1);
+  border-color: var(--c-accent);
+}
+
+.search-trigger-text {
+  flex: 1;
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.search-trigger-kbd {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  font-weight: 500;
+  border: 1px solid var(--c-line);
+  border-radius: var(--radius-sm);
+  padding: 1px 5px;
+  background: var(--c-surface);
+}
+
+@media (max-width: 640px) {
+  .site-header {
+    gap: 12px;
+    padding: 0 16px;
+  }
+
+  .brand-name {
+    display: none;
+  }
+
+  /* Narrow screens: collapse back to a compact icon button, and park it
+   * left beside the brand icon instead of floating centered — the brand
+   * wing stops flexing so only the right wing absorbs the space. */
+  .brand {
+    flex: none;
+  }
+
+  .search-trigger {
+    width: auto;
+  }
+
+  .search-trigger-text,
+  .search-trigger-kbd {
+    display: none;
+  }
+}
+</style>

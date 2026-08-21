@@ -1,0 +1,31 @@
+{
+  "generated": "2026-08-04T00:00:00Z",
+  "packages": [
+    {
+      "namespace": "acme",
+      "package": "polyglot",
+      "name": "ocx.sh/acme/polyglot",
+      "status": "active",
+      "deprecatedMessage": null,
+      "supersededBy": null,
+      "created": "2026-08-01",
+      "updated": "2026-08-04T00:00:00Z",
+      "title": "Polyglot",
+      "description": "A caf\u00e9 \u2615 of version grammars.",
+      "keywords": [
+        "grammar",
+        "tags"
+      ],
+      "latestVersion": "1.0.0",
+      "variants": [
+        "slim"
+      ],
+      "tagCount": 4,
+      "platforms": [
+        "linux/amd64"
+      ],
+      "logoUrl": null,
+      "readmeUrl": null
+    }
+  ]
+}

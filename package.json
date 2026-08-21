@@ -1,0 +1,94 @@
+{
+  "name": "@ocx-sh/catalog",
+  "version": "0.1.0",
+  "description": "OCX catalog renderer \u2014 VitePress-based site generator for OCI-backed package indices",
+  "keywords": [
+    "ocx",
+    "catalog",
+    "package-index",
+    "vitepress",
+    "oci",
+    "static-site-generator"
+  ],
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ocx-sh/catalog.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ocx-sh/catalog/issues"
+  },
+  "homepage": "https://github.com/ocx-sh/catalog#readme",
+  "type": "module",
+  "bin": {
+    "ocx-catalog": "dist/cli/index.js"
+  },
+  "exports": {
+    "./theme": {
+      "types": "./src/theme/index.mts",
+      "import": "./src/theme/index.mts"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "src/config/schema",
+    "templates",
+    "src/theme",
+    "LICENSE",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "engines": {
+    "node": ">=20.19"
+  },
+  "scripts": {
+    "build": "tsc",
+    "postbuild": "node -e \"require('fs').chmodSync('dist/cli/index.js', 0o755)\"",
+    "prepack": "npm run build",
+    "test": "vitest run --coverage",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.theme.json"
+  },
+  "dependencies": {
+    "@fontsource/ibm-plex-mono": "^5.2.7",
+    "@fontsource/ibm-plex-sans": "^5.2.8",
+    "@vueuse/core": "^14.3.0",
+    "commander": "^14.0.2",
+    "dompurify": "^3.4.14",
+    "highlight.js": "^11.12.0",
+    "markdown-it": "^14.3.0",
+    "minisearch": "7.2.0",
+    "reka-ui": "^2.10.1"
+  },
+  "peerDependencies": {
+    "vitepress": "^2.0.0-alpha.18",
+    "vue": "^3.5.27"
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "^0.18.2",
+    "@eslint/js": "^9.39.0",
+    "@types/node": "^24.10.0",
+    "@vitejs/plugin-vue": "^6.0.8",
+    "@vitest/coverage-v8": "^3.2.4",
+    "@vue/test-utils": "^2.4.11",
+    "ajv": "^8.18.0",
+    "eslint": "^10.9.0",
+    "globals": "^16.5.0",
+    "happy-dom": "^20.11.6",
+    "jsdom": "^29.1.1",
+    "publint": "^0.3.14",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.67.0",
+    "vitepress": "^2.0.0-alpha.18",
+    "vitest": "^3.2.4",
+    "vue": "^3.5.27"
+  }
+}

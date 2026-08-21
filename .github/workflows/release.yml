@@ -1,0 +1,128 @@
+# ============================================================================
+# OWNER SETUP REQUIRED — this workflow cannot publish anything until ALL of
+# the following are done, in order:
+#
+#   1. Create the `@ocx-sh` npm org now (console action; npm has no name-
+#      reservation mechanism, so this is the only real anti-squat move —
+#      see .claude/artifacts/research_npm_publish_hygiene.md in the index
+#      repo). Independent of everything else below.
+#
+#   2. Publish `@ocx-sh/catalog@0.1.0` MANUALLY, once, from a local machine
+#      (`npm publish --access public`) using a granular, 2FA-bypass
+#      automation token — DELETE that token immediately after. npm trusted
+#      publishing (OIDC, used below) requires the package to already exist;
+#      it cannot pre-provision a brand-new package name.
+#
+#   3. Only after step 2: on npmjs.com, register a Trusted Publisher for
+#      `@ocx-sh/catalog` scoped to EXACTLY this repository, this workflow
+#      file (`.github/workflows/release.yml`), and the branch/environment
+#      you intend to publish from. Trusted-publisher config is per-package
+#      (no bulk setting) and, since 2026-05-20, must name the workflow
+#      explicitly.
+#
+#   4. `--provenance` below silently attaches NO attestation unless this
+#      repository is PUBLIC on GitHub at the time a tag is pushed — make the
+#      repo public first if provenance is required.
+#
+#   5. Do NOT add an `NPM_TOKEN` (or any npm auth) secret to this repo for
+#      this workflow. Trusted publishing is token-less by design; a stored
+#      token here would be a live credential this workflow never reads.
+#
+# None of the above is required for this FILE to exist or be valid — it is
+# simply inert (no `v*` tag to push it, no package trusted-publisher config
+# to authenticate it) until the owner completes the steps above.
+# ============================================================================
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions: {}
+
+jobs:
+  # Re-runs the full quality gate against the exact tagged commit — a tag
+  # push is not guaranteed to be a commit that already went through ci.yml
+  # (e.g. a tag pushed after the fact), so this job never trusts a prior run.
+  gate:
+    name: gate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
+        with:
+          node-version: "24"
+          # No dependency cache in the release lane: this workflow publishes
+          # runtime artifacts, and a restored cache is a supply-chain write
+          # into what gets published (zizmor cache-poisoning, high). CI keeps
+          # its cache; a publish run pays the extra install instead.
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - run: node scripts/pack-smoke.mjs
+
+  publish:
+    name: publish
+    needs: gate
+    runs-on: ubuntu-latest
+    permissions:
+      # id-token: write is the OIDC token trusted publishing exchanges for a
+      # short-lived npm publish credential — no NODE_AUTH_TOKEN secret exists
+      # or is read anywhere in this job.
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
+        with:
+          node-version: "24"
+          registry-url: https://registry.npmjs.org
+          # See the gate job above: no dependency cache in the release lane.
+      # --ignore-scripts, and ONLY in this job: this is the one job holding
+      # `id-token: write`, so a plain `npm ci` would execute every transitive
+      # dependency's install script with ACTIONS_ID_TOKEN_REQUEST_URL/TOKEN in
+      # its environment — one compromised dependency could mint the npm
+      # publish credential itself (security panel 2026-08-22, W6). The `gate`
+      # job above deliberately keeps full install scripts and has no
+      # id-token, so a dependency that genuinely needs its install script
+      # fails loudly there rather than silently here. Verified: `npm ci
+      # --ignore-scripts && npm run build` (tsc + a chmod) produces the same
+      # dist/ — nothing in the build path depends on an install script.
+      # `npm publish` below still runs this package's OWN prepack/postbuild
+      # lifecycle scripts; --ignore-scripts is scoped to the install.
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      # Trusted publishing needs npm CLI >=11.5.1 (OIDC exchange support).
+      # Pinned, not `@latest`: this is the tool that publishes the package,
+      # so an unpinned fetch at release time is a supply-chain write into
+      # every release (zizmor adhoc-packages). Bump deliberately, like any
+      # other pin; Renovate manages it via the same npm datasource.
+      - name: Ensure npm supports trusted publishing (OIDC)
+        run: |
+          set -euo pipefail
+          npm install -g npm@11.9.0
+          npm --version
+      # Dry-run first and fail hard on any silent manifest auto-correction
+      # (e.g. npm dropping `bin` with only a warning) — never let that reach
+      # a real publish. Ported verbatim from the grim release.yml precedent
+      # (research_npm_publish_hygiene.md).
+      - name: npm publish --dry-run (auto-correction guard)
+        run: |
+          set -euo pipefail
+          output="$(npm publish --dry-run --provenance --access public 2>&1)"
+          echo "$output"
+          if grep -q "auto-corrected" <<<"$output"; then
+            echo "::error::npm silently auto-corrected the package manifest during --dry-run — treating as a hard failure, not a warning." >&2
+            exit 1
+          fi
+      - name: npm publish
+        run: npm publish --provenance --access public

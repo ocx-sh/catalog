@@ -1,0 +1,28 @@
+{{header}}
+#
+# Rendered by `ocx-catalog ci` from this repository's own catalog.config.json
+# `ci` block. Not a root .gitlab-ci.yml — this repository's own root file
+# includes it:
+#
+#     include:
+#       - local: ".gitlab-ci/catalog.yml"
+#
+# Do not hand-edit this file — change the config instead and re-render:
+#
+#     npx ocx-catalog ci
+#
+# `ci.verifyCi: false` in catalog.config.json omits the catalog:verify job
+# below (`ocx-catalog ci --check`) and stops CI from catching a hand-edit —
+# the repository then owns this file by hand instead.
+catalog:build:
+  image: {{image}}
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  script:
+    - {{installCmd}}
+    - {{execPrefix}} ocx-catalog build
+  artifacts:
+    paths:
+      - dist
+{{verifyJob}}

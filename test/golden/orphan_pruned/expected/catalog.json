@@ -1,0 +1,25 @@
+{
+  "generated": "2026-07-17T00:00:00Z",
+  "packages": [
+    {
+      "namespace": "oven-sh",
+      "package": "bun",
+      "name": "ocx.sh/oven-sh/bun",
+      "status": "active",
+      "deprecatedMessage": null,
+      "supersededBy": null,
+      "created": "2026-07-10",
+      "updated": "2026-07-17T00:00:00Z",
+      "title": "ocx.sh/oven-sh/bun",
+      "description": "",
+      "keywords": [],
+      "latestVersion": "1.2.0",
+      "tagCount": 1,
+      "platforms": [
+        "linux/amd64"
+      ],
+      "logoUrl": null,
+      "readmeUrl": null
+    }
+  ]
+}

@@ -1,0 +1,34 @@
+{{header}}
+#
+# Rendered by `ocx-catalog ci` from this repository's own catalog.config.json
+# `ci` block. Do not hand-edit this file — change the config instead and
+# re-render:
+#
+#     npx ocx-catalog ci
+#
+# `ci.verifyCi: false` in catalog.config.json omits the verify-catalog-ci job
+# below (`ocx-catalog ci --check`) and stops CI from catching a hand-edit —
+# the repository then owns this file by hand instead.
+name: catalog-ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions: {}
+
+jobs:
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@{{checkoutPin}}
+        with:
+          persist-credentials: false
+{{setupSteps}}
+      - run: {{installCmd}}
+      - run: {{execPrefix}} ocx-catalog build
+{{verifyJob}}

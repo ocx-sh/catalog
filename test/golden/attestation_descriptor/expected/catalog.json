@@ -1,0 +1,26 @@
+{
+  "generated": "2026-07-17T00:00:00Z",
+  "packages": [
+    {
+      "namespace": "sigstore",
+      "package": "cosign",
+      "name": "ocx.sh/sigstore/cosign",
+      "status": "active",
+      "deprecatedMessage": null,
+      "supersededBy": null,
+      "created": "2026-01-01",
+      "updated": "2026-07-17T00:00:00Z",
+      "title": "ocx.sh/sigstore/cosign",
+      "description": "",
+      "keywords": [],
+      "latestVersion": "2.0.0",
+      "tagCount": 1,
+      "platforms": [
+        "linux/amd64",
+        "linux/arm64"
+      ],
+      "logoUrl": null,
+      "readmeUrl": null
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+/* Type tokens — design mock 1h: "mono is the voice of the product; sans
+ * only where humans read sentences". Scale is the mock's verbatim 8-step
+ * ramp (26 / 23 / 18 / 14.5 / 13 / 12.5 / 11.5 / 10.5).
+ *
+ * Font files themselves are self-hosted via @fontsource, imported as a
+ * side effect in theme/index.mts (weights 400/500/600/700 sans,
+ * 400/500/600 mono — NEVER mono 700, mono never carries bold display text).
+ */
+
+:root {
+  --font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --text-2xl: 26px;
+  --text-xl: 23px;
+  --text-lg: 18px;
+  --text-md: 14.5px;
+  --text-base: 13px;
+  --text-sm: 12.5px;
+  --text-xs: 11.5px;
+  --text-2xs: 10.5px;
+}

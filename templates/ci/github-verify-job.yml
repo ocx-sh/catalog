@@ -1,0 +1,12 @@
+  verify-catalog-ci:
+    name: verify-catalog-ci
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@{{checkoutPin}}
+        with:
+          persist-credentials: false
+{{setupSteps}}
+      - run: {{installCmd}}
+      - run: {{execPrefix}} ocx-catalog ci --check

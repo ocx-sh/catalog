@@ -1,0 +1,19 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // Bundler resolution (Vite/VitePress), not Node's — lifted verbatim from
+    // the source theme, which uses extensionless relative imports throughout
+    // (e.g. `from './useToast'`). Also required for `.vue` specifiers, which
+    // NodeNext resolution cannot resolve at all.
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    // Browser code (Vue app in the client), unlike the Node-targeted CLI —
+    // needs `document`/`window`/`HTMLElement`/`MouseEvent` etc.
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "noEmit": true
+  },
+  "include": ["src/theme"],
+  // Base tsconfig.json excludes src/theme (see its own comment) — reset that
+  // here, this file's whole job is to typecheck exactly that directory.
+  "exclude": []
+}

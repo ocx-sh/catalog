@@ -1,0 +1,29 @@
+{
+  "generated": "2026-07-17T00:00:00Z",
+  "packages": [
+    {
+      "namespace": "kitware",
+      "package": "cmake",
+      "name": "ocx.sh/kitware/cmake",
+      "status": "active",
+      "deprecatedMessage": null,
+      "supersededBy": null,
+      "created": "2026-07-17",
+      "updated": "2026-07-17T00:00:00Z",
+      "title": "CMake",
+      "description": "Cross-platform build system generator.",
+      "keywords": [
+        "build",
+        "cmake"
+      ],
+      "latestVersion": "1.0.0",
+      "tagCount": 2,
+      "platforms": [
+        "darwin/arm64",
+        "linux/amd64"
+      ],
+      "logoUrl": "/p/kitware/cmake/o/sha256/llllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllll.svg",
+      "readmeUrl": "/p/kitware/cmake/o/sha256/rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr.md"
+    }
+  ]
+}

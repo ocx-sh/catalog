@@ -1,0 +1,5 @@
+.agents/worktrees/
+.claude/state/
+node_modules/
+dist/
+coverage/

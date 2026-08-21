@@ -1,0 +1,29 @@
+{
+  "generated": "2026-07-17T00:00:00Z",
+  "packages": [
+    {
+      "namespace": "regclient",
+      "package": "regsync",
+      "name": "ocx.sh/regclient/regsync",
+      "status": "active",
+      "deprecatedMessage": null,
+      "supersededBy": null,
+      "created": "2026-02-01",
+      "updated": "2026-07-17T00:00:00Z",
+      "title": "regsync",
+      "description": "Utility to sync images between registries.",
+      "keywords": [
+        "oci",
+        "registry",
+        "sync"
+      ],
+      "latestVersion": "0.7.0",
+      "tagCount": 1,
+      "platforms": [
+        "linux/amd64"
+      ],
+      "logoUrl": "/p/regclient/regsync/o/sha256/wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww.svg",
+      "readmeUrl": "/p/regclient/regsync/o/sha256/qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq.md"
+    }
+  ]
+}

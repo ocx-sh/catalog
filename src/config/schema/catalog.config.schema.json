@@ -1,0 +1,157 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cdn.jsdelivr.net/npm/@ocx-sh/catalog/src/config/schema/catalog.config.schema.json",
+  "title": "OCX Catalog Configuration",
+  "description": "catalog.config.json — configures an @ocx-sh/catalog deployment (data sources, branding, nav, CI). See src/config/load.ts for the runtime validation contract this schema documents; validation itself is hand-rolled, not ajv-driven.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["sources", "brand"],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Editor/tooling pointer at this schema. Never read at runtime."
+    },
+    "configVersion": {
+      "const": 1,
+      "description": "Forward-compat discriminator. Absent means version 1."
+    },
+    "sources": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/sourceEntry" },
+      "contains": { "$ref": "#/$defs/rootSourceEntry" },
+      "minContains": 0,
+      "maxContains": 1
+    },
+    "brand": { "$ref": "#/$defs/brand" },
+    "nav": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/navEntry" }
+    },
+    "docs": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Single docs directory, resolved relative to this file's directory."
+    },
+    "css": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Custom stylesheet, resolved relative to this file's directory."
+    },
+    "publicDir": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Static assets directory, resolved relative to this file's directory. Copied verbatim into VitePress's publicDir, served at the site root."
+    },
+    "ci": { "$ref": "#/$defs/ci" },
+    "siteUrl": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Deployment origin (e.g. https://index.ocx.sh), feeding sitemap.hostname and per-page og:url. Must be an absolute http(s) URL — src/config/load.ts validates the shape beyond what this schema (minLength only) expresses."
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Site-wide tagline/meta description, distinct from brand.title."
+    },
+    "favicon": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Site-root-relative href for the browser-tab icon, e.g. /favicon.svg for a favicon.svg shipped via publicDir. Emitted as <link rel=\"icon\"> on every page, with type derived from the extension (.svg/.png/.ico). Omit for no icon link."
+    }
+  },
+  "$defs": {
+    "sourceEntry": {
+      "description": "Exactly one of path | url | git, discriminated by which key is present.",
+      "type": "object",
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["path"],
+          "additionalProperties": false,
+          "properties": {
+            "path": { "type": "string", "minLength": 1 },
+            "label": { "$ref": "#/$defs/label" },
+            "root": { "type": "boolean" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["url"],
+          "additionalProperties": false,
+          "properties": {
+            "url": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^https://",
+              "description": "Base URL of a deployed catalog/index instance. https only — /config.json and /c/index.json are the only fetched files that are never digest-verified, so over plain http a network attacker rewrites the enumeration and every downstream digest check then verifies against their digests. src/config/load.ts enforces the same rule with new URL() + a protocol check."
+            },
+            "label": { "$ref": "#/$defs/label" },
+            "root": { "type": "boolean" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["git"],
+          "additionalProperties": false,
+          "properties": {
+            "git": { "type": "string", "minLength": 1 },
+            "ref": { "type": "string", "minLength": 1 },
+            "dir": { "type": "string", "minLength": 1 },
+            "label": { "$ref": "#/$defs/label" },
+            "root": { "type": "boolean" }
+          }
+        }
+      ]
+    },
+    "label": { "type": "string", "minLength": 1 },
+    "rootSourceEntry": {
+      "description": "Matches a sources[] entry declaring root: true, for the array-level contains/maxContains check that caps the count at one. minContains: 0 keeps a config with zero root entries legal.",
+      "type": "object",
+      "properties": { "root": { "const": true } },
+      "required": ["root"]
+    },
+    "brand": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title"],
+      "properties": {
+        "title": { "type": "string", "minLength": 1 },
+        "wordmark": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Header wordmark — the text beside the logo in the site header. Omit to show title there too."
+        },
+        "logo": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Logo asset, relative to this file's directory (a local path, never a URL). Copied into the site's public root and rendered in the header in place of the theme's built-in mark. Omit to keep the built-in mark."
+        }
+      }
+    },
+    "navEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text", "link"],
+      "properties": {
+        "text": { "type": "string", "minLength": 1 },
+        "link": { "type": "string", "minLength": 1 }
+      }
+    },
+    "ci": {
+      "type": "object",
+      "description": "Unknown keys inside ci are ignored (forward-compat) — this is the one object in the config that is NOT additionalProperties: false.",
+      "required": ["forge"],
+      "properties": {
+        "forge": { "type": "string", "enum": ["github", "gitlab"] },
+        "packageManager": {
+          "type": "string",
+          "enum": ["npm", "bun"],
+          "default": "npm",
+          "description": "Package manager the rendered workflow's install/exec steps use. npm (default) or bun only — pnpm/yarn are unsupported, so a mismatched value is a loud config-load error rather than a silently broken rendered workflow."
+        },
+        "verifyCi": { "type": "boolean" }
+      }
+    }
+  }
+}

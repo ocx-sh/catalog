@@ -1,0 +1,15 @@
+# zizmor project configuration.
+#
+# release.yml publishes runtime artifacts on a tag, so zizmor flags every
+# actions/setup-node step there under `cache-poisoning`: a restored
+# dependency cache would be a supply-chain write into what gets published.
+# The actual mitigation is applied — neither setup-node step requests a
+# cache (`cache:` is deliberately absent, unlike ci.yml which keeps one) —
+# but v7 is reported as caching by default, which the action exposes no
+# input to disable. The finding is low-confidence and the exposure is
+# already minimised, so it is recorded here rather than left to re-alarm on
+# every run. Revisit if setup-node gains an explicit opt-out.
+rules:
+  cache-poisoning:
+    ignore:
+      - release.yml

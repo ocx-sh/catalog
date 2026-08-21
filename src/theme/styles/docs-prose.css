@@ -1,0 +1,233 @@
+/* Docs prose typography — scoped via the `.docs-prose` wrapper class that
+ * `components/docs/DocLayout.vue` wraps around VitePress's rendered
+ * `<Content/>` markdown output. `:where()` keeps every rule at zero
+ * specificity so anything more specific overrides it without `!important`
+ * (the one exception is the Shiki background below — see its comment).
+ * Imported globally from base.css; safe because every selector is scoped
+ * under `.docs-prose`, which only DocLayout.vue renders.
+ */
+
+.docs-prose {
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: 1.7;
+  color: var(--c-text-2);
+}
+
+.docs-prose :where(h1, h2, h3, h4, h5, h6) {
+  color: var(--c-text-1);
+  line-height: 1.3;
+  font-weight: 700;
+  /* Fixed header height (SiteHeader.vue, 54px) + breathing room, so an
+   * anchor-jump or OnThisPage.vue scroll-spy target never lands flush
+   * under the sticky header. No `scrollOffset` config in alpha.18. */
+  scroll-margin-top: 72px;
+}
+
+.docs-prose :where(h1) {
+  font-size: var(--text-2xl);
+  margin: 0 0 0.6em;
+}
+
+.docs-prose :where(h2) {
+  font-size: var(--text-xl);
+  font-weight: 600;
+  margin: 2em 0 0.7em;
+  padding-top: 0.5em;
+  border-top: 1px solid var(--c-line);
+}
+
+.docs-prose :where(h2:first-child) {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
+.docs-prose :where(h3) {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  margin: 1.6em 0 0.5em;
+}
+
+.docs-prose :where(h4, h5, h6) {
+  font-size: var(--text-md);
+  font-weight: 600;
+  margin: 1.4em 0 0.5em;
+}
+
+.docs-prose :where(p, ul, ol, blockquote) {
+  margin: 0.9em 0;
+}
+
+.docs-prose :where(ul, ol) {
+  padding-left: 1.4em;
+}
+
+.docs-prose :where(li) {
+  margin: 0.3em 0;
+}
+
+.docs-prose :where(li > ul, li > ol) {
+  margin: 0.3em 0;
+}
+
+.docs-prose :where(a) {
+  color: var(--c-accent);
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  transition: text-decoration-color 0.15s;
+}
+
+.docs-prose :where(a:hover) {
+  text-decoration-color: currentColor;
+}
+
+.docs-prose :where(blockquote) {
+  border-left: 3px solid var(--c-line);
+  padding-left: 1em;
+  color: var(--c-text-3);
+}
+
+.docs-prose :where(hr) {
+  border: none;
+  border-top: 1px solid var(--c-line);
+  margin: 2em 0;
+}
+
+.docs-prose :where(strong) {
+  color: var(--c-text-1);
+  font-weight: 600;
+}
+
+.docs-prose :where(code) {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  background: var(--c-surface-2);
+  padding: 0.15em 0.45em;
+  border-radius: var(--radius-sm);
+  color: var(--c-text-1);
+}
+
+/* Shiki fence output — `.shiki`, NOT DefaultTheme's `.vp-code`
+ * (alpha.18 gotcha). Theme-following (owner decision 2026-08-05, revising
+ * mock 1f's always-dark rule): dual-theme Shiki (config.mts) emits
+ * --shiki-light/--shiki-dark vars per span; the rules below switch them on
+ * `.dark`. `!important` defeats Shiki's own inline
+ * `style="background-color:…"` so the token keeps owning the fence bg. */
+.docs-prose :where(.shiki) {
+  background: var(--c-code-bg) !important;
+  border: 1px solid var(--c-line);
+  border-radius: var(--radius-lg);
+  padding: 14px 18px;
+  overflow-x: auto;
+  font-size: 0.85em;
+  line-height: 1.75;
+}
+
+.docs-prose :where(.shiki),
+.docs-prose :where(.shiki span) {
+  color: var(--shiki-light);
+}
+
+.dark .docs-prose :where(.shiki),
+.dark .docs-prose :where(.shiki span) {
+  color: var(--shiki-dark);
+}
+
+.docs-prose :where(.shiki code) {
+  background: none;
+  padding: 0;
+  color: inherit;
+}
+
+/* VitePress core (`preWrapperPlugin`, independent of theme — DefaultTheme
+ * just supplies the CSS) injects a `button.copy` + `span.lang` label
+ * before every fence's `.shiki`, and the click-to-copy handler is wired
+ * globally too (`app/index.js`), not a DefaultTheme feature. The lang
+ * label stays hidden (mock 1f: minimal chrome), but the copy button is now
+ * styled in (owner decision 2026-08-05, revising the mock's zero-chrome
+ * rule): ghost icon button, top-right, visible on fence hover. Layout.vue
+ * fires the copy toast for it. */
+.docs-prose :where(div[class*='language-'] > .lang) {
+  display: none;
+}
+
+.docs-prose :where(div[class*='language-']) {
+  position: relative;
+}
+
+/* Bare fade-in icon, not a boxed button (owner spec): invisible until the
+ * fence is hovered, muted glyph, accent on direct hover. */
+.docs-prose :where(div[class*='language-'] > .copy) {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.docs-prose :where(div[class*='language-']:hover > .copy),
+.docs-prose :where(div[class*='language-'] > .copy:focus-visible) {
+  opacity: 1;
+}
+
+.docs-prose :where(div[class*='language-'] > .copy)::before {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  background-color: var(--c-text-3);
+  transition: background-color 0.15s;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='9' y='9' width='13' height='13' rx='2' ry='2'/%3E%3Cpath d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+.docs-prose :where(div[class*='language-'] > .copy:hover)::before {
+  background-color: var(--c-accent);
+}
+
+.docs-prose :where(div[class*='language-'] > .copy.copied)::before {
+  background-color: var(--c-ok);
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");
+}
+
+.docs-prose :where(p > code) {
+  white-space: nowrap;
+}
+
+/* GFM tables — design mock 1f FIELD/TYPE header row. */
+.docs-prose :where(table) {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid var(--c-line);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  font-size: var(--text-sm);
+  margin: 1em 0;
+}
+
+.docs-prose :where(th) {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--c-text-3);
+  background: var(--c-surface-2);
+  text-align: left;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--c-line);
+}
+
+.docs-prose :where(td) {
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--c-line);
+  vertical-align: top;
+}
+
+.docs-prose :where(tr:last-child td) {
+  border-bottom: none;
+}

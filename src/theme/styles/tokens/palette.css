@@ -1,0 +1,74 @@
+/* Color tokens — verbatim hex/rgba from the design mock (section 1h
+ * "Foundations" + the x-dc data script's swatchesLight/swatchesDark/accents
+ * arrays), .claude/artifacts/design_mock_site_redesign/OCX Index
+ * Redesign.dc.html. Light = :root default; dark = `.dark` class on <html>,
+ * which is exactly what VitePress core's `appearance: true` pre-hydration
+ * script toggles (see theme/components/layout/ThemeToggle.vue) — no other
+ * selector wires dark mode.
+ *
+ * Coral (--c-accent) is intentionally IDENTICAL in both themes — the mock's
+ * one rule: "coral is the only interactive color", light and dark alike.
+ * The other accents (ok/warn/kw) shift per theme for contrast, also
+ * verbatim from the mock.
+ *
+ * WP-C addition: --c-accent-tint-bg/--c-accent-tint-border (active filter
+ * chip tint) — the mock only shows this rgba pair on dark-themed panels
+ * (1b's active platform/status chips: `rgba(255,96,71,.10)` background,
+ * `rgba(255,96,71,.55)` border); no light-themed active-chip example
+ * exists in the mock, so this reuses the same values in both themes,
+ * consistent with coral's own identical-both-themes rule above. Flagged
+ * for WP-E, which also renders active/selected states in the ⌘K palette.
+ */
+
+:root {
+  --c-bg: #f6f7f9;
+  --c-surface: #ffffff;
+  --c-surface-2: #eff2f5;
+  --c-line: #e2e6ec;
+  --c-text-1: #1b2129;
+  --c-text-2: #4b5665;
+  --c-text-3: #8a94a3;
+
+  --c-accent: #ff6047;
+  --c-accent-hover: #ff8570;
+  --c-accent-tint-bg: rgba(255, 96, 71, 0.1);
+  --c-accent-tint-border: rgba(255, 96, 71, 0.55);
+  --c-ok: #0e9f6e;
+  --c-warn: #9a6b13;
+  --c-warn-bg: rgba(250, 184, 51, 0.16);
+  --c-kw: #6f5bd0;
+  --c-kw-bg: rgba(111, 91, 208, 0.09);
+
+  /* Code fences follow the site theme (owner decision 2026-08-05, revising
+   * mock 1f's "code blocks always dark" rule — a black box on a light page
+   * read as a bug). Light pairs with Shiki github-light, dark with
+   * github-dark (config.mts markdown.theme).
+   * --c-overlay stays theme-invariant: modal/drawer backdrop scrim (WP-E
+   * SearchModal + DocsMobileNav) — one dim value works over either theme. */
+  --c-code-bg: #f6f8fa;
+  --c-code-text: #1b2129;
+  --c-overlay: rgba(15, 18, 23, 0.55);
+}
+
+.dark {
+  --c-bg: #0e1116;
+  --c-surface: #151a22;
+  --c-surface-2: #1c232d;
+  --c-line: #252d39;
+  --c-text-1: #e7ebf1;
+  --c-text-2: #9aa5b3;
+  --c-text-3: #606c7c;
+
+  --c-accent: #ff6047;
+  --c-accent-hover: #ff8570;
+  --c-accent-tint-bg: rgba(255, 96, 71, 0.1);
+  --c-accent-tint-border: rgba(255, 96, 71, 0.55);
+  --c-ok: #3edea6;
+  --c-warn: #fab833;
+  --c-warn-bg: rgba(250, 184, 51, 0.1);
+  --c-kw: #c0b3ff;
+  --c-kw-bg: rgba(192, 179, 255, 0.1);
+
+  --c-code-bg: #14181f;
+  --c-code-text: #c8d0da;
+}

@@ -1,0 +1,123 @@
+name: ci
+
+# Runs for every PR and every push to `main`. Default-deny at workflow level;
+# each job grants itself only `contents: read` — none of these steps need to
+# write anything.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions: {}
+
+jobs:
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+
+  typecheck:
+    name: typecheck
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci
+      # `npm test` runs `vitest run --coverage` at 100% branch/function/line/
+      # statement thresholds (vitest.config.ts) and builds dist/ itself via
+      # vitest's globalSetup — no separate build step needed here.
+      - run: npm test
+
+  pack-verify:
+    name: pack-verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      # C-009 pack-verification gate: npm pack -> publint -> attw --pack ->
+      # install the tarball into a sandbox -> run the installed bin -> resolve
+      # the theme subpath export. Fails on any npm manifest auto-correction
+      # (stripped bin/exports class). This runner has registry access, so
+      # also opts into the stricter `npm publish --dry-run` manifest check
+      # pack-smoke.mjs otherwise skips for offline-safety (see its docblock).
+      - run: node scripts/pack-smoke.mjs
+        env:
+          OCX_CATALOG_PACK_SMOKE_NETWORK: "1"
+
+  workflows-lint:
+    name: workflows-lint
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      # Same gate ocx-sh/index runs (`task workflows:lint`): zizmor over the
+      # whole .github tree at medium severity, via uvx so nothing is added to
+      # this package's own dependency graph. Config (documented rule
+      # exclusions) lives in .github/zizmor.yml.
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e  # v6.8.0
+      - run: uvx zizmor --min-severity medium --config .github/zizmor.yml .github/
+
+  audit-signatures:
+    name: audit-signatures
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci
+      # Verifies every resolved dependency's registry signature against
+      # npm's public key — supply-chain check, independent of `npm audit`'s
+      # vulnerability-database scan.
+      - run: npm audit signatures

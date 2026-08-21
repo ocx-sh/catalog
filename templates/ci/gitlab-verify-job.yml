@@ -1,0 +1,8 @@
+catalog:verify:
+  image: {{image}}
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  script:
+    - {{installCmd}}
+    - {{execPrefix}} ocx-catalog ci --check
