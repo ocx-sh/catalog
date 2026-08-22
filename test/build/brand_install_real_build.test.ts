@@ -27,11 +27,12 @@ import { linkNodeModules, withTempDir } from "./helpers.js";
 const SRC_DIR = "src";
 const LOGO_BYTES = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 8 8"><!-- fixture logo --></svg>\n';
 
-/** The theme's own built-in mark, identified by the one attribute no
- * consumer logo would share (`Logo.vue`'s inlined design-authority SVG).
- * Case-insensitive: Vue's SSR serializer lowercases `viewBox` on the way
- * out, which is an implementation detail, not part of this contract. */
-const BUILT_IN_MARK = /viewbox="0 0 270\.93 270\.93"/i;
+/** The theme's own built-in mark. C-606: it used to be inlined raw `<svg>`
+ * DOM (identified by its own `viewBox`); it's now a Vite `?url` asset
+ * import, emitted once as a real file and referenced via `<img src>` — the
+ * `ocx-logo` stem (Vite appends its own content hash + keeps the extension)
+ * is the one substring no consumer-configured logo asset would share. */
+const BUILT_IN_MARK = /src="[^"]*ocx-logo[^"]*\.svg"/;
 
 function route(segments: readonly string[]): PackageRoute {
   return { segments, wireBase: "" };
@@ -112,9 +113,12 @@ describe("C-002 brand real build — a rebranded deployment", () => {
             expect(brandBlock(html)).not.toMatch(BUILT_IN_MARK);
             expect(await readFile(join(outDir, "acme-logo.svg"), "utf8")).toBe(LOGO_BYTES);
 
-            // `brand.title` still owns <title>/og:site_name — unchanged, and
-            // distinct from the wordmark above.
-            expect(html).toContain("<title>Acme Packages</title>");
+            // `brand.title` still owns `og:site_name` unconditionally, and
+            // still suffixes `<title>` via VitePress's own titleTemplate —
+            // but C-301 gives this DETAIL page its own leading title
+            // segment (the page's key, no descLookup configured here) so
+            // the whole `<title>` is no longer just the bare site title.
+            expect(html).toContain("<title>kitware/cmake | Acme Packages</title>");
             expect(html).toContain('<meta property="og:site_name" content="Acme Packages">');
           },
         );
@@ -138,8 +142,12 @@ describe("C-002 brand real build — a config setting none of the new keys", () 
         }),
         async (html) => {
           expect(wordmark(html)).toBe("Plain Catalog");
+          // C-606: the built-in mark is now ALSO an <img> (emitted once as
+          // a real asset, not inlined raw SVG DOM) — BUILT_IN_MARK is what
+          // distinguishes it from a consumer-configured logo, not the
+          // element type.
           expect(brandBlock(html)).toMatch(BUILT_IN_MARK);
-          expect(brandBlock(html)).not.toContain("<img");
+          expect(brandBlock(html)).not.toContain("<svg");
         },
       );
     },
@@ -159,7 +167,10 @@ describe("C-002 brand real build — the index's own identity surface", () => {
         }),
         async (html) => {
           expect(wordmark(html)).toBe("index.ocx.sh");
-          expect(html).toContain("<title>OCX Index</title>");
+          // C-301: this DETAIL page's own title segment leads, the site
+          // title trails via VitePress's own titleTemplate — see the
+          // sibling assertion above for the same fix on a different brand.
+          expect(html).toContain("<title>kitware/cmake | OCX Index</title>");
           expect(html).toContain('<meta property="og:site_name" content="OCX Index">');
           expect(brandBlock(html)).toMatch(BUILT_IN_MARK);
         },

@@ -61,6 +61,42 @@ export async function waitUntil(check: () => boolean | Promise<boolean>, timeout
   throw new Error(`waitUntil: condition not met within ${timeoutMs}ms`);
 }
 
+/**
+ * Runs `fn` to completion while concurrently sampling `workerProcessPids()`
+ * every few ms, capturing every observed pid not already in `pidsBefore`.
+ *
+ * Exists because a dev-server worker's boot-failure IPC message races its
+ * own `process.exit()` (`dev.ts`'s own doc note): sampling pids only ONCE,
+ * after `fn` has already settled, can miss a worker that already exited by
+ * then — `capturedPids` would silently come back empty, and an "every
+ * captured pid is now dead" assertion built on top of that passes
+ * vacuously (true of the empty set) without ever having observed a live
+ * worker at all. Sampling concurrently instead observes the worker's pid
+ * WHILE it's still alive, whichever narrow window that falls in, so a
+ * caller can assert `capturedPids.length > 0` is actually reachable before
+ * asserting on its eventual cleanup.
+ */
+export async function captureNewPidsDuring<T>(
+  pidsBefore: ReadonlySet<number>,
+  fn: () => Promise<T>,
+): Promise<{ settled: PromiseSettledResult<T>; capturedPids: number[] }> {
+  const captured = new Set<number>();
+  let polling = true;
+  const pollLoop = (async () => {
+    while (polling) {
+      for (const pid of workerProcessPids()) {
+        if (!pidsBefore.has(pid)) captured.add(pid);
+      }
+      await new Promise((r) => setTimeout(r, 5));
+    }
+  })();
+
+  const [settled] = await Promise.allSettled([fn()]);
+  polling = false;
+  await pollLoop;
+  return { settled, capturedPids: [...captured] };
+}
+
 /** Every entry currently in `scratchBaseDir`, or `[]` if it doesn't exist
  * yet (nothing has ever created a scratch root in this checkout). */
 export async function scratchBaseDirEntries(): Promise<string[]> {

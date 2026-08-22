@@ -1,5 +1,6 @@
 import { cp, mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { Semaphore } from "../sources/walker.js";
 
 /**
  * Page synthesis (C-005, S-008) — writes one real `.md` file per package
@@ -127,17 +128,32 @@ const CATALOG_PAGE_CONTENT = "---\nlayout: catalog\n---\n";
 /** Always synthesized — content is irrelevant, see the file doc. */
 const NOT_FOUND_PAGE_CONTENT = "<!-- Exists so VitePress emits 404.html. -->\n";
 
+/** C-304: caps in-flight package-page writes — an unbounded `Promise.all`
+ * over every resolved package opened one `mkdir`+`writeFile` pair per
+ * package simultaneously, which a large index (thousands of packages) turns
+ * into thousands of concurrent filesystem operations at once. Same cap as
+ * `walker.ts`'s own fetch queue (`MAX_CONCURRENCY`) — one bounded-
+ * concurrency policy, not a per-caller-tuned number. */
+const PAGE_WRITE_CONCURRENCY = 16;
+
 export async function synthesizePages(options: SynthesizePagesOptions): Promise<void> {
   const srcRoot = join(options.scratchRoot, options.srcDir);
   await mkdir(srcRoot, { recursive: true });
+
+  const semaphore = new Semaphore(PAGE_WRITE_CONCURRENCY);
 
   await Promise.all([
     writeFile(join(srcRoot, "index.md"), CATALOG_PAGE_CONTENT, "utf8"),
     writeFile(join(srcRoot, "404.md"), NOT_FOUND_PAGE_CONTENT, "utf8"),
     ...options.packages.map(async (route) => {
-      const filePath = join(srcRoot, ...route.segments.slice(0, -1), `${route.segments[route.segments.length - 1]}.md`);
-      await mkdir(join(filePath, ".."), { recursive: true });
-      await writeFile(filePath, PACKAGE_PAGE_CONTENT, "utf8");
+      const release = await semaphore.acquire();
+      try {
+        const filePath = join(srcRoot, ...route.segments.slice(0, -1), `${route.segments[route.segments.length - 1]}.md`);
+        await mkdir(join(filePath, ".."), { recursive: true });
+        await writeFile(filePath, PACKAGE_PAGE_CONTENT, "utf8");
+      } finally {
+        release();
+      }
     }),
   ]);
 
