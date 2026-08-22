@@ -6,22 +6,22 @@ import { installCommand, useInstallFlavors } from '../../composables/useInstallF
 import CopyIcon from '../shared/CopyIcon.vue'
 
 const props = defineProps<{
-  /** Bare `<ns>/<pkg>` — this component builds the full `ocx add
-   * ocx.sh/<name>` command itself. Never pass `root.name` here (it already
-   * carries the `ocx.sh/` prefix — see `usePackageRoot`'s CAS-gotcha
-   * docblock for the same trap on CAS URLs). */
-  name: string
+  /** The wire-qualified name (`pkg.name`/`root.name` — already carries this
+   * deployment's own brand prefix). C-601: this component used to accept a
+   * bare `<ns>/<pkg>` and synthesize a hardcoded `ocx.sh/` prefix itself,
+   * which rendered a wrong, uninstallable command on any deployment whose
+   * index uses a different prefix (a corporate mirror). Never a bare name
+   * here — pass the qualified name straight through instead. */
+  qualifiedName: string
 }>()
 
 const { copied, copyText } = useCopyState(1500)
-
-const qualifiedName = computed(() => `ocx.sh/${props.name}`)
 
 // The card's one-line shorthand is the FIRST of the theme's fixed install
 // flavors — `DEFAULT_INSTALL_FLAVORS[0]`, "add to project". `useInstallFlavors`
 // never yields an empty list, so there is no no-command state to render.
 const flavors = useInstallFlavors()
-const command = computed(() => installCommand(flavors.value[0].command, qualifiedName.value))
+const command = computed(() => installCommand(flavors.value[0].command, props.qualifiedName))
 
 // The card wraps this component in `<a href>` (catalog grid navigates to
 // the detail page on click) — the box is a copy-only shorthand precisely so
@@ -45,7 +45,7 @@ function onClick(event: MouseEvent) {
   <!-- No own context menu — the whole card carries one (PackageCard wraps
        its root anchor in CopyContextMenu); a second nested menu here would
        double-open on right-click over the box. -->
-  <button type="button" class="install-row" tabindex="-1" title="Click to copy install command · right-click for more" :class="{ copied }" @click="onClick">
+  <button type="button" class="install-row" title="Click to copy install command · right-click for more" :class="{ copied }" @click="onClick">
     <span class="install-prefix">$</span>
     <span class="install-cmd">{{ command }}</span>
     <CopyIcon :copied="copied" class="install-icon" check-class="install-icon-check" />

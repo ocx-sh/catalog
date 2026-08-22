@@ -1,14 +1,20 @@
 <template>
-  <div class="catalog-grid">
+  <ul class="catalog-grid">
     <slot />
-  </div>
+  </ul>
 </template>
 
 <style scoped>
+/* C-607: real list semantics (`<ul>`) — callers wrap each item in an `<li>`
+ * (`display: contents`, see CatalogPage.vue/SkeletonGrid.vue) so the grid
+ * item itself is unchanged; this only strips the UA list box/marker. */
 .catalog-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: var(--space-3);
+  list-style: none;
+  margin: 0;
+  padding: 0;
 }
 
 /* Pinned 2-col band — the mock only shows the ≥1200 desktop grid (1a/1b)

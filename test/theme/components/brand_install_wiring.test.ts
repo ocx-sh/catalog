@@ -15,11 +15,17 @@ import { describe, expect, test, vi, beforeEach } from "vitest";
 import { ref } from "vue";
 
 const themeState = ref<Record<string, unknown>>({});
-vi.mock("vitepress", () => ({ useData: () => ({ theme: themeState }) }));
+// `isDark` is C-601 test additions' own requirement: mounting PackageCard
+// pulls in LogoTile -> MonogramTile, which reads `useData().isDark` (the
+// theme-aware monogram palette) — the pre-existing mock only ever needed
+// `theme` (Logo/InstallRow/MetaRail render no MonogramTile).
+vi.mock("vitepress", () => ({ useData: () => ({ theme: themeState, isDark: ref(false) }) }));
 
 const Logo = (await import("../../../src/theme/components/layout/Logo.vue")).default;
 const InstallRow = (await import("../../../src/theme/components/catalog/InstallRow.vue")).default;
 const MetaRail = (await import("../../../src/theme/components/detail/MetaRail.vue")).default;
+const PackageCard = (await import("../../../src/theme/components/catalog/PackageCard.vue")).default;
+const IdentityBlock = (await import("../../../src/theme/components/detail/IdentityBlock.vue")).default;
 const { buildTagCopyActions } = await import("../../../src/theme/components/shared/CopyContextMenu.vue");
 const { DEFAULT_INSTALL_FLAVORS } = await import("../../../src/theme/composables/useInstallFlavors.js");
 
@@ -45,6 +51,34 @@ const ROOT = {
   created: "2026-01-01T00:00:00Z",
   desc: null,
   tags: {},
+};
+
+/** C-601 fixtures: a corporate-mirror deployment whose wire `root.name`
+ * carries ITS OWN brand token (`acme.example`, not `ocx.sh`) — proves the
+ * install/copy-link surface renders whatever prefix the wire actually
+ * supplies, never a hardcoded `ocx.sh/` re-synthesis (S-01). */
+const ACME_ROOT = {
+  ...ROOT,
+  name: "acme.example/widgets/tool",
+};
+
+const ACME_PKG = {
+  namespace: "widgets",
+  package: "tool",
+  name: "acme.example/widgets/tool",
+  status: "active" as const,
+  deprecatedMessage: null,
+  supersededBy: null,
+  created: "2026-01-01T00:00:00Z",
+  updated: null,
+  title: "Tool",
+  description: "An acme tool",
+  keywords: [],
+  latestVersion: "2.0.0",
+  tagCount: 3,
+  platforms: [],
+  logoUrl: null,
+  readmeUrl: null,
 };
 
 /** MetaRail with no variants/alias chain — the install grid still renders
@@ -82,17 +116,20 @@ describe("brand wiring — Logo", () => {
     expect(html).not.toContain("<svg");
   });
 
-  test("no brand.logo -> the theme's built-in inline mark, unchanged", () => {
+  // C-606: the built-in mark used to be inlined raw <svg> DOM here (56% of
+  // every page's HTML bytes); it's now a Vite `?url` asset import — an
+  // `<img>` pointing at a real, once-emitted file, same as a configured
+  // brand.logo, distinguished only by WHICH file it points to.
+  test("no brand.logo -> the theme's built-in mark, emitted once as a real asset (not inlined per-page)", () => {
     const html = mount(Logo).html();
-    expect(html).toContain("<svg");
-    expect(html).toContain('viewBox="0 0 270.93 270.93"');
-    expect(html).not.toContain("<img");
+    expect(html).not.toContain("<svg");
+    expect(html).toMatch(/<img[^>]*src="[^"]*ocx-logo\.svg[^"]*"/);
   });
 });
 
 describe("install wiring — catalog card install box (InstallRow)", () => {
   test("shows the FIRST flavor's command, the built-in `ocx add` shorthand", () => {
-    expect(mount(InstallRow, { props: { name: "kitware/cmake" } }).html()).toContain(
+    expect(mount(InstallRow, { props: { qualifiedName: "ocx.sh/kitware/cmake" } }).html()).toContain(
       "ocx add ocx.sh/kitware/cmake",
     );
   });
@@ -133,6 +170,42 @@ describe("install wiring — copy context menu", () => {
   });
 });
 
+// C-601: a corporate-mirror deployment's own index carries its own brand
+// token in `root.name` (e.g. `acme.example/<ns>/<pkg>`, not `ocx.sh/...`).
+// Every surface below used to strip a hardcoded `ocx.sh/` and re-synthesize
+// it, which rendered a WRONG, uninstallable command
+// (`ocx add ocx.sh/acme.example/widgets/tool`) on such a deployment — these
+// assert the RENDERED result carries the fixture's OWN prefix instead.
+describe("C-601 mirror-agnostic install / copy-link", () => {
+  test("PackageCard's install row renders a non-ocx.sh package's own prefix, never ocx.sh/", () => {
+    const html = mount(PackageCard, { props: { pkg: ACME_PKG } }).html();
+    expect(installCommands(html)).toEqual(["ocx add acme.example/widgets/tool"]);
+    expect(html).not.toContain("ocx.sh/");
+  });
+
+  test("IdentityBlock's name badge renders a non-ocx.sh root's own prefix, never ocx.sh/", () => {
+    const html = mount(IdentityBlock, {
+      props: { root: ACME_ROOT, bareName: "widgets/tool", latestVersionLabel: null },
+    }).html();
+    expect(html).toContain("acme.example/widgets/tool");
+    expect(html).not.toContain("ocx.sh/");
+  });
+
+  test("buildTagCopyActions' Copy-link strips exactly the brand's own first segment, for any brand token", () => {
+    for (const qualifiedName of ["ocx.sh/kitware/cmake", "acme.example/widgets/tool"]) {
+      const actions = buildTagCopyActions(qualifiedName, null, []);
+      const copyLink = actions.find((a) => a.label === "Copy link");
+      const barePath = qualifiedName.split("/").slice(1).join("/");
+      expect(copyLink?.command).toBe(`${window.location.origin}/${barePath}`);
+      // Never leaves the brand-prefixed whole name unstripped (the pre-fix
+      // bug when the brand token wasn't literally "ocx.sh": the regex-strip
+      // silently no-op'd, leaving the WHOLE qualified name — brand included
+      // — inside the path segment instead of just `<ns>/<pkg>`).
+      expect(copyLink?.command).not.toContain(qualifiedName);
+    }
+  });
+});
+
 /*
  * Source-level pin: the literals that made all of the above dead code in the
  * first place must not come back. A component may name the CLI in a comment;
@@ -169,5 +242,21 @@ describe("no hardcoded brand or CLI name in the theme's own source", () => {
   test("the built-in CLI name lives in exactly one module", () => {
     const source = sourceWithoutComments("src/theme/composables/useInstallFlavors.ts");
     expect(source).toMatch(/['"`]ocx add \{name\}['"`]/);
+  });
+
+  // C-601: the literal `ocx.sh/` brand-prefix synthesis that made every
+  // install/copy-link surface above ONLY correct for the reference
+  // `ocx.sh`-prefixed deployment must never come back in any of the five
+  // components that build a qualified name / install command / copy link.
+  test("no component synthesizes a hardcoded ocx.sh/ prefix", () => {
+    for (const relPath of [
+      "src/theme/components/catalog/PackageCard.vue",
+      "src/theme/components/catalog/PackageTable.vue",
+      "src/theme/components/catalog/InstallRow.vue",
+      "src/theme/components/detail/IdentityBlock.vue",
+      "src/theme/components/shared/CopyContextMenu.vue",
+    ]) {
+      expect(sourceWithoutComments(relPath), relPath).not.toContain("ocx.sh/");
+    }
   });
 });

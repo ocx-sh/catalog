@@ -51,6 +51,12 @@ async function fetchCatalog(): Promise<CatalogData> {
   if (cache) return cache
   if (inFlight) return inFlight
 
+  // C-604: a genuine 404 (render pipeline hasn't run yet, or a fresh deploy
+  // before the first run) is the only failure degraded to the empty catalog
+  // HERE — a real "no packages published yet" state. Every other failure
+  // (5xx, network error, malformed JSON) REJECTS instead of degrading, so
+  // `useCatalog()` below can tell "genuinely empty" apart from "broken" and
+  // never mislabels a broken deploy as an empty index (S-02).
   inFlight = (async (): Promise<CatalogData> => {
     try {
       const resp = await fetch('/data/catalog/catalog.json')
@@ -59,9 +65,7 @@ async function fetchCatalog(): Promise<CatalogData> {
       const data: CatalogData = await resp.json()
       cache = data
       return data
-    } catch {
-      return EMPTY_CATALOG
-    } finally { /* v8 ignore next -- WP-03: v8-to-istanbul instruments this bare-statement finally header as a synthetic branch; every real statement/branch in this try/catch/finally is covered (test/theme/composables/useCatalog.test.ts) */
+    } finally {
       inFlight = null
     }
   })()
@@ -70,9 +74,13 @@ async function fetchCatalog(): Promise<CatalogData> {
 
 /**
  * Fetches `/data/catalog/catalog.json`, module-level cached + in-flight
- * deduped. A 404 (render pipeline hasn't run yet, or a fresh deploy before
- * the first run) and any other fetch failure both degrade to the same
- * empty catalog — this composable never throws to the render tree.
+ * deduped. A 404 degrades to the empty catalog (`error` stays `null`) — any
+ * other failure (5xx, network error, malformed JSON) instead sets `error`
+ * and leaves `catalog` at the empty catalog, mirroring `usePackageRoot.ts`'s
+ * `notFound`-vs-`error` split (C-604) so a caller can render a distinct
+ * "failed to load" state instead of "no packages published yet" (S-02). A
+ * failed fetch is never cached (`cache` is only set on the success path),
+ * so the next `load()` call always retries.
  *
  * Pure fetch + cache only — no auto-fetch on mount (mirrors
  * `useImageIndex.ts`). Callers decide when to trigger `load()`: eager
@@ -84,12 +92,20 @@ async function fetchCatalog(): Promise<CatalogData> {
 export function useCatalog() {
   const catalog = ref<CatalogData>(cache ?? EMPTY_CATALOG)
   const loading = ref(!cache)
+  const error = ref<string | null>(null)
 
   async function load() {
     loading.value = true
-    catalog.value = await fetchCatalog()
-    loading.value = false
+    error.value = null
+    try {
+      catalog.value = await fetchCatalog()
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : 'Failed to load catalog'
+      catalog.value = EMPTY_CATALOG
+    } finally {
+      loading.value = false
+    }
   }
 
-  return { catalog, loading, load }
+  return { catalog, loading, error, load }
 }

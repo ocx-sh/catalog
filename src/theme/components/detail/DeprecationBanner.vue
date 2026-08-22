@@ -1,11 +1,49 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+import { assertSafePackagePath } from '../../../viewmodel/catalog.js'
+
 // DetailPage owns the `v-if="root.status === 'deprecated'"` gate.
-defineProps<{
+const props = defineProps<{
   message: string | null
   /** Bare `<ns>/<pkg>` (never `ocx.sh/`-prefixed — schema:
    * `root.schema.json`'s `superseded_by`). */
   supersededBy: string | null
 }>()
+
+// C-605: `supersededBy` is wire data interpolated into `/${supersededBy}`
+// below, where it becomes a same-tab `:href` — so a value that resolves OFF
+// the current origin or UP the path must never reach that sink; it degrades
+// to plain text instead. The loose `/^[^/]+(?:\/[^/]+)+$/` this replaced let
+// a BACKSLASH through: `\evil.com/x` rendered `/\evil.com/x`, and browsers
+// apply the WHATWG special-scheme "authority ignores slashes" rule (`/\` ==
+// `//`) to navigate to https://evil.com/x — a CWE-601 open redirect
+// (`new URL("/\\evil.com/x", base)` === `https://evil.com/x`). Whitespace and
+// `.`/`..` traversal segments slipped through the same way.
+//
+// Rather than hand-roll a second, driftable allowlist, validate against
+// `viewmodel/catalog.ts`'s `assertSafePackagePath` — the ONE grammar that
+// decides whether a bare `<ns>/<pkg>` reference is a real, path-safe package
+// id (the same check `casRelpath` gates every CAS URL/path join with, so
+// there is no second definition to drift from the wire contract). `ns` is the
+// first segment and `pkg` the depth-N remainder, matching `DetailPage.vue`'s
+// own route-identity split. It throws on any bad segment — a backslash,
+// whitespace, an empty/leading segment, a `.`/`..` traversal, or anything
+// outside the lowercase `[a-z0-9._-]` package charset — so a throw means
+// "render text", the same "null on failure, caller renders text" shape
+// `safeHref.ts` uses for wire-sourced URLs.
+function safeSupersededByPath(value: string): string | null {
+  const slash = value.indexOf('/')
+  if (slash < 1) return null
+  try {
+    assertSafePackagePath(value.slice(0, slash), value.slice(slash + 1))
+    return value
+  } catch {
+    return null
+  }
+}
+const safeSupersededBy = computed(() =>
+  props.supersededBy === null ? null : safeSupersededByPath(props.supersededBy),
+)
 </script>
 
 <template>
@@ -17,7 +55,10 @@ defineProps<{
     </svg>
     <span class="deprecation-text">
       <strong>Deprecated</strong>
-      <template v-if="supersededBy"> — superseded by <a :href="`/${supersededBy}`">{{ supersededBy }}</a>.</template>
+      <template v-if="supersededBy">
+        — superseded by
+        <a v-if="safeSupersededBy" :href="`/${safeSupersededBy}`">{{ supersededBy }}</a><template v-else>{{ supersededBy }}</template>.
+      </template>
       <template v-if="message"> {{ message }}</template>
       <template v-else> Existing versions remain installable; no new releases will be mirrored.</template>
     </span>
@@ -48,8 +89,16 @@ defineProps<{
   color: var(--c-text-1);
 }
 
+/* WP6: --c-accent-text, not --c-accent — this banner's own 10%-accent-tint
+ * background was the WORST case that sized --c-accent-text (2.51:1 here).
+ * Underline: this "superseded by" link sits inline in a prose sentence
+ * (`.deprecation-text`) next to --c-text-1 body text — axe's
+ * link-in-text-block wants EITHER >=3:1 link-vs-surrounding-text contrast
+ * OR a non-color cue; --c-accent-text vs --c-text-1 is only 2.99:1, so this
+ * needs the underline (matches ReadmePane's/docs-prose's own prose links). */
 .deprecation-text a {
-  color: var(--c-accent);
+  color: var(--c-accent-text);
+  text-decoration: underline;
 }
 
 .deprecation-text a:hover {

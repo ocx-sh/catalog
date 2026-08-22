@@ -21,12 +21,16 @@ const props = defineProps<{
   activeKeywords: string[]
   hiddenKeywordCount: number
   deprecatedActive: boolean
+  /** Whole-package `status === 'yanked'` filter — parallel to
+   * `deprecatedActive`, a distinct status value (C-603). */
+  yankedActive: boolean
 }>()
 
 const emit = defineEmits<{
   'toggle-platform': [os: string]
   'toggle-keyword': [keyword: string]
   'toggle-deprecated': []
+  'toggle-yanked': []
 }>()
 
 // Searchable popover replaces the old expand-all chip dump (owner finding:
@@ -47,7 +51,6 @@ const popoverKeywords = computed(() => {
       :key="os"
       type="button"
       class="chip"
-      tabindex="-1"
       :class="{ active: activePlatforms.includes(os) }"
       :aria-pressed="activePlatforms.includes(os)"
       @click="emit('toggle-platform', os)"
@@ -67,7 +70,6 @@ const popoverKeywords = computed(() => {
       :key="kw.keyword"
       type="button"
       class="chip"
-      tabindex="-1"
       :class="{ active: activeKeywords.includes(kw.keyword) }"
       :aria-pressed="activeKeywords.includes(kw.keyword)"
       @click="emit('toggle-keyword', kw.keyword)"
@@ -77,7 +79,7 @@ const popoverKeywords = computed(() => {
     </button>
 
     <PopoverRoot v-if="hiddenKeywordCount > 0">
-      <PopoverTrigger class="chip-more" tabindex="-1">
+      <PopoverTrigger class="chip-more">
         +{{ hiddenKeywordCount }} more
       </PopoverTrigger>
       <PopoverPortal>
@@ -110,13 +112,23 @@ const popoverKeywords = computed(() => {
     <button
       type="button"
       class="chip chip-deprecated"
-      tabindex="-1"
       :class="{ active: deprecatedActive }"
       :aria-pressed="deprecatedActive"
       @click="emit('toggle-deprecated')"
     >
       deprecated
       <span v-if="deprecatedActive" class="chip-close">✕</span>
+    </button>
+
+    <button
+      type="button"
+      class="chip chip-yanked"
+      :class="{ active: yankedActive }"
+      :aria-pressed="yankedActive"
+      @click="emit('toggle-yanked')"
+    >
+      yanked
+      <span v-if="yankedActive" class="chip-close">✕</span>
     </button>
   </div>
 </template>
@@ -166,7 +178,7 @@ const popoverKeywords = computed(() => {
 }
 
 .chip-close {
-  font-size: 10px;
+  font-size: var(--text-2xs);
 }
 
 .chip-more {

@@ -15,11 +15,14 @@ defineEmits<{ 'clear-filters': [] }>()
 
 <template>
   <div class="result-meta">
-    <span class="count">{{ filtered === total ? `${total} packages` : `${filtered} of ${total} packages` }}</span>
+    <!-- C-607: role="status" + aria-atomic on the COUNT ONLY — announces
+         "N of M packages" as filters change, never the result list itself
+         (that would spam a screen reader on every keystroke/toggle). -->
+    <span class="count" role="status" aria-atomic="true">{{ filtered === total ? `${total} packages` : `${filtered} of ${total} packages` }}</span>
     <!-- No placeholder text when unfiltered — the meta row's sort select
          (CatalogPage) states the order now. -->
     <span v-if="activeFilterLabels.length" class="filters">{{ activeFilterLabels.join(' · ') }}</span>
-    <button v-if="activeFilterLabels.length || hasQuery" type="button" class="clear-btn" tabindex="-1" @click="$emit('clear-filters')">
+    <button v-if="activeFilterLabels.length || hasQuery" type="button" class="clear-btn" @click="$emit('clear-filters')">
       clear filters
     </button>
   </div>

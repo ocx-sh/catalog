@@ -1,9 +1,12 @@
 <template>
-  <div class="not-found">
+  <!-- C-607: promoted to <main> (with the same #main-content skip-link
+       target every other page's own <main> carries) — the 404 page had no
+       landmark at all before. -->
+  <main id="main-content" class="not-found">
     <span class="not-found-code">404</span>
     <p class="not-found-message">This page doesn't exist.</p>
     <a href="/" class="not-found-link">← back to catalog</a>
-  </div>
+  </main>
 </template>
 
 <style scoped>

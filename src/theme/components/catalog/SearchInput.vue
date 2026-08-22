@@ -72,7 +72,6 @@ defineExpose({
       type="button"
       class="search-kbd search-clear"
       aria-label="Clear search"
-      tabindex="-1"
       @click="$emit('update:modelValue', ''); inputEl?.focus()"
     >×</button>
     <span v-else class="search-kbd">/</span>

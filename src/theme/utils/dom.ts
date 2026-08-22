@@ -12,3 +12,14 @@ export function isEditableTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false
   return target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable
 }
+
+/**
+ * True when `link` carries an absolute URI scheme (or protocol-relative
+ * `//`) — the same heuristic VitePress's own DefaultTheme nav uses, and
+ * what `SiteHeader.vue`'s `nav[]` rendering already applied before this was
+ * extracted here (C-602: `SiteFooter.vue` renders the SAME `nav[]` config
+ * now too, so this is a genuine second caller, not speculative reuse).
+ */
+export function isExternalLink(link: string): boolean {
+  return /^([a-z][a-z\d+.-]*:|\/\/)/i.test(link)
+}

@@ -1,12 +1,24 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
+import { useData } from 'vitepress'
 import { useCatalog } from '../../composables/useCatalog'
+import { isExternalLink } from '../../utils/dom'
 
 // Site-wide footer (owner finding, grimoire-index precedent): policy line +
 // raw-data pointer + the catalog freshness stamp, which lived awkwardly in
 // the catalog meta row before. Lazy consumer of useCatalog like the command
 // palette — one tiny module-cached JSON fetch, shared with CatalogPage.
 const { catalog, load } = useCatalog()
+
+// C-602: the footer used to hardcode a `github.com/ocx-sh/index` link —
+// this deployment's OWN identity, not this renderer's to assume. Sourced
+// from the SAME `nav[]` config surface `SiteHeader.vue` already renders
+// (`theme.nav`) instead: a corporate mirror that configures no `nav[]`
+// entry gets no extra footer link at all, rather than one advertising a
+// URL it never configured.
+interface FooterNavItem { text: string, link: string }
+const { theme } = useData()
+const navItems = computed(() => (theme.value.nav ?? []) as FooterNavItem[])
 
 // Relative-time math reads `Date.now()` — computed post-mount only so SSR
 // output and the first client render agree (same pattern as ResultMeta had).
@@ -36,7 +48,14 @@ onMounted(async () => {
     <div class="footer-inner">
       <span class="footer-links">
         <a href="/c/index.json">raw data</a>
-        · <a href="https://github.com/ocx-sh/index" target="_blank" rel="noopener noreferrer">github</a>
+        <template v-for="item in navItems" :key="item.link">
+          ·
+          <a
+            :href="item.link"
+            :target="isExternalLink(item.link) ? '_blank' : undefined"
+            :rel="isExternalLink(item.link) ? 'noopener noreferrer' : undefined"
+          >{{ item.text }}</a>
+        </template>
         · <a href="/docs/privacy">privacy</a>
       </span>
       <span v-if="updatedLabel" class="footer-note">updated {{ updatedLabel }}</span>

@@ -61,8 +61,9 @@ const safeRepositoryUrl = computed(() => safeHref(props.repositoryUrl))
   color: var(--c-text-2);
 }
 
+/* WP6: --c-accent-text, not --c-accent — 2.79:1 on the ambient --c-bg. */
 .disclaimer-text a {
-  color: var(--c-accent);
+  color: var(--c-accent-text);
 }
 
 /* Same external-link glyph as the header's github link (owner spec) —

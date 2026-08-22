@@ -11,6 +11,10 @@
 
 html {
   background: var(--c-bg);
+  /* C-607: both schemes are genuinely supported (ThemeToggle/.dark class) —
+   * this lets native UA chrome (form controls, scrollbars) follow whichever
+   * one is active instead of defaulting to light regardless of theme. */
+  color-scheme: light dark;
 }
 
 body {
@@ -26,8 +30,12 @@ body {
     color 0.15s;
 }
 
+/* WP6: --c-accent-text, not --c-accent — the site-wide default link color
+ * is small static text on a light background wherever a component doesn't
+ * override it (e.g. MetaRail's unclassed owner links), the same 2.99:1
+ * failing pair as every other WP6 accent-text site (see palette.css). */
 a {
-  color: var(--c-accent);
+  color: var(--c-accent-text);
   text-decoration: none;
 }
 

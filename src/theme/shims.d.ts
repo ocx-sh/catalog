@@ -16,3 +16,13 @@ declare module '*.vue' {
 // Side-effect CSS imports (`import './styles/base.css'`, `@fontsource/*`) —
 // no exports needed, just lets tsc resolve the specifier.
 declare module '*.css'
+
+// Vite's explicit `?url` asset suffix — always resolves to the emitted
+// file's URL string, bypassing Vite's default assetsInlineLimit base64
+// inlining (`components/layout/Logo.vue`'s built-in mark, C-606: emitted
+// ONCE as a real cacheable file instead of inlined raw SVG DOM into every
+// SSR'd page).
+declare module '*.svg?url' {
+  const url: string
+  export default url
+}

@@ -1,4 +1,6 @@
 import { ref } from 'vue'
+import { readImageIndexAnnotations } from '../../viewmodel/catalog.js'
+import type { CatalogPackageDetail } from '../../viewmodel/types.js'
 
 // Shape mirrors the OCI image-index spec (v1.1.1) 1:1 — the `platform`
 // object's dotted keys — `os.version`, `os.features` — are OCI image-spec
@@ -24,6 +26,32 @@ export interface ImageIndex {
   schemaVersion: number
   mediaType: string
   manifests: ManifestDescriptor[]
+  /** OCI annotations map (C-600) — `readImageIndexAnnotations`
+   * (`src/viewmodel/catalog.ts`) reads `org.opencontainers.image.
+   * {licenses,source,revision}` off this field. */
+  annotations?: Record<string, unknown>
+}
+
+/**
+ * C-600: reuses `readImageIndexAnnotations` (`src/viewmodel/catalog.ts`)
+ * rather than hand-rolling a second annotation reader here (the
+ * install-command drift class `subsystem-theme.md` warns about). That
+ * parser is deliberately strict (throws naming the digest on a malformed
+ * `annotations` value) because a build-time failure should abort the build
+ * loudly. A malformed value reaching the BROWSER at runtime is different:
+ * this is a third-party registry's own CAS bytes, fetched directly by an
+ * end user's browser, with no build-time gate to catch it first — a crash
+ * here would take down the whole detail page over a decoration field, so
+ * this wrapper degrades a malformed value to "omitted" instead of
+ * propagating the throw (same posture as `casUrl`'s malformed-digest ->
+ * `null`, never a broken request).
+ */
+function safeReadDetail(index: ImageIndex, digest: string): CatalogPackageDetail {
+  try {
+    return readImageIndexAnnotations(index, digest)
+  } catch {
+    return {}
+  }
 }
 
 // Module-level cache + in-flight dedup, shared across every component
@@ -75,6 +103,11 @@ async function fetchImageIndex(ns: string, pkg: string, digest: string): Promise
 export function useImageIndex() {
   const imageIndex = ref<ImageIndex | null>(null)
   const loading = ref(false)
+  // C-600: license/source/revision derived from `imageIndex`'s own
+  // `annotations`, kept in lockstep with it (same token guard below) rather
+  // than a separate computed a consumer could read one tick out of sync
+  // with which digest `imageIndex` itself currently reflects.
+  const detail = ref<CatalogPackageDetail>({})
 
   // Sequence token scoped to this composable instance — guards against a
   // rapid double-`load()` (e.g. two hover targets in quick succession)
@@ -88,8 +121,9 @@ export function useImageIndex() {
     const result = await fetchImageIndex(ns, pkg, digest)
     if (token !== requestToken) return
     imageIndex.value = result
+    detail.value = result ? safeReadDetail(result, digest) : {}
     loading.value = false
   }
 
-  return { imageIndex, loading, load }
+  return { imageIndex, loading, detail, load }
 }

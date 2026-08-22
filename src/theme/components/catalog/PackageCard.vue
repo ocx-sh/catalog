@@ -21,16 +21,19 @@ const displayKeywords = computed(() => {
   return kws.slice(0, 3)
 })
 
-/** Bare `<ns>/<pkg>` — the route path, the monogram hash input, and
- * `InstallRow`'s prop all use this, never `pkg.name` (which carries the
- * `ocx.sh/` prefix — same CAS-gotcha trap documented in `usePackageRoot`). */
+/** Bare `<ns>/<pkg>` — the route path and the monogram hash input use
+ * this, never `pkg.name` (which carries the deployment's own brand prefix —
+ * same CAS-gotcha trap documented in `usePackageRoot`). `pkg.name` (wire
+ * `root.name`, already correctly prefixed for THIS deployment) is what the
+ * install command / copy actions use instead (C-601) — never a hardcoded
+ * `ocx.sh/` synthesis, which breaks on a corporate mirror's own prefix. */
 const bareName = computed(() => `${props.pkg.namespace}/${props.pkg.package}`)
 
 // Card-wide right-click copy menu (shared builder, like the table rows).
 // InstallRow deliberately has no menu of its own any more — see its note.
 const flavors = useInstallFlavors()
 const menuActions = computed(() =>
-  buildTagCopyActions(`ocx.sh/${bareName.value}`, props.pkg.latestVersion, flavors.value),
+  buildTagCopyActions(props.pkg.name, props.pkg.latestVersion, flavors.value),
 )
 const { copy: menuCopy } = useClipboard()
 
@@ -66,6 +69,7 @@ const platforms = computed(() =>
           <span class="card-title" :title="pkg.title">{{ pkg.title }}</span>
           <span v-if="pkg.latestVersion" class="card-version">{{ pkg.latestVersion }}</span>
           <span v-if="pkg.status === 'deprecated'" class="card-deprecated">DEPRECATED</span>
+          <span v-else-if="pkg.status === 'yanked'" class="card-deprecated card-yanked">YANKED</span>
         </div>
         <div class="card-name">{{ bareName }}</div>
       </div>
@@ -94,7 +98,7 @@ const platforms = computed(() =>
       </span>
     </div>
 
-      <InstallRow :name="bareName" />
+      <InstallRow :qualified-name="pkg.name" />
     </a>
   </CopyContextMenu>
 </template>
@@ -190,6 +194,14 @@ const platforms = computed(() =>
   border-radius: var(--radius-sm);
   padding: 2px 8px;
   letter-spacing: 0.05em;
+}
+
+/* Whole-package yanked (C-603) — same shape as .card-deprecated, warn
+ * tokens instead of muted text/line, so it reads as more severe than a
+ * plain deprecation notice at a glance. */
+.card-yanked {
+  color: var(--c-warn);
+  border-color: var(--c-warn);
 }
 
 .card-name {

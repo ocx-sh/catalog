@@ -12,17 +12,24 @@ import { installCommand, useInstallFlavors, type InstallIcon } from '../../compo
 import { parseTag, type VersionTable } from '../../utils/version'
 import type { PackageRoot } from '../../composables/usePackageRoot'
 import type { ImageIndex } from '../../composables/useImageIndex'
+import type { CatalogPackageDetail } from '../../../viewmodel/types.js'
 
 const props = defineProps<{
   root: PackageRoot
-  /** `root.name` — already `ocx.sh/`-prefixed, safe for CLI command strings
-   * directly (unlike CAS URLs). */
+  /** `root.name` — already qualified-prefixed (whatever brand token this
+   * deployment's own schema uses, see `subsystem-sources.md`'s labels.ts
+   * note), safe for CLI command strings directly (unlike CAS URLs). */
   qualifiedName: string
   /** Default row's primary tag (`utils/version.ts`'s `buildVersionTable`
    * output) — `null` when the package has no live tag at all. */
   primaryTag: string | null
   latestVersionLabel: string | null
   activeImageIndex: ImageIndex | null
+  /** License/source/revision read off `activeImageIndex`'s own OCI
+   * annotations (C-600, `useImageIndex.ts`'s `detail`) — optional since
+   * `mountMetaRail()`-style tests predate this prop and a package may have
+   * no live tag/image index loaded at all yet. */
+  detail?: CatalogPackageDetail
   tagCount: number
   /** Full version table — drives the install card's variant + version
    * selectors (each variant row carries its own alias chain). */
@@ -201,18 +208,34 @@ async function copyRow(key: string, text: string) {
 
 const owners = computed(() => props.root.owners)
 
+// Owner profile links are a FIXED `https://github.com/<owner>` prefix
+// around wire-sourced `owner.github` text, not a raw wire URL — low risk
+// (the scheme/host are never attacker-controlled), but routed through
+// `safeHref` anyway for consistency with every other wire-adjacent href on
+// this page (C-605) rather than being the one exception.
+function ownerHref(owner: { github: string }): string | null {
+  return safeHref(`https://github.com/${owner.github}`)
+}
+
 // `upstream.repository_url` is third-party metadata (wire-sourced, not
 // authored here) — allowlist the scheme before it ever reaches an `:href`
 // (CWE-79 guard, see `utils/safeHref.ts`). `null` degrades to plain text.
 const safeUpstreamUrl = computed(() => safeHref(props.root.upstream?.repository_url))
 
-// `source` = the repo whose CI built the artifacts (bot-derived from the
-// registry annotation), a different thing from `upstream` above (the vendor
-// a mirror attributes) — hence its own row, its own label, its own tooltip.
-// Registry-sourced URL text, so the same CWE-79 guard applies; unlike
-// `upstream` there is no org name to degrade to, so an unsafe value drops
-// the whole row rather than printing the raw string.
-const safeSourceUrl = computed(() => safeHref(props.root.source))
+// `source` = the repo whose CI built the artifacts. Two independent
+// readings of the SAME underlying annotation, preferred in order:
+// `root.source` (bot-derived at index-build time from the latest live tag,
+// already on the wire root) falls back to `detail.sourceRepository` (C-600
+// — THIS renderer's own read of `activeImageIndex`'s OCI annotations,
+// `useImageIndex.ts`'s `readImageIndexAnnotations`) — closes the gap where
+// an index never populated (or omits) its own `source` field but the
+// underlying OCI annotation is still directly readable from the CAS bytes
+// this renderer already fetched. A different thing from `upstream` above
+// (the vendor a mirror attributes) — hence its own row, its own label, its
+// own tooltip. Registry-sourced URL text either way, so the same CWE-79
+// guard applies; unlike `upstream` there is no org name to degrade to, so
+// an unsafe value drops the whole row rather than printing the raw string.
+const safeSourceUrl = computed(() => safeHref(props.root.source ?? props.detail?.sourceRepository ?? null))
 </script>
 
 <template>
@@ -327,10 +350,18 @@ const safeSourceUrl = computed(() => safeHref(props.root.source))
             <span class="metadata-key" title="Repository whose CI built these artifacts">source</span>
             <a class="metadata-value truncate link metadata-external" :href="safeSourceUrl" target="_blank" rel="noopener noreferrer">{{ safeSourceUrl }}<ExternalIcon /></a>
           </div>
+          <!-- C-600: `detail.license` — the OCI `org.opencontainers.image.
+               licenses` annotation read off the currently-loaded image
+               index (`useImageIndex.ts`'s `readImageIndexAnnotations`).
+               Plain text (an SPDX expression string, not a URL). -->
+          <div v-if="detail?.license" class="metadata-row">
+            <span class="metadata-key">license</span>
+            <span class="metadata-value plain">{{ detail.license }}</span>
+          </div>
           <div class="metadata-row">
             <span class="metadata-key">owners</span>
             <span class="metadata-value">
-              <a v-for="(owner, i) in owners" :key="owner.github" :href="`https://github.com/${owner.github}`" target="_blank" rel="noopener noreferrer">
+              <a v-for="(owner, i) in owners" :key="owner.github" :href="ownerHref(owner)" target="_blank" rel="noopener noreferrer">
                 @{{ owner.github }}<template v-if="i < owners.length - 1">, </template>
               </a>
             </span>
@@ -578,8 +609,12 @@ const safeSourceUrl = computed(() => safeHref(props.root.source))
   flex-shrink: 0;
 }
 
+/* WP6: --c-accent-text, not --c-accent — 2.99:1 on --c-surface (the
+ * `owners`/`upstream` links; `.truncate.link` below repeats the swap for
+ * the `source` link, which a more specific `.truncate` rule would
+ * otherwise re-color). */
 .metadata-value {
-  color: var(--c-accent);
+  color: var(--c-accent-text);
   min-width: 0;
 }
 
@@ -597,7 +632,7 @@ const safeSourceUrl = computed(() => safeHref(props.root.source))
 /* Truncated *and* clickable (the source row) — keep the link color the
    `registry` row's plain treatment would otherwise override. */
 .metadata-value.truncate.link {
-  color: var(--c-accent);
+  color: var(--c-accent-text);
 }
 
 .metadata-copy {

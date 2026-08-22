@@ -5,7 +5,6 @@ import { PopoverRoot, PopoverTrigger, PopoverPortal, PopoverContent } from 'reka
 import { casUrl } from '../../utils/cas'
 import CopyIcon from '../shared/CopyIcon.vue'
 import { useToast } from '../../composables/useToast'
-import { sanitizeReadmeHtml } from '../../utils/sanitize'
 
 // The pane is always rendered by DetailPage (no more `v-if="root.desc?.readme"`
 // gate) — `digest` is `null` when the package has no readme at all, in which
@@ -39,15 +38,17 @@ async function load() {
     return
   }
   try {
-    // Dynamic imports — `markdown-it` and `highlight.js` only reach the
-    // browser as their own chunks, fetched the first time a README actually
-    // renders, instead of static imports pulling them into the shared
-    // every-page bundle. hljs `lib/common` = the ~35 mainstream grammars;
-    // fences without a language hint fall back to auto-detection.
-    const [resp, { default: MarkdownIt }, { default: hljs }] = await Promise.all([
+    // Dynamic imports — `markdown-it`, `highlight.js`, and the sanitizer
+    // (dompurify, ~29KB) only reach the browser as their own chunks, fetched
+    // the first time a README actually renders, instead of static imports
+    // pulling them into the shared every-page/grid-entry bundle (C-606).
+    // hljs `lib/common` = the ~35 mainstream grammars; fences without a
+    // language hint fall back to auto-detection.
+    const [resp, { default: MarkdownIt }, { default: hljs }, { sanitizeReadmeHtml }] = await Promise.all([
       fetch(url),
       import('markdown-it'),
       import('highlight.js/lib/common'),
+      import('../../utils/sanitize'),
     ])
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
     const text = await resp.text()
@@ -235,11 +236,14 @@ async function copyAction(key: string, text: string) {
   margin: 0;
 }
 
+/* WP6: no `opacity` — it diluted --c-text-3 to an effective ~2.34:1 against
+ * --c-surface (opacity blends toward the background, undoing the token's
+ * own WCAG margin). --c-text-3 alone is already the muted tone this state
+ * wants, matching `.readme-status` (the loading state) just above. */
 .readme-empty {
   font-family: var(--font-mono);
   font-size: var(--text-sm);
   color: var(--c-text-3);
-  opacity: 0.6;
   text-align: center;
   padding: 32px 0;
 }
@@ -384,8 +388,14 @@ async function copyAction(key: string, text: string) {
   color: var(--c-accent);
 }
 
+/* WP6: an inline prose link distinguished from surrounding text by color
+ * alone fails axe's link-in-text-block — underline gives it a second, non-
+ * color cue. Same --c-accent-text swap as SiteHeader's `.nav-link.active`/
+ * DetailPage's `.back-link`: plain --c-accent on --c-surface here is the
+ * same 2.99:1 failing pair, -> 5.42:1. */
 .readme-content :deep(a) {
-  color: var(--c-accent);
+  color: var(--c-accent-text);
+  text-decoration: underline;
 }
 
 .readme-content :deep(table) {
