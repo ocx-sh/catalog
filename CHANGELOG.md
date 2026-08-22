@@ -5,7 +5,13 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
-## [0.1.0] - Unreleased
+## [0.1.1] - 2026-08-22
+
+First release published through the CI release lane (npm trusted publishing
+via OIDC, with provenance attestation). No code changes over 0.1.0, which was
+published manually to bootstrap the package name.
+
+## [0.1.0] - 2026-08-22
 
 Initial release. This version ships the CLI surface, the `catalog.config.json`
 loader and published JSON Schema, the VitePress theme (catalog grid, package
