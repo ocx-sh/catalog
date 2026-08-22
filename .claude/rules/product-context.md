@@ -98,11 +98,12 @@ on).
 
 ## Status
 
-Pre-1.0, published. `0.1.0` is on the npm registry — a one-time manual
-bootstrap publish, since npm trusted publishing cannot pre-provision a
-package name that doesn't exist yet. The GitHub remote
-[`ocx-sh/catalog`](https://github.com/ocx-sh/catalog) exists and is public. A
-`v0.1.1` tag was cut but **never published** (the CI publish job failed on a
-missing npm Trusted Publisher registration — owner-only, still pending); only
-`0.1.0` is installable today. Any consumer, not just `ocx-sh/index`, can now
-`npm install @ocx-sh/catalog` from the registry.
+Pre-1.0, published. `0.1.0` and `0.1.1` are on the npm registry, `latest`
+being `0.1.1`. `0.1.0` was a one-time manual bootstrap publish, since npm
+trusted publishing cannot pre-provision a package name that doesn't exist
+yet; `0.1.1` went out through the CI release lane on 2026-08-22 with a SLSA
+v1 provenance attestation, which is the end-to-end proof that trusted
+publishing works for this package. The GitHub remote
+[`ocx-sh/catalog`](https://github.com/ocx-sh/catalog) is public — a
+precondition for `--provenance` attaching anything at all. Any consumer, not
+just `ocx-sh/index`, can `npm install @ocx-sh/catalog` from the registry.

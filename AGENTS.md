@@ -28,13 +28,13 @@ surfaces this package owns versus reads, and the non-goals →
 [`product-context.md`](./.claude/rules/product-context.md). Canonical; do
 not restate it here.
 
-> **Status: pre-1.0.** `0.1.0` is published to npm — a one-time manual
-> bootstrap publish, since npm trusted publishing cannot pre-provision a new
-> package name. The GitHub remote
-> [`ocx-sh/catalog`](https://github.com/ocx-sh/catalog) exists. The `v0.1.1`
-> tag was cut but **not** published (only `0.1.0` is on the registry). The
-> one release step still pending is owner-only: registering the npm Trusted
-> Publisher (see [Release](#release)).
+> **Status: pre-1.0, published.** `0.1.0` and `0.1.1` are both on npm
+> (`latest` is `0.1.1`). The GitHub remote
+> [`ocx-sh/catalog`](https://github.com/ocx-sh/catalog) is public, and the
+> release lane is fully operational: `0.1.0` was a one-time manual bootstrap
+> publish (trusted publishing cannot pre-provision a new package name), and
+> `0.1.1` went out through CI with a real provenance attestation. No release
+> setup remains — see [Release](#release).
 
 ## Rule Catalog
 
@@ -153,9 +153,11 @@ the next version (git-cliff), writes it into `package.json`, regenerates
 `CHANGELOG.md`, and runs `verify` — then prints the manual commit/tag/push
 steps. It never commits, tags, or pushes.
 
-`0.1.0` was published manually to bootstrap the package name (done — trusted
-publishing cannot pre-provision a name that does not exist yet). The one
-remaining release step is owner-only: register the npm Trusted Publisher for
-`@ocx-sh/catalog` scoped to repo `ocx-sh/catalog`, workflow `release.yml`,
-branch `main`. Until then a `v*` tag runs the gate but the publish job is
-inert. `--provenance` also needs the GitHub repo public at tag-push time.
+The npm Trusted Publisher is registered and proven end to end: `0.1.1`
+published through this lane with a SLSA v1 provenance attestation. It is
+scoped to org `ocx-sh`, repo `catalog`, workflow `release.yml`, and **no
+environment** — npm's form has no branch field, so the scope is
+org + repo + workflow (+ optional environment), and a configured environment
+the `publish` job does not set would reject the OIDC exchange. `--provenance`
+additionally requires the GitHub repo to be public at tag-push time; it is,
+and taking it private would silently drop attestations rather than fail.

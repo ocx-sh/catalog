@@ -15,12 +15,6 @@ All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
-
-> **Registry note.** `v0.1.1` was tagged but **never published**: the release
-> lane's publish job failed on a missing npm Trusted Publisher registration.
-> Only `0.1.0` is installable from the npm registry today. This note lives in
-> `cliff.toml`'s header because it is not derivable from git history, and a
-> regeneration would otherwise drop it.
 """
 body = """
 {%- if commits | length == 0 -%}

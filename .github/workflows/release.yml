@@ -1,32 +1,32 @@
 # ============================================================================
-# RELEASE LANE — status (historical record + the one remaining owner step)
+# RELEASE LANE — historical record. Nothing here is a pending task.
 #
-# Bootstrap already done:
+# Bootstrap, all done:
 #   - The `@ocx-sh` npm org exists.
 #   - `@ocx-sh/catalog@0.1.0` was published MANUALLY, once, from a local
 #     machine (`npm publish --access public`) with a short-lived, granular
 #     automation token that was deleted right after — npm trusted publishing
 #     (OIDC, used below) cannot pre-provision a brand-new package name, so the
-#     first publish had to be manual. That is history now, not a pending task.
-#   - The GitHub remote (github.com/ocx-sh/catalog) exists; branch+PR+merge is
-#     the active workflow.
-#   - The `v0.1.1` tag was cut but was NOT published to npm — only `0.1.0` is on
-#     the registry. (CHANGELOG.md's version notes are the source of truth for
-#     what actually shipped.)
-#
-# THE ONE REMAINING OWNER STEP — until it is done, a `v*` tag push runs the
-# `gate` job fine but the `publish` job's OIDC exchange has no publisher to
-# authenticate against, so it is inert (fails at publish, publishes nothing):
-#   - On npmjs.com, register a Trusted Publisher for `@ocx-sh/catalog` scoped to
-#     EXACTLY this repository (ocx-sh/catalog), this workflow file
-#     (`.github/workflows/release.yml`), and branch `main`. Trusted-publisher
-#     config is per-package (no bulk setting) and, since 2026-05-20, must name
-#     the workflow explicitly.
+#     first publish had to be manual.
+#   - The GitHub remote (github.com/ocx-sh/catalog) exists and is PUBLIC;
+#     branch+PR+merge is the active workflow.
+#   - The npm Trusted Publisher is REGISTERED (2026-08-22) and proven: it is
+#     scoped to org `ocx-sh`, repo `catalog`, workflow file `release.yml`, and
+#     no environment (this `publish` job declares none — a configured
+#     environment the job does not set would reject the OIDC exchange). npm's
+#     trusted-publisher form has NO branch field: the scope is
+#     org + repo + workflow (+ optional environment), so any tag on any branch
+#     that reaches this workflow can publish.
+#   - `0.1.1` published through this lane on 2026-08-22 (the `v0.1.1` tag's
+#     originally-failed `publish` job, re-run once the publisher existed), and
+#     carries a real SLSA v1 provenance attestation — which is the end-to-end
+#     proof that the OIDC exchange and `--provenance` both work here.
 #
 # Two standing invariants (not steps — keep them true):
 #   - `--provenance` below silently attaches NO attestation unless this
-#     repository is PUBLIC on GitHub at the time a tag is pushed. Make the repo
-#     public before a provenance-bearing release.
+#     repository is PUBLIC on GitHub at the time a tag is pushed. Taking the
+#     repo private would degrade every later release to an unattested publish
+#     without failing anything.
 #   - Do NOT add an `NPM_TOKEN` (or any npm auth) secret to this repo for this
 #     workflow. Trusted publishing is token-less by design; a stored token here
 #     would be a live credential this workflow never reads.

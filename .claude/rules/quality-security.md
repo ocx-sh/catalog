@@ -68,16 +68,21 @@ in review: it hides a real gap rather than an already-mitigated one.
 
 ## npm Trusted Publishing (OIDC)
 
-Per-package config, not a repo setting — the `release.yml` header comment
-enumerates the manual bootstrap this depends on: reserve the `@ocx-sh` npm org,
-publish `0.1.0` once manually with a short-lived automation token (deleted right
-after), then register a Trusted Publisher scoped to this exact repo, this exact
-workflow file, and the intended branch. `--provenance` additionally needs the
-GitHub repo to be public at tag-push time, or it silently attaches no
-attestation. None of this makes the workflow file itself invalid before the
-bootstrap is done — it's simply inert until a `v*` tag exists to trigger it and
-a Trusted Publisher exists to authenticate it. Don't "fix" the inert state by
-adding a stored token — see the checklist above.
+Per-package config, not a repo setting — the `release.yml` header comment is
+the record of the bootstrap this depended on: reserve the `@ocx-sh` npm org,
+publish `0.1.0` once manually with a short-lived automation token (deleted
+right after), then register a Trusted Publisher. All of it is done, and
+`0.1.1` published through the lane with a real attestation.
+
+The publisher's scope is **org + repo + workflow filename + optional
+environment** — npm's form has **no branch field**, so do not describe it as
+scoped to a branch; any tag reaching this workflow can publish. This repo
+registers no environment, matching a `publish` job that declares none: a
+configured environment the job does not set rejects the OIDC exchange.
+`--provenance` additionally needs the GitHub repo public at tag-push time, or
+it silently attaches no attestation — a private-repo release still succeeds,
+just unattested. Never "fix" a failing exchange by adding a stored npm token
+— see the checklist above.
 
 ---
 
