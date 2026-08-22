@@ -3,3 +3,11 @@
 node_modules/
 dist/
 coverage/
+.lhci-site/
+.lighthouseci/
+
+# lychee link-check cache (task lint:links)
+.lycheecache
+
+# direnv local activation state (.envrc itself IS tracked)
+.direnv/

@@ -1,36 +1,35 @@
 # ============================================================================
-# OWNER SETUP REQUIRED — this workflow cannot publish anything until ALL of
-# the following are done, in order:
+# RELEASE LANE — status (historical record + the one remaining owner step)
 #
-#   1. Create the `@ocx-sh` npm org now (console action; npm has no name-
-#      reservation mechanism, so this is the only real anti-squat move —
-#      see .claude/artifacts/research_npm_publish_hygiene.md in the index
-#      repo). Independent of everything else below.
+# Bootstrap already done:
+#   - The `@ocx-sh` npm org exists.
+#   - `@ocx-sh/catalog@0.1.0` was published MANUALLY, once, from a local
+#     machine (`npm publish --access public`) with a short-lived, granular
+#     automation token that was deleted right after — npm trusted publishing
+#     (OIDC, used below) cannot pre-provision a brand-new package name, so the
+#     first publish had to be manual. That is history now, not a pending task.
+#   - The GitHub remote (github.com/ocx-sh/catalog) exists; branch+PR+merge is
+#     the active workflow.
+#   - The `v0.1.1` tag was cut but was NOT published to npm — only `0.1.0` is on
+#     the registry. (CHANGELOG.md's version notes are the source of truth for
+#     what actually shipped.)
 #
-#   2. Publish `@ocx-sh/catalog@0.1.0` MANUALLY, once, from a local machine
-#      (`npm publish --access public`) using a granular, 2FA-bypass
-#      automation token — DELETE that token immediately after. npm trusted
-#      publishing (OIDC, used below) requires the package to already exist;
-#      it cannot pre-provision a brand-new package name.
+# THE ONE REMAINING OWNER STEP — until it is done, a `v*` tag push runs the
+# `gate` job fine but the `publish` job's OIDC exchange has no publisher to
+# authenticate against, so it is inert (fails at publish, publishes nothing):
+#   - On npmjs.com, register a Trusted Publisher for `@ocx-sh/catalog` scoped to
+#     EXACTLY this repository (ocx-sh/catalog), this workflow file
+#     (`.github/workflows/release.yml`), and branch `main`. Trusted-publisher
+#     config is per-package (no bulk setting) and, since 2026-05-20, must name
+#     the workflow explicitly.
 #
-#   3. Only after step 2: on npmjs.com, register a Trusted Publisher for
-#      `@ocx-sh/catalog` scoped to EXACTLY this repository, this workflow
-#      file (`.github/workflows/release.yml`), and the branch/environment
-#      you intend to publish from. Trusted-publisher config is per-package
-#      (no bulk setting) and, since 2026-05-20, must name the workflow
-#      explicitly.
-#
-#   4. `--provenance` below silently attaches NO attestation unless this
-#      repository is PUBLIC on GitHub at the time a tag is pushed — make the
-#      repo public first if provenance is required.
-#
-#   5. Do NOT add an `NPM_TOKEN` (or any npm auth) secret to this repo for
-#      this workflow. Trusted publishing is token-less by design; a stored
-#      token here would be a live credential this workflow never reads.
-#
-# None of the above is required for this FILE to exist or be valid — it is
-# simply inert (no `v*` tag to push it, no package trusted-publisher config
-# to authenticate it) until the owner completes the steps above.
+# Two standing invariants (not steps — keep them true):
+#   - `--provenance` below silently attaches NO attestation unless this
+#     repository is PUBLIC on GitHub at the time a tag is pushed. Make the repo
+#     public before a provenance-bearing release.
+#   - Do NOT add an `NPM_TOKEN` (or any npm auth) secret to this repo for this
+#     workflow. Trusted publishing is token-less by design; a stored token here
+#     would be a live credential this workflow never reads.
 # ============================================================================
 name: release
 
@@ -45,6 +44,9 @@ jobs:
   # Re-runs the full quality gate against the exact tagged commit — a tag
   # push is not guaranteed to be a commit that already went through ci.yml
   # (e.g. a tag pushed after the fact), so this job never trusts a prior run.
+  # It runs the SAME `task` targets ci.yml and a local developer run, for
+  # local/CI parity; the checks and their order are unchanged from the
+  # pre-task gate (lint, typecheck, test, build, pack-smoke).
   gate:
     name: gate
     runs-on: ubuntu-latest
@@ -61,14 +63,25 @@ jobs:
           # runtime artifacts, and a restored cache is a supply-chain write
           # into what gets published (zizmor cache-poisoning, high). CI keeps
           # its cache; a publish run pays the extra install instead.
+      - uses: ocx-sh/setup-ocx@25fa771f8572572dc64528db89560de68a163a0e  # v1
       - run: npm ci
-      - run: npm run lint
-      - run: npm run typecheck
-      - run: npm test
-      - run: npm run build
-      - run: node scripts/pack-smoke.mjs
+      - run: task lint
+      - run: task typecheck
+      - run: task test
+      - run: task build
+      - run: task pack-smoke
 
   publish:
+    # The ONE job in this repo that deliberately does NOT run `task` and
+    # carries no `setup-ocx` step. Everywhere else local and CI run the
+    # identical `task` target — that parity is the point. Here it is traded
+    # away on purpose: this job holds
+    # the OIDC write permission below, so every tool it provisions is another
+    # package that could mint an npm credential during the publish window.
+    # `gate` has already run the full `task verify` on this same commit, so the
+    # parity this job gives up buys nothing it does not already have, while the
+    # smaller tooling surface is real. Same reasoning as the `--ignore-scripts`
+    # install below.
     name: publish
     needs: gate
     runs-on: ubuntu-latest

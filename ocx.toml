@@ -1,0 +1,8 @@
+#:schema https://ocx.sh/schemas/project/v1.json
+
+[tools]
+task = "ocx.sh/go-task/task:3"
+git-cliff = "ocx.sh/git-cliff/git-cliff:2"
+actionlint = "ocx.sh/actionlint/actionlint:1"
+lychee = "ocx.sh/lychee/lychee:0"
+gitleaks = "ocx.sh/gitleaks/gitleaks:8"

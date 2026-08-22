@@ -1,8 +1,14 @@
 name: ci
 
 # Runs for every PR and every push to `main`. Default-deny at workflow level;
-# each job grants itself only `contents: read` — none of these steps need to
-# write anything.
+# each job grants itself only `contents: read` — none of these steps writes
+# anything. Every job provisions its toolchain through `ocx-sh/setup-ocx`
+# (task/actionlint/lychee/gitleaks/git-cliff, pinned in ocx.toml + ocx.lock)
+# and then runs the SAME `task` target a developer runs locally, so CI and
+# local execute identical checks (`task verify` is the four-gate local
+# equivalent). No `ocx run --` wrapper: setup-ocx ACTIVATES the project when
+# ocx.toml is present, exporting the pinned tools onto PATH for every
+# subsequent step — wrapping again would be redundant indirection.
 on:
   pull_request:
   push:
@@ -24,8 +30,9 @@ jobs:
         with:
           node-version: "24"
           cache: npm
+      - uses: ocx-sh/setup-ocx@25fa771f8572572dc64528db89560de68a163a0e  # v1
       - run: npm ci
-      - run: npm run lint
+      - run: task lint
 
   typecheck:
     name: typecheck
@@ -40,8 +47,9 @@ jobs:
         with:
           node-version: "24"
           cache: npm
+      - uses: ocx-sh/setup-ocx@25fa771f8572572dc64528db89560de68a163a0e  # v1
       - run: npm ci
-      - run: npm run typecheck
+      - run: task typecheck
 
   test:
     name: test
@@ -56,11 +64,12 @@ jobs:
         with:
           node-version: "24"
           cache: npm
+      - uses: ocx-sh/setup-ocx@25fa771f8572572dc64528db89560de68a163a0e  # v1
       - run: npm ci
-      # `npm test` runs `vitest run --coverage` at 100% branch/function/line/
-      # statement thresholds (vitest.config.ts) and builds dist/ itself via
-      # vitest's globalSetup — no separate build step needed here.
-      - run: npm test
+      # `task test` runs `npm test` (`vitest run --coverage`) at 100% branch/
+      # function/line/statement thresholds (vitest.config.ts) and builds dist/
+      # itself via vitest's globalSetup — no separate build step needed here.
+      - run: task test
 
   pack-verify:
     name: pack-verify
@@ -75,15 +84,16 @@ jobs:
         with:
           node-version: "24"
           cache: npm
+      - uses: ocx-sh/setup-ocx@25fa771f8572572dc64528db89560de68a163a0e  # v1
       - run: npm ci
-      - run: npm run build
-      # C-009 pack-verification gate: npm pack -> publint -> attw --pack ->
-      # install the tarball into a sandbox -> run the installed bin -> resolve
-      # the theme subpath export. Fails on any npm manifest auto-correction
-      # (stripped bin/exports class). This runner has registry access, so
-      # also opts into the stricter `npm publish --dry-run` manifest check
-      # pack-smoke.mjs otherwise skips for offline-safety (see its docblock).
-      - run: node scripts/pack-smoke.mjs
+      # Pack-verification gate (`task pack-smoke`): npm pack -> publint -> attw
+      # --pack -> install the tarball into a sandbox -> run the installed bin ->
+      # resolve the theme subpath export -> dependency-completeness. `npm pack`
+      # builds dist/ via this package's own prepack, so no separate build step.
+      # This runner has registry access, so it opts into the stricter `npm
+      # publish --dry-run` manifest check pack-smoke.mjs otherwise skips for
+      # offline-safety (see its docblock).
+      - run: task pack-smoke
         env:
           OCX_CATALOG_PACK_SMOKE_NETWORK: "1"
 
@@ -96,12 +106,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           persist-credentials: false
-      # Same gate ocx-sh/index runs (`task workflows:lint`): zizmor over the
-      # whole .github tree at medium severity, via uvx so nothing is added to
-      # this package's own dependency graph. Config (documented rule
-      # exclusions) lives in .github/zizmor.yml.
+      # `task lint:workflows` runs zizmor over the whole .github tree at medium
+      # severity via uvx (config: .github/zizmor.yml) — uvx keeps this CI-only
+      # tool out of the package's own dependency graph, so setup-uv provides it
+      # rather than ocx or npm. Same gate ocx-sh/index runs.
       - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e  # v6.8.0
-      - run: uvx zizmor --min-severity medium --config .github/zizmor.yml .github/
+      - uses: ocx-sh/setup-ocx@25fa771f8572572dc64528db89560de68a163a0e  # v1
+      - run: task lint:workflows
 
   audit-signatures:
     name: audit-signatures
@@ -116,8 +127,48 @@ jobs:
         with:
           node-version: "24"
           cache: npm
+      - uses: ocx-sh/setup-ocx@25fa771f8572572dc64528db89560de68a163a0e  # v1
       - run: npm ci
-      # Verifies every resolved dependency's registry signature against
-      # npm's public key — supply-chain check, independent of `npm audit`'s
-      # vulnerability-database scan.
-      - run: npm audit signatures
+      # `task audit:signatures` verifies every resolved dependency's registry
+      # signature against npm's public key — supply-chain check, independent of
+      # `npm audit`'s vulnerability-database scan.
+      - run: task audit:signatures
+
+  repo-checks:
+    name: repo-checks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      # fetch-depth: 0 — gitleaks scans commit history and lychee walks the
+      # whole tree; both want the full checkout, not a shallow clone.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      # actionlint, lychee, and gitleaks are all ocx-provisioned binaries — no
+      # node toolchain or npm install is needed for this job.
+      - uses: ocx-sh/setup-ocx@25fa771f8572572dc64528db89560de68a163a0e  # v1
+      - run: task lint:actions
+      - run: task lint:links
+      - run: task secrets
+
+  web-quality:
+    name: web-quality
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
+        with:
+          node-version: "24"
+          cache: npm
+      - uses: ocx-sh/setup-ocx@25fa771f8572572dc64528db89560de68a163a0e  # v1
+      - run: npm ci
+      # `task quality:web` builds the fixture catalog site and runs Lighthouse
+      # CI (accessibility/SEO/best-practices as errors, performance as a warn)
+      # against it — see .lighthouserc.cjs and test/fixtures/quality-index/.
+      - run: task quality:web
