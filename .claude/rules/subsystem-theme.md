@@ -46,8 +46,11 @@ paths.
 
 Every color/spacing/type value is a CSS custom property from
 `src/theme/styles/tokens/*.css` (`--c-*`, `--font-*`, `--text-*`,
-`--radius-*`, `--space-*`) — no component hardcodes a hex value or a pixel
-font size outside those tokens. Dark mode is the `.dark` class VitePress's
+`--radius-*`, `--space-*`) — components hardcoding a hex value or a pixel
+font size outside those tokens are a defect, not a pattern to extend. WP6
+(theme a11y pass, 2026-08-22) tokenized the last three: a `font-size: 10px`
+each in `FilterChips.vue`, `DocsSidebar.vue`, and `OnThisPage.vue`, now
+`var(--text-2xs)`. Dark mode is the `.dark` class VitePress's
 own pre-hydration script toggles on `<html>`; `ThemeToggle.vue` writes
 `useData().isDark` directly (never a shadow ref) so VitePress core's own
 `localStorage` persistence and re-apply-on-load keep working unchanged.

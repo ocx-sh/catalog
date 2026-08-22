@@ -1,0 +1,51 @@
+{
+  "generated": "2026-08-11T00:00:00Z",
+  "packages": [
+    {
+      "namespace": "acme",
+      "package": "zebra",
+      "name": "ocx.sh/acme/zebra",
+      "status": "active",
+      "deprecatedMessage": null,
+      "supersededBy": null,
+      "created": "2026-01-01",
+      "updated": "2026-01-02T00:00:00Z",
+      "title": "Zebra",
+      "description": "Striped build tool.",
+      "keywords": [
+        "build",
+        "zebra"
+      ],
+      "latestVersion": "2.0.0",
+      "variants": [
+        "musl"
+      ],
+      "tagCount": 2,
+      "platforms": [
+        "linux/amd64"
+      ],
+      "logoUrl": "/p/acme/zebra/o/sha256/ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff.svg",
+      "readmeUrl": "/p/acme/zebra/o/sha256/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee.md"
+    },
+    {
+      "namespace": "acme",
+      "package": "apple",
+      "name": "ocx.sh/acme/apple",
+      "status": "active",
+      "deprecatedMessage": null,
+      "supersededBy": null,
+      "created": "2026-08-01",
+      "updated": "2026-08-11T00:00:00Z",
+      "title": "ocx.sh/acme/apple",
+      "description": "",
+      "keywords": [],
+      "latestVersion": "1.0.0",
+      "tagCount": 1,
+      "platforms": [
+        "linux/amd64"
+      ],
+      "logoUrl": null,
+      "readmeUrl": null
+    }
+  ]
+}

@@ -27,12 +27,15 @@ at this layer, `tryIncludeFile` treats ENOENT as "not present".
 
 `config/load.ts`'s `PATH_ESCAPE` check on a `path`/`git` source's `path`/`dir`
 is **lexical only** (`resolve`/`relative` string math) — it never follows
-symlinks. `path.ts`'s `resolveContainedRealPath` is the actual enforcement
-point: every file this subsystem opens is realpath-verified against its
-source root's own realpath, **per file, not just once at the root** — a
-symlinked file or subdirectory can appear at any depth during a recursive
-walk, and only a per-file check catches both. Never assume a config having
-passed `loadConfig` proves a later read is safe.
+symlinks. `path.ts`'s `assertContained` is the actual per-file enforcement
+point (called from `tryIncludeFile`/`walkTree` as each entry is opened):
+every file this subsystem opens is realpath-verified against its source
+root's own realpath, **per file, not just once at the root** — a symlinked
+file or subdirectory can appear at any depth during a recursive walk, and
+only a per-file check catches both. `resolveContainedRealPath` is the
+per-root variant (`readDirectoryTree`'s own root, `git.ts`'s `entry.dir`) —
+a single call at the top of a walk, not the per-file gate. Never assume a
+config having passed `loadConfig` proves a later read is safe.
 
 `mirror.ts`'s `writeDistFile` re-checks the resolved write destination stays
 inside `distDir` too, belt-and-braces against a malformed `WirePath` built

@@ -49,16 +49,19 @@ import type { Brand, NavEntry } from "../config/types.js";
  * | `description` | `GeneratedConfigOptions.description` (C-002's `CatalogConfig.description`) — omitted entirely when absent, letting VitePress fall back to its own default rather than baking in placeholder copy. |
  * | `vite.cacheDir` | Always emitted — see `GeneratedConfigOptions.cacheDir`'s own doc for why this can never be left to Vite's own default once the scratch root lives inside the consumer's `node_modules`. |
  * | `vite.plugins` (`ocx-dev-wire`, the original site's dev-only wire mirror) | **N/A, not carried, not an open item**: that plugin existed only because the ORIGINAL site's `vitepress dev` had no live render step of its own (needed `task site:dev`'s pre-rendered snapshot). This package's `dev.ts`/`dev_worker.ts` instead serve LIVE wire data from the loaded config's resolved sources directly (S-003) — a different mechanism for the same underlying need, not a gap to fill here. |
- * | `head` `og:site_name`/`og:type`/`twitter:card` | Carried verbatim; `og:site_name` sourced from `brand.title`. |
+ * | `head` `og:site_name`/`og:type`/`twitter:card`/`color-scheme` | Carried verbatim; `og:site_name` sourced from `brand.title`. `color-scheme: light dark` (C-301) is unconditional — a cheap, static SEO/UX win the theme's own light/dark support already backs, so it needs no per-config guard. |
  * | `head` `<link rel="icon">` | Emitted from `GeneratedConfigOptions.favicon` (C-002's `CatalogConfig.favicon`) — a site-root-relative href the consumer serves out of its own `publicDir`; `brand.logo` is NOT a favicon source (it's the header logo) and this package ships no bundled default, so an absent `favicon` emits no link at all. |
+ * | `head` `og:image`/`twitter:image` (C-301) | Site-wide, from the SAME resolved logo href `themeConfig.brand.logo` gets (see `logoHref`/`copyBrandLogo` below) — made absolute against `siteUrl` when set, else left site-root-relative (still correct against whatever origin actually serves the page). Absent logo -> neither meta emitted; never a build failure either way. |
  * | `transformHead` per-page `description` fallback | Fixed template `Install {name} from <brand.title>.`, `{name}` replaced with the page's `<ns>/<pkg>` key — never a hardcoded deployment identity (the index's own `ocx.sh/` prefix and "the OCX public package index" phrasing live in a *desc* per package root, not here). |
- * | `themeConfig.brand`/`.nav`/`.docsPresent`/`.siteUrl`/`.descLookup` | Baked static JSON — see "Injection channel" above. `docsPresent` is `true` iff `<scratchRoot>/<srcDir>/docs` exists on disk when this function runs (i.e., `synthesizePages()` was given a `docsSourceDir`). `brand` is a PROJECTION of C-002's `Brand`, not the raw value: `logo` is replaced by the site-root href of the copy this function makes (see `brandLogoSource`), since a config-relative filesystem path is meaningless to a browser. `wordmark` is passed through UNRESOLVED — `SiteHeader.vue` owns the `wordmark ?? title` fallback, so a hand-written `themeConfig` behaves the same as a generated one. |
+ * | `themeConfig.brand`/`.nav`/`.docsPresent`/`.siteUrl` | Baked static JSON — see "Injection channel" above. `docsPresent` is `true` iff `<scratchRoot>/<srcDir>/docs` exists on disk when this function runs (i.e., `synthesizePages()` was given a `docsSourceDir`). `brand` is a PROJECTION of C-002's `Brand`, not the raw value: `logo` is replaced by the site-root href of the copy this function makes (see `brandLogoSource`), since a config-relative filesystem path is meaningless to a browser. `wordmark` is passed through UNRESOLVED — `SiteHeader.vue` owns the `wordmark ?? title` fallback, so a hand-written `themeConfig` behaves the same as a generated one. **No `descLookup` key** (C-302, removed): it had zero runtime consumer — the theme never reads `useData().theme.descLookup` — and only bloated every page's metadata chunk; the module-level `DESC_LOOKUP` const below (`transformHead`/`transformPageData`'s own lookup table) is unaffected, since neither hook reads it through `themeConfig` at all. |
  * | `themeConfig.search.provider: 'local'` | Carried verbatim — VitePress core reads this itself (independent of active theme) to decide whether to build the local-search virtual module at all. |
  * | `ignoreDeadLinks: [/^\/p\//]` | Carried verbatim — every synthesized page still links CAS paths the dead-link linter can't see until the mirror copy (C-006) exists. |
  * | `markdown.theme` (`ocxCodeTheme`, dual light/dark Shiki JSON) | Carried verbatim, including its hardcoded OCX brand hex values — this package ships one fixed visual identity (C-008: config parameterizes brand/nav CONTENT, not the theme's own CSS token palette). |
  * | `markdown.headers: { level: [2, 3] }` | Carried verbatim — matches `OnThisPage.vue`'s fixed two-tier scroll-spy. |
- * | `sitemap.hostname` / `transformHead` `og:url` | Only emitted when `siteUrl` is given — degrades to no sitemap + no `og:url` meta, never a build failure. |
- * | `transformHead` per-page `og:title`/`og:description` | Derives the page's identity from `pageData.relativePath` (NOT `pageData.params` — see `pages.ts`'s "Specify-spike correction" doc note; a synthesized page is a plain static file, `params` is never populated for it), looks up `DESC_LOOKUP[key]` (the baked table above), degrades to generic copy on a miss. |
+ * | `sitemap.hostname` / `transformHead` `og:url`/`link rel=canonical` (C-301) | Only emitted when `siteUrl` is given — degrades to no sitemap + no `og:url`/canonical, never a build failure. `canonical` is emitted for every routable page (index, docs, detail) from the SAME clean-URL path `og:url` already derives; a 404 page gets neither (nothing to canonicalize). |
+ * | `public/robots.txt` (C-303) | Emitted by `generateConfig()` (not `transformHead` — this is a static file write, not a per-request head hook) under the SAME `siteUrl` guard as `sitemap.hostname` above, into the same `public/` mount `copyBrandLogo` writes into, carrying a `Sitemap:` line pointing at VitePress's own `sitemap.xml`. Written with the `wx` flag — a `publicDir`-supplied `robots.txt` (already copied there by `synthesizePages()`, which runs BEFORE this function) always wins; this is a default, not an override. |
+ * | `transformPageData` per-page `title` (C-301) | Sets `pageData.title` to the package's own resolved title (desc title, or the bare `<ns>/<pkg>` key on a miss) for a detail page ONLY — index/404/docs pages are left alone, so VitePress's OWN `createTitle()` templating (`"<page title> \| <site title>"`, or the bare site title when no override is set) does the suffixing; this package does not reimplement that logic. Fixes the identity-gate defect where every detail page's rendered `<title>` was literally the SITE title, `brand.title` itself, never the package's own name. |
+ * | `transformHead` per-page `og:title`/`og:description`/CAS preload (C-301) | Derives the page's identity from `pageData.relativePath` (NOT `pageData.params` — see `pages.ts`'s "Specify-spike correction" doc note; a synthesized page is a plain static file, `params` is never populated for it), looks up `DESC_LOOKUP[key]` (the baked table above), degrades to generic copy on a miss. Detail pages additionally get `link rel=preload as=fetch crossorigin` for their own `/p/<key>.json` — the wire root `usePackageRoot.ts` fetches on mount, so a bare navigation now beats the first fetch's own round-trip. |
  * | `themeConfig.githubUrl` | **Open item, unchanged**: no C-002 field carries it yet; `SiteHeader.vue`'s own nav is still hardcoded too (WP-10 territory, depends on WP-06). |
  *
  * ## CSS cascade order (C-005 named requirement)
@@ -225,6 +228,24 @@ function faviconHeadEntry(favicon: string | undefined): string {
   return `\n    ["link", ${JSON.stringify(attrs)}],`;
 }
 
+/**
+ * C-301: the generated `head[]` entries for site-wide `og:image`/
+ * `twitter:image`, or `""` when no logo is configured. Not gated on
+ * `siteUrl` the way `og:url`/canonical are — a root-relative href still
+ * resolves correctly against whichever origin actually serves the page, so
+ * a logo with no configured `siteUrl` still gets a working image reference
+ * rather than none at all; `siteUrl`, when present, only upgrades it to an
+ * absolute URL (some crawlers require one for `og:image` specifically).
+ */
+function ogImageHeadEntries(logoHref: string | undefined, siteUrl: string | undefined): string {
+  if (logoHref === undefined) return "";
+  const content = siteUrl !== undefined ? `${siteUrl}${logoHref}` : logoHref;
+  return (
+    `\n    ["meta", ${JSON.stringify({ property: "og:image", content })}],` +
+    `\n    ["meta", ${JSON.stringify({ name: "twitter:image", content })}],`
+  );
+}
+
 function renderThemeShim(css: string | undefined): string {
   const cssImport = css !== undefined ? `\nimport ${JSON.stringify(css)};` : "";
   return `import Theme from "@ocx-sh/catalog/theme";${cssImport}\nexport default Theme;\n`;
@@ -275,6 +296,37 @@ const SITE_URL = ${siteUrlLiteral};
 const PKG_DESCRIPTION = ${JSON.stringify(packageDescription)};
 const DESC_LOOKUP = ${JSON.stringify(descLookupTable, null, 2)};
 
+// C-301: shared between transformPageData/transformHead below — the one
+// place a page's relativePath resolves to its package identity + fallback
+// copy, so the two hooks can never disagree on what a page's title/
+// description actually is. \`null\` for index/404/docs: none of those are a
+// PACKAGE detail page (index/404 have no package identity at all; docs
+// pages already get a real title from their own Markdown content).
+function detailPageMeta(relativePath) {
+  if (relativePath === "index.md" || relativePath === "404.md") return null;
+  const segments = relativePath.replace(/\\.md$/, "").split("/");
+  if (segments[0] === "docs") return null;
+  const key = segments.join("/");
+  const desc = DESC_LOOKUP[key];
+  return {
+    key,
+    title: desc ? desc.title : key,
+    // split/join, not replace(): a replacement STRING is \`$\`-significant in
+    // replace()/replaceAll(), and this one is consumer data.
+    description: desc ? desc.description : PKG_DESCRIPTION.split("{name}").join(key),
+  };
+}
+
+// C-301: the clean-URL path \`link rel=canonical\`/\`og:url\` both resolve
+// against — \`null\` for 404 (nothing to canonicalize), "/" for the landing
+// page, "/<key>" for every other routable page (detail AND docs alike,
+// unlike \`detailPageMeta\` above which is package-scoped only).
+function canonicalPath(relativePath) {
+  if (relativePath === "404.md") return null;
+  if (relativePath === "index.md") return "/";
+  return \`/\${relativePath.replace(/\\.md$/, "")}\`;
+}
+
 export default defineConfig({
   srcDir: ${JSON.stringify(options.srcDir)},
   srcExclude: ["public/**"],
@@ -283,10 +335,11 @@ export default defineConfig({
   title: BRAND_TITLE,${
     options.description !== undefined ? `\n  description: ${JSON.stringify(options.description)},` : ""
   }
-  head: [${faviconHeadEntry(options.favicon)}
+  head: [${faviconHeadEntry(options.favicon)}${ogImageHeadEntries(logoHref, options.siteUrl)}
     ["meta", { property: "og:site_name", content: BRAND_TITLE }],
     ["meta", { property: "og:type", content: "website" }],
     ["meta", { name: "twitter:card", content: "summary" }],
+    ["meta", { name: "color-scheme", content: "light dark" }],
   ],${sitemapField}
   ignoreDeadLinks: [/^\\/p\\//],
   markdown: {
@@ -298,32 +351,63 @@ export default defineConfig({
     nav: ${JSON.stringify(options.nav, null, 2)},
     docsPresent: ${JSON.stringify(docsPresent)},
     siteUrl: ${siteUrlLiteral},
-    descLookup: DESC_LOOKUP,
     search: { provider: 'local' },
   },
+  // C-301: sets a detail page's OWN title (bare — VitePress's own
+  // titleTemplate does the " | BRAND_TITLE" suffixing from here, never
+  // reimplemented in this file); index/404/docs pages are left untouched.
+  transformPageData(pageData) {
+    const meta = detailPageMeta(pageData.relativePath);
+    if (meta) return { title: meta.title };
+  },
   transformHead({ pageData }) {
+    const head = [];
     if (pageData.relativePath === "index.md") {
-      return [["link", { rel: "preload", href: "/data/catalog/catalog.json", as: "fetch", crossorigin: "" }]];
+      head.push(["link", { rel: "preload", href: "/data/catalog/catalog.json", as: "fetch", crossorigin: "" }]);
     }
-    if (pageData.relativePath === "404.md") return [];
-    const segments = pageData.relativePath.replace(/\\.md$/, "").split("/");
-    if (segments[0] === "docs") return [];
-    const key = segments.join("/");
-    const desc = DESC_LOOKUP[key];
-    const title = desc ? \`\${desc.title} — \${BRAND_TITLE}\` : \`\${key} — \${BRAND_TITLE}\`;
-    // split/join, not replace(): a replacement STRING is \`$\`-significant in
-    // replace()/replaceAll(), and this one is consumer data.
-    const description = desc ? desc.description : PKG_DESCRIPTION.split("{name}").join(key);
-    const metas = [
-      ["meta", { property: "og:title", content: title }],
-      ["meta", { property: "og:description", content: description }],
-      ["meta", { name: "description", content: description }],
-    ];
-    if (SITE_URL) metas.push(["meta", { property: "og:url", content: \`\${SITE_URL}/\${key}\` }]);
-    return metas;
+    const path = canonicalPath(pageData.relativePath);
+    if (SITE_URL && path !== null) {
+      head.push(["link", { rel: "canonical", href: \`\${SITE_URL}\${path}\` }]);
+    }
+    const meta = detailPageMeta(pageData.relativePath);
+    if (meta) {
+      head.push(
+        ["meta", { property: "og:title", content: \`\${meta.title} — \${BRAND_TITLE}\` }],
+        ["meta", { property: "og:description", content: meta.description }],
+        ["meta", { name: "description", content: meta.description }],
+        // C-301: prefetches this page's own wire root ahead of
+        // usePackageRoot.ts's mount-time fetch.
+        ["link", { rel: "preload", href: \`/p/\${meta.key}.json\`, as: "fetch", crossorigin: "" }],
+      );
+      if (SITE_URL) head.push(["meta", { property: "og:url", content: \`\${SITE_URL}/\${meta.key}\` }]);
+    }
+    return head;
   },
 });
 `;
+}
+
+/**
+ * C-303: emits `public/robots.txt` (with a `Sitemap:` line pointing at
+ * VitePress's own `sitemap.xml`) whenever `siteUrl` is set — the SAME guard
+ * as `sitemap.hostname` (`renderConfig`'s `sitemapField`), so the two
+ * site-discovery files can never disagree about whether a deployment origin
+ * is configured. Written into the SAME `public/` mount `copyBrandLogo`
+ * writes the logo into (VitePress's default `publicDir`): `synthesizePages()`
+ * has already copied a consumer's own `publicDir` there by the time this
+ * runs, so `wx` (write-exclusive) fails with `EEXIST` on a `publicDir`-
+ * supplied `robots.txt`, which this function treats as "the consumer
+ * already has one" and leaves untouched — a default, never an override.
+ */
+async function emitRobotsTxt(srcRoot: string, siteUrl: string): Promise<void> {
+  const publicDir = join(srcRoot, "public");
+  await mkdir(publicDir, { recursive: true });
+  const body = `User-agent: *\nAllow: /\n\nSitemap: ${siteUrl}/sitemap.xml\n`;
+  try {
+    await writeFile(join(publicDir, "robots.txt"), body, { encoding: "utf8", flag: "wx" });
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "EEXIST") throw err;
+  }
 }
 
 export async function generateConfig(options: GeneratedConfigOptions): Promise<void> {
@@ -351,5 +435,6 @@ export async function generateConfig(options: GeneratedConfigOptions): Promise<v
   await Promise.all([
     writeFile(join(vitepressDir, "config.mts"), renderConfig(options, docsPresent, descLookupTable, logoHref), "utf8"),
     writeFile(join(themeDir, "index.ts"), renderThemeShim(options.css), "utf8"),
+    options.siteUrl !== undefined ? emitRobotsTxt(srcRoot, options.siteUrl) : undefined,
   ]);
 }

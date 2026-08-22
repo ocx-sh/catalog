@@ -41,8 +41,10 @@ Test code favors being self-contained and readable in isolation over
 eliminating duplication — matching [quality-core.md](./quality-core.md)'s general "DAMP" carve-out
 from DRY. `test/sources/helpers.ts` states the actual bar explicitly: shared
 builders are extracted only once real duplication crosses multiple files
-("quality-core.md DRY: 5 genuine callers" — path/extract/labels/mirror/walker
-all needed the same schema-shaped root builder and byte-equality check).
+("quality-core.md DRY: 5 genuine callers" in the file's own comment —
+path/extract/labels/mirror/walker all needed the same schema-shaped root
+builder and byte-equality check; `git.test.ts` has since become a 6th caller
+of `bytesEqual`/`utf8`, same bar, comment not yet bumped).
 Most test files instead define their own small local helpers even when a
 near-identical one exists elsewhere (e.g. `brand_install_wiring.test.ts`'s
 `sourceWithoutComments`) — each test file should read on its own.

@@ -16,7 +16,7 @@ const { page } = useData()
     <aside class="doc-sidebar">
       <DocsSidebar />
     </aside>
-    <main class="doc-prose-col">
+    <main id="main-content" class="doc-prose-col">
       <div class="docs-prose">
         <Content />
       </div>

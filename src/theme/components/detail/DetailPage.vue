@@ -7,6 +7,7 @@ import { buildVersionTable } from '../../utils/version'
 import IdentityBlock from './IdentityBlock.vue'
 import DisclaimerBanner from './DisclaimerBanner.vue'
 import DeprecationBanner from './DeprecationBanner.vue'
+import YankedBanner from './YankedBanner.vue'
 import VersionTree from './VersionTree.vue'
 import ReadmePane from './ReadmePane.vue'
 import MetaRail from './MetaRail.vue'
@@ -41,7 +42,7 @@ const tagCount = computed(() => (root.value ? Object.keys(root.value.tags).lengt
 // default row's primary tag on package load, then swapped on version-tag
 // hover (debounced) and reverted on mouseleave (VersionTree itself emits
 // the revert as just another `hover-tag`).
-const { imageIndex: activeImageIndex, load: loadImageIndex } = useImageIndex()
+const { imageIndex: activeImageIndex, detail: activeDetail, load: loadImageIndex } = useImageIndex()
 let hoverTimer: ReturnType<typeof setTimeout> | null = null
 
 // Install-card selection (variant/version combos) — immediate, no hover
@@ -68,7 +69,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <main class="detail-page">
+  <main id="main-content" class="detail-page">
     <p v-if="loading" class="detail-status">Loading…</p>
 
     <div v-else-if="notFound" class="detail-notfound">
@@ -92,6 +93,7 @@ onMounted(() => {
         :message="root.deprecated_message"
         :superseded-by="root.superseded_by ?? null"
       />
+      <YankedBanner v-else-if="root.status === 'yanked'" />
 
       <IdentityBlock :root="root" :bare-name="bareName" :latest-version-label="defaultRow?.preciseAliasTag ?? null" />
 
@@ -123,6 +125,7 @@ onMounted(() => {
           :primary-tag="defaultRow?.primaryTag ?? null"
           :latest-version-label="defaultRow?.preciseAliasTag ?? null"
           :active-image-index="activeImageIndex"
+          :detail="activeDetail"
           :tag-count="tagCount"
           :table="table"
           @select-tag="onInstallSelect"
@@ -161,6 +164,8 @@ onMounted(() => {
   text-align: center;
 }
 
+/* WP6: --c-accent-text, not --c-accent — 2.79:1 on --c-bg with the plain
+ * accent -> 5.05:1. */
 .back-link {
   display: inline-flex;
   align-items: center;
@@ -168,7 +173,7 @@ onMounted(() => {
   font-family: var(--font-mono);
   font-size: var(--text-sm);
   font-weight: 500;
-  color: var(--c-accent);
+  color: var(--c-accent-text);
   width: fit-content;
 }
 

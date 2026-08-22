@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { devServer } from "../../src/build/dev.js";
 import { BuildError } from "../../src/build/errors.js";
 import {
+  captureNewPidsDuring,
   findFreePort,
   isProcessAlive,
   occupyPort,
@@ -164,26 +165,31 @@ describe("C-005/S-003 devServer — child-process lifecycle", () => {
           const pidsBefore = new Set(workerProcessPids());
           const scratchBefore = new Set(await scratchBaseDirEntries());
 
-          let error: unknown;
-          try {
-            await devServer({ sourcePath, port, smoke: true });
-          } catch (err) {
-            error = err;
-          }
-          expect(error).toBeInstanceOf(BuildError);
-          expect((error as BuildError).code).toBe("UNAVAILABLE");
-          expect((error as BuildError).message).toContain(String(port));
-
           // Isolates the pid(s) THIS call's own worker spawned — other test
           // FILES run in parallel and legitimately keep their OWN dev-server
           // workers alive for the whole matcher `workerProcessPids()` shares,
           // so a global-count comparison drifts against that traffic (a
           // count returning to its earlier value is neither necessary nor
           // sufficient for THIS call's worker having exited). The worker's
-          // boot-failure IPC message races its own process.exit() — poll
-          // rather than assert immediately.
-          const newPids = workerProcessPids().filter((pid) => !pidsBefore.has(pid));
-          await waitUntil(() => newPids.every((pid) => !isProcessAlive(pid)));
+          // boot-failure IPC message races its own `process.exit()` — sample
+          // pids CONCURRENTLY with the call (`captureNewPidsDuring`) rather
+          // than once after it settles, or a worker that already exited by
+          // then leaves `capturedPids` empty and the "nothing alive" check
+          // below passes vacuously without ever having proven a worker ran.
+          const { settled, capturedPids } = await captureNewPidsDuring(pidsBefore, () =>
+            devServer({ sourcePath, port, smoke: true }),
+          );
+          expect(settled.status).toBe("rejected");
+          const error = settled.status === "rejected" ? settled.reason : undefined;
+          expect(error).toBeInstanceOf(BuildError);
+          expect((error as BuildError).code).toBe("UNAVAILABLE");
+          expect((error as BuildError).message).toContain(String(port));
+
+          // Proves the worker was actually observed alive at least once —
+          // without this, the cleanup assert below (every captured pid now
+          // dead) is vacuously true of an empty list.
+          expect(capturedPids.length).toBeGreaterThan(0);
+          await waitUntil(() => capturedPids.every((pid) => !isProcessAlive(pid)));
 
           // Diffed against the snapshot above (not the directory's whole
           // contents at the end): other test FILES run in parallel and can

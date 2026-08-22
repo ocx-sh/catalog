@@ -8,22 +8,36 @@ const PLACEHOLDER_COUNT = 9
 </script>
 
 <template>
-  <CatalogGrid>
-    <div v-for="i in PLACEHOLDER_COUNT" :key="i" class="skeleton-card" :class="{ offbeat: i % 2 === 0 }">
-      <div class="skeleton-row">
-        <div class="skeleton-tile" />
-        <div class="skeleton-lines">
-          <div class="skeleton-line" style="width: 50%" />
-          <div class="skeleton-line skeleton-line-sm" style="width: 65%" />
+  <!-- C-607: `aria-hidden` on the whole grid — a screen reader has nothing
+       useful to announce for placeholder boxes (no package data yet), and
+       ResultMeta's `role="status"` region announces the real count once it
+       arrives. Vue's attribute fallthrough puts this on CatalogGrid's own
+       rendered <ul> root. -->
+  <CatalogGrid aria-hidden="true">
+    <li v-for="i in PLACEHOLDER_COUNT" :key="i" class="skeleton-item">
+      <div class="skeleton-card" :class="{ offbeat: i % 2 === 0 }">
+        <div class="skeleton-row">
+          <div class="skeleton-tile" />
+          <div class="skeleton-lines">
+            <div class="skeleton-line" style="width: 50%" />
+            <div class="skeleton-line skeleton-line-sm" style="width: 65%" />
+          </div>
         </div>
+        <div class="skeleton-line skeleton-line-sm" style="width: 90%" />
+        <div class="skeleton-install" />
       </div>
-      <div class="skeleton-line skeleton-line-sm" style="width: 90%" />
-      <div class="skeleton-install" />
-    </div>
+    </li>
   </CatalogGrid>
 </template>
 
 <style scoped>
+/* Same `display: contents` reasoning as CatalogPage.vue's `.catalog-grid-item`
+ * — the <li> is a list-semantics wrapper only, `.skeleton-card` stays the
+ * actual CSS grid item so the placeholder layout is unchanged. */
+.skeleton-item {
+  display: contents;
+}
+
 /* prefers-reduced-motion is already handled globally (styles/base.css
  * zeroes all animation durations under that media query) — no local
  * override needed here. */

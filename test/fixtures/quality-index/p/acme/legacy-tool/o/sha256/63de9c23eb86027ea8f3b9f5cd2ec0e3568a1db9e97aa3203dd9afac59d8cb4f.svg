@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none" role="img">
+  <title>legacy-tool</title>
+  <rect x="96" y="96" width="320" height="320" rx="48" fill="#a1a1aa"/>
+  <path d="M176 256 L240 320 L336 192" stroke="#e4e4e7" stroke-width="34" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

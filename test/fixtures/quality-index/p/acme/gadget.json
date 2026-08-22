@@ -1,0 +1,63 @@
+{
+  "name": "ocx.sh/acme/gadget",
+  "repository": "oci://ghcr.io/ocx-contrib/acme/gadget",
+  "owners": [
+    {
+      "github": "ocx-bot",
+      "github_id": 309019509
+    }
+  ],
+  "status": "active",
+  "deprecated_message": null,
+  "created": "2026-02-11",
+  "upstream": {
+    "org": "acme",
+    "repository_url": "https://github.com/acme/gadget",
+    "disclaimer": "Unaffiliated mirror of the upstream acme/gadget project."
+  },
+  "desc": {
+    "digest": "sha256:b520a85559e203c4403d5106a3512b9a6fed7e81e9a5c208865b88183f2dc1ff",
+    "title": "gadget",
+    "description": "Fast cross-platform CLI multitool for inspecting and transforming JSON, YAML and TOML.",
+    "keywords": [
+      "cli",
+      "json",
+      "yaml",
+      "toml",
+      "transform",
+      "data"
+    ],
+    "readme": "sha256:694faac6a65dce1b6f72c71b1af336a7328f39fc83c60bdb75151bbd87ef71b0",
+    "logo": "sha256:39e92f4255848135d225df352bd173c8aa58017b4c74a94b60ff543cdb9e48a9"
+  },
+  "tags": {
+    "1": {
+      "content": "sha256:52d3de0092494c4a598271bdf5d03c00c01a8c699cbbed2caf082e9d994a396d",
+      "observed": "2026-08-10T09:14:00Z"
+    },
+    "1.4.0_20260810": {
+      "content": "sha256:52d3de0092494c4a598271bdf5d03c00c01a8c699cbbed2caf082e9d994a396d",
+      "observed": "2026-08-10T09:14:00Z"
+    },
+    "1.4.0": {
+      "content": "sha256:52d3de0092494c4a598271bdf5d03c00c01a8c699cbbed2caf082e9d994a396d",
+      "observed": "2026-08-10T09:14:00Z"
+    },
+    "1.4": {
+      "content": "sha256:52d3de0092494c4a598271bdf5d03c00c01a8c699cbbed2caf082e9d994a396d",
+      "observed": "2026-08-10T09:14:00Z"
+    },
+    "latest": {
+      "content": "sha256:52d3de0092494c4a598271bdf5d03c00c01a8c699cbbed2caf082e9d994a396d",
+      "observed": "2026-08-10T09:14:00Z"
+    },
+    "musl-1.4.0": {
+      "content": "sha256:4346003cff27860d0473842633ecb3f72a800998ac5897db98fa7da420a6ebe5",
+      "observed": "2026-08-10T09:14:00Z"
+    },
+    "musl-1.4": {
+      "content": "sha256:4346003cff27860d0473842633ecb3f72a800998ac5897db98fa7da420a6ebe5",
+      "observed": "2026-08-10T09:14:00Z"
+    }
+  }
+}

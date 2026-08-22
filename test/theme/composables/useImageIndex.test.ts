@@ -125,4 +125,77 @@ describe('useImageIndex', () => {
     expect(imageIndex.value).toBeNull()
     expect(loading.value).toBe(false)
   })
+
+  // C-600: `detail` reuses WP5's `readImageIndexAnnotations`
+  // (`src/viewmodel/catalog.ts`) against `imageIndex`'s own `annotations` —
+  // proves the client composable is a REAL caller of that shared parser
+  // (the anti-orphan concern), never a second hand-rolled reader.
+  describe('detail (C-600)', () => {
+    function mockJsonResponseWithAnnotations(digest: string, annotations: unknown) {
+      return {
+        ok: true,
+        json: async () => ({
+          schemaVersion: 2,
+          mediaType: 'application/vnd.oci.image.index.v1+json',
+          manifests: [],
+          annotations,
+        }),
+      }
+    }
+
+    test('reads license/source/revision off a loaded image index', async () => {
+      const digest = `sha256:${'1'.repeat(64)}`
+      globalThis.fetch = vi.fn(() =>
+        Promise.resolve(mockJsonResponseWithAnnotations(digest, {
+          'org.opencontainers.image.licenses': 'MIT',
+          'org.opencontainers.image.source': 'https://github.com/acme/widget',
+          'org.opencontainers.image.revision': 'abc123',
+        })),
+      ) as unknown as typeof fetch
+
+      const { detail, load } = useImageIndex()
+      await load('ns', 'pkg7', digest)
+
+      expect(detail.value).toEqual({
+        license: 'MIT',
+        sourceRepository: 'https://github.com/acme/widget',
+        revision: 'abc123',
+      })
+    })
+
+    test('omits detail entirely when the image index has no annotations key', async () => {
+      const digest = `sha256:${'2'.repeat(64)}`
+      globalThis.fetch = vi.fn(() => Promise.resolve(mockJsonResponse(digest))) as unknown as typeof fetch
+
+      const { detail, load } = useImageIndex()
+      await load('ns', 'pkg8', digest)
+
+      expect(detail.value).toEqual({})
+    })
+
+    test('a malformed annotations value degrades to omitted, never throws to the caller', async () => {
+      const digest = `sha256:${'3'.repeat(64)}`
+      globalThis.fetch = vi.fn(() =>
+        Promise.resolve(mockJsonResponseWithAnnotations(digest, 'not-an-object')),
+      ) as unknown as typeof fetch
+
+      const { detail, imageIndex, load } = useImageIndex()
+      await expect(load('ns', 'pkg9', digest)).resolves.toBeUndefined()
+
+      // The malformed field degrades to "omitted" — the REST of the fetch
+      // (imageIndex itself) is unaffected, matching `casUrl`'s "malformed
+      // input -> null, never a broken request" posture this wrapper mirrors.
+      expect(detail.value).toEqual({})
+      expect(imageIndex.value).not.toBeNull()
+    })
+
+    test('a non-ok response (null image index) resets detail to omitted too', async () => {
+      globalThis.fetch = vi.fn(() => Promise.resolve({ ok: false })) as unknown as typeof fetch
+
+      const { detail, load } = useImageIndex()
+      await load('ns', 'pkg10', `sha256:${'4'.repeat(64)}`)
+
+      expect(detail.value).toEqual({})
+    })
+  })
 })

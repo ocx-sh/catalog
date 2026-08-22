@@ -5,10 +5,17 @@
  * `indexbot.model` and produce for `/data/catalog/catalog.json`.
  *
  * These are catalog-scoped SUBSETS, not full ports of the bot's dataclasses:
- * fields the catalog emitter never reads (`repository`, `owners`, `upstream`,
- * `source`, the vestigial `variants` root field, `desc.digest`, `root_raw`)
- * are omitted. See `bot/src/indexbot/model.py` for the full wire-facing
- * shapes.
+ * fields the catalog emitter never reads (`owners`, `upstream`, `source`, the
+ * vestigial `variants` root field, `desc.digest`, `root_raw`) are omitted.
+ * See `bot/src/indexbot/model.py` for the full wire-facing shapes.
+ *
+ * `repository` (C-501, 2026-08-22 WP5) is the one exception: it IS carried
+ * on `CatalogPackageRoot`, faithfully, for package DETAIL pages — but
+ * `catalogEntry` (`catalog.ts`) never copies it onto `CatalogEntry`, so it
+ * still never reaches `/data/catalog/catalog.json` (C-503, byte-stable).
+ * `CatalogPackageDetail` below is the other detail-only addition (C-600) —
+ * neither is a "catalog" field despite living in this catalog-scoped file,
+ * which is the existing home for every `CatalogSourcePackage`-adjacent type.
  */
 
 /** Ported from Python `Status` (`model.py:17`). */
@@ -59,6 +66,11 @@ export interface CatalogPackageRoot {
   readonly status: Status;
   readonly deprecatedMessage: string | null;
   readonly supersededBy: string | null;
+  /** Physical OCI repository this entry points to, `oci://<host>/<path>`
+   * (C-501). Detail-page data only — `catalogEntry` never copies this onto
+   * `CatalogEntry`, so it never reaches `/data/catalog/catalog.json`
+   * (C-503). `null` when the wire root omits it; never fabricated. */
+  readonly repository: string | null;
   readonly created: string;
   readonly desc: CatalogDesc | null;
   readonly tags: Readonly<Record<string, TagEntry>>;
@@ -122,4 +134,36 @@ export interface CatalogEntry {
 export interface Catalog {
   readonly generated: string | null;
   readonly packages: readonly CatalogEntry[];
+}
+
+/**
+ * Package DETAIL-page-only data (C-502, ADR Decision 4, 2026-08-22) — read
+ * from `org.opencontainers.image.{licenses,source,revision}` on a live tag's
+ * OCI image-index manifest `annotations`, when present. NOT ported from the
+ * Python bot: `core/render.py` fetches these same image-index bytes for
+ * `_catalog_platforms` but never reads `annotations` at all — a pure
+ * renderer-side addition, no new wire field, no index write.
+ *
+ * Every field is TS-optional and OMITTED (never `null`/fabricated) when its
+ * source annotation is absent — matches `CatalogEntry.variants`'s existing
+ * "optional, not nullable" convention for exactly the same reason: an absent
+ * annotation is not a knowable "no license", it is simply unreported.
+ *
+ * Deliberately no provenance/attestation boolean here (ADR Decision 4:
+ * signature-verification provenance stays deferred) — this is a faithful
+ * read-through of existing annotation text, nothing more. Never entered into
+ * `/data/catalog/catalog.json` (C-503) — no `catalogIndex`/`catalogEntry`
+ * caller reads this type.
+ */
+export interface CatalogPackageDetail {
+  /** `org.opencontainers.image.licenses` verbatim (e.g. `"MIT OR Apache-2.0"`
+   * — an SPDX expression string, not parsed/validated as one here). */
+  readonly license?: string;
+  /** `org.opencontainers.image.source` verbatim — the repository whose CI
+   * produced this build. Publisher-controlled, untrusted text: a renderer
+   * consuming this MUST run it through an href allowlist (`safeHref.ts`)
+   * before rendering it as a link, same as any other wire-sourced URL. */
+  readonly sourceRepository?: string;
+  /** `org.opencontainers.image.revision` verbatim (e.g. a commit SHA). */
+  readonly revision?: string;
 }

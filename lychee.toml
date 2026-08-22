@@ -1,0 +1,30 @@
+# Broken-link checker configuration (`task lint:links`).
+#
+# The excludes below are all RFC-reserved or non-routable hosts that only ever
+# appear as documentation examples or security-defence test fixtures in this
+# repo (config-schema examples, source-guard tests, the SSRF link-local
+# metadata fixture) — none is a real link, and several (127.0.0.1, the
+# 169.254 metadata endpoint) would hang the checker rather than resolve.
+# Reserved TLDs (.test/.example/.invalid) and the example.* domains are
+# guaranteed unregistrable per RFC 2606 / RFC 6761, so excluding them can never
+# mask a genuinely broken external link.
+
+# `test/fixtures/**` is wire DATA, not repo documentation: the READMEs there are
+# CAS payloads a fixture index serves to the renderer, and their links are
+# resolved against the RENDERED SITE's root (`/acme/gadget` is a package detail
+# page), not against this repository. Checking them here asks the wrong question
+# and fails on links that are correct for their actual consumer — the fixture's
+# own wire validity is asserted by `test/quality/fixture-index.test.ts`, and the
+# rendered site's links are exercised by the Lighthouse gate.
+exclude_path = ["test/fixtures"]
+
+exclude = [
+    "^https?://localhost",
+    "^https?://127\\.0\\.0\\.1",
+    "^https?://169\\.254\\.169\\.254",
+    "example\\.(com|net|org)",
+    "\\.(test|example|invalid)(?:[:/]|$)",
+]
+accept = [200, 429]
+cache = true
+max_cache_age = "1d"

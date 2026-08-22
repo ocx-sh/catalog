@@ -1,26 +1,35 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useData } from 'vitepress'
 import Logo from '../layout/Logo.vue'
+import { isExternalLink } from '../../utils/dom'
 
-// CTA targets per plan_site_redesign.md owner decision 6.
-const REQUEST_PACKAGE_URL = 'https://github.com/ocx-sh/ocx/issues/new?template=package_request.yml'
-const CONTRIBUTE_MIRROR_URL = '/docs/how-to/announce-a-package'
+// C-602: this component used to hardcode a `github.com/ocx-sh/ocx` issue
+// CTA and a `/docs/how-to/announce-a-package` mirror-contribution link —
+// both ocx-sh/index-specific (the latter assumes a docs page that ships
+// with THAT deployment's own docs content, which this renderer never
+// bundles). Neither is "what a corporate mirror configured" (S-01), so both
+// are replaced by the SAME `nav[]` config surface `SiteHeader.vue`/
+// `SiteFooter.vue` already render — omitted entirely when unset, never a
+// baked-in ocx-sh URL.
+interface EmptyStateNavItem { text: string, link: string }
+const { theme } = useData()
+const navItems = computed(() => (theme.value.nav ?? []) as EmptyStateNavItem[])
 
-const props = defineProps<{
-  variant: 'no-data' | 'no-match'
+defineProps<{
+  variant: 'no-data' | 'no-match' | 'error'
   /** Only meaningful for `no-match` — the query that produced zero results. */
   query?: string
   /** Only meaningful for `no-match` — total catalog size for the hint copy. */
   total?: number
+  /** Only meaningful for `error` (C-604) — `useCatalog()`'s own `error`
+   * message, distinguishing a genuine broken-deploy fetch failure from a
+   * real empty index (never "no packages published yet" for a 5xx/network/
+   * malformed response — S-02). */
+  errorMessage?: string | null
 }>()
 
-defineEmits<{ 'clear-search': [] }>()
-
-const requestQueryUrl = computed(() => {
-  const q = props.query?.trim()
-  if (!q) return REQUEST_PACKAGE_URL
-  return `${REQUEST_PACKAGE_URL}&title=${encodeURIComponent(`Request: ${q}`)}`
-})
+defineEmits<{ 'clear-search': [], retry: [] }>()
 </script>
 
 <template>
@@ -29,19 +38,41 @@ const requestQueryUrl = computed(() => {
       <Logo class="empty-logo" />
       <span class="empty-title">No packages published yet</span>
       <p class="empty-copy">
-        The index is live but the first seeds haven't landed. Watch the repo, or bring a mirror of your own.
+        The index is live but the first seeds haven't landed.
       </p>
-      <div class="empty-ctas">
-        <a :href="REQUEST_PACKAGE_URL" target="_blank" rel="noopener noreferrer" class="cta-primary">request a package</a>
-        <a :href="CONTRIBUTE_MIRROR_URL" class="cta-secondary">contribute a mirror</a>
+      <div v-if="navItems.length" class="empty-ctas">
+        <a
+          v-for="item in navItems"
+          :key="item.link"
+          :href="item.link"
+          :target="isExternalLink(item.link) ? '_blank' : undefined"
+          :rel="isExternalLink(item.link) ? 'noopener noreferrer' : undefined"
+          class="cta-secondary"
+        >{{ item.text }}</a>
       </div>
     </template>
-    <template v-else>
+    <template v-else-if="variant === 'no-match'">
       <span class="empty-title">No matches for &ldquo;{{ query }}&rdquo;</span>
       <p class="empty-copy">Check the spelling or drop a filter — {{ total }} packages total.</p>
       <div class="empty-ctas">
         <button type="button" class="cta-outline" @click="$emit('clear-search')">clear search</button>
-        <a :href="requestQueryUrl" target="_blank" rel="noopener noreferrer" class="cta-ghost">request &ldquo;{{ query }}&rdquo; →</a>
+        <a
+          v-for="item in navItems"
+          :key="item.link"
+          :href="item.link"
+          :target="isExternalLink(item.link) ? '_blank' : undefined"
+          :rel="isExternalLink(item.link) ? 'noopener noreferrer' : undefined"
+          class="cta-ghost"
+        >{{ item.text }}</a>
+      </div>
+    </template>
+    <!-- C-604: a genuine fetch failure (5xx/network/malformed
+         catalog.json), distinct from a real empty index — S-02. -->
+    <template v-else>
+      <span class="empty-title">Failed to load the catalog</span>
+      <p class="empty-copy">{{ errorMessage ?? 'Something went wrong fetching package data.' }} Try reloading.</p>
+      <div class="empty-ctas">
+        <button type="button" class="cta-outline" @click="$emit('retry')">try again</button>
       </div>
     </template>
   </div>
@@ -85,7 +116,6 @@ const requestQueryUrl = computed(() => {
   margin-top: 6px;
 }
 
-.cta-primary,
 .cta-secondary,
 .cta-outline,
 .cta-ghost {
@@ -95,18 +125,6 @@ const requestQueryUrl = computed(() => {
   border-radius: var(--radius-md);
   padding: 7px 14px;
   cursor: pointer;
-}
-
-.cta-primary {
-  color: #fff;
-  background: var(--c-accent);
-  border: 1px solid var(--c-accent);
-}
-
-.cta-primary:hover {
-  background: var(--c-accent-hover);
-  border-color: var(--c-accent-hover);
-  color: #fff;
 }
 
 .cta-secondary {

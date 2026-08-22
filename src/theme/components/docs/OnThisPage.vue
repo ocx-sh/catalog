@@ -57,7 +57,7 @@ onBeforeUnmount(() => observer?.disconnect())
 
 .otp-label {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--text-2xs);
   font-weight: 600;
   letter-spacing: 0.09em;
   color: var(--c-text-3);

@@ -18,6 +18,9 @@ export interface PackageFilter {
   keywords?: string[]
   /** When true, only `status === 'deprecated'` packages match. */
   deprecatedOnly?: boolean
+  /** When true, only `status === 'yanked'` (whole-package yank) packages
+   * match — parallel to `deprecatedOnly`, a distinct status value (C-603). */
+  yankedOnly?: boolean
 }
 
 // One index per catalog array, built lazily on first query. WeakMap keyed
@@ -65,6 +68,7 @@ export function filterPackages(packages: CatalogPackage[], filter: PackageFilter
     }
 
     if (filter.deprecatedOnly && pkg.status !== 'deprecated') return false
+    if (filter.yankedOnly && pkg.status !== 'yanked') return false
 
     return true
   })

@@ -21,12 +21,17 @@
       "items": { "$ref": "#/$defs/sourceEntry" },
       "contains": { "$ref": "#/$defs/rootSourceEntry" },
       "minContains": 0,
-      "maxContains": 1
+      "maxContains": 1,
+      "description": "One or more index sources this catalog renders (path/url/git, discriminated per entry — see sourceEntry). At most one entry may set root: true, serving that source's wire tree at the site root as well as under index/<label>/."
     },
-    "brand": { "$ref": "#/$defs/brand" },
+    "brand": {
+      "$ref": "#/$defs/brand",
+      "description": "Site branding: title (required), and optional wordmark/logo. Drives <title>, og:site_name, and the header."
+    },
     "nav": {
       "type": "array",
-      "items": { "$ref": "#/$defs/navEntry" }
+      "items": { "$ref": "#/$defs/navEntry" },
+      "description": "Extra top-nav links, rendered after the built-in Docs entry when docs is set."
     },
     "docs": {
       "type": "string",
@@ -43,7 +48,10 @@
       "minLength": 1,
       "description": "Static assets directory, resolved relative to this file's directory. Copied verbatim into VitePress's publicDir, served at the site root."
     },
-    "ci": { "$ref": "#/$defs/ci" },
+    "ci": {
+      "$ref": "#/$defs/ci",
+      "description": "CI workflow rendering configuration for `ocx-catalog ci` — forge (github/gitlab), package manager, and whether to render the verification job."
+    },
     "siteUrl": {
       "type": "string",
       "minLength": 1,
@@ -134,8 +142,12 @@
       "additionalProperties": false,
       "required": ["text", "link"],
       "properties": {
-        "text": { "type": "string", "minLength": 1 },
-        "link": { "type": "string", "minLength": 1 }
+        "text": { "type": "string", "minLength": 1, "description": "Visible label for this nav entry." },
+        "link": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Target href — an http(s) URL or a site-relative path. Validated at config-load time against the same allowlist the theme's safeHref uses before render."
+        }
       }
     },
     "ci": {

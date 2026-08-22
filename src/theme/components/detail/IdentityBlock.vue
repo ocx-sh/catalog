@@ -25,7 +25,11 @@ const props = defineProps<{
 const title = computed(() => props.root.desc?.title ?? props.bareName.split('/').pop() ?? props.bareName)
 const description = computed(() => props.root.desc?.description ?? '')
 const keywords = computed(() => props.root.desc?.keywords ?? [])
-const qualifiedDisplayName = computed(() => `ocx.sh/${props.bareName}`)
+// C-601: `root.name` — already carries this deployment's own brand prefix
+// (whatever it is), never re-synthesized from `bareName` with a hardcoded
+// `ocx.sh/` (that broke on a corporate mirror's own prefix). Same pattern
+// MetaRail/VersionTree already use for their own `qualifiedName` prop.
+const qualifiedDisplayName = computed(() => props.root.name)
 
 const { copied, copyText } = useCopyState(1500)
 const { toast } = useToast()
@@ -79,6 +83,7 @@ const monogramStyle = computed(() => ({
         </CopyContextMenu>
         <span v-if="latestVersionLabel" class="identity-latest">latest {{ latestVersionLabel }}</span>
         <span v-if="root.status === 'deprecated'" class="identity-deprecated">DEPRECATED</span>
+        <span v-else-if="root.status === 'yanked'" class="identity-deprecated identity-yanked">YANKED</span>
       </div>
 
       <p v-if="description" class="identity-desc">{{ description }}</p>
@@ -184,15 +189,28 @@ const monogramStyle = computed(() => ({
   color: var(--c-ok);
 }
 
+/* WP6: text color --c-accent-text, not --c-accent-hover — 2.21:1 on the
+ * ambient --c-bg (this badge's DEFAULT state was reusing the hover token
+ * for its bright look, not an actual :hover). The border stays
+ * --c-accent-hover — a non-text/decorative use the WCAG text-contrast
+ * check doesn't cover. */
 .identity-deprecated {
   font-family: var(--font-mono);
   font-size: var(--text-2xs);
   font-weight: 600;
-  color: var(--c-accent-hover);
+  color: var(--c-accent-text);
   border: 1px solid var(--c-accent-hover);
   border-radius: var(--radius-sm);
   padding: 2px 8px;
   letter-spacing: 0.05em;
+}
+
+/* Whole-package yanked (C-603) — same shape as .identity-deprecated, warn
+ * tokens instead of the accent-hover coral (more severe than a plain
+ * deprecation notice). */
+.identity-yanked {
+  color: var(--c-warn);
+  border-color: var(--c-warn);
 }
 
 .identity-desc {

@@ -1,0 +1,159 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+#
+# Canonical local + CI task surface. Every task wraps a plain npm script or an
+# ocx-provisioned tool (task/git-cliff/actionlint/lychee/gitleaks, pinned in
+# ocx.toml). `task verify` is the local equivalent of the CI quality gate; CI
+# runs the identical tasks through `ocx run -- task <name>` so local and CI
+# execute the same checks. Node dependencies come from `npm ci` (a CI step, or
+# an existing local node_modules) — these tasks do not install them.
+
+version: '3'
+
+tasks:
+  default:
+    desc: Fast feedback — the full local quality gate
+    cmds:
+      - task: verify
+
+  verify:
+    desc: Full quality gate (lint, typecheck, test+coverage, pack-smoke)
+    cmds:
+      - task: lint
+      - task: typecheck
+      - task: test
+      - task: pack-smoke
+
+  lint:
+    desc: Lint sources (eslint)
+    cmds:
+      - npm run lint
+
+  typecheck:
+    desc: Type-check the CLI/library and the theme (two tsconfig passes)
+    cmds:
+      - npm run typecheck
+
+  test:
+    desc: Run vitest under coverage (100% statements/branches/functions/lines)
+    cmds:
+      - npm test
+
+  pack-smoke:
+    desc: Publish-shape verification (publint, attw, real pack + install smoke)
+    cmds:
+      - node scripts/pack-smoke.mjs
+
+  build:
+    desc: Compile TypeScript to dist/
+    cmds:
+      - npm run build
+
+  lint:actions:
+    desc: Lint GitHub Actions workflows
+    cmds:
+      - actionlint
+
+  lint:links:
+    desc: Check for broken links (network; may be flaky offline)
+    cmds:
+      - lychee --cache --max-cache-age 1d .
+
+  # Version-pinned like every other tool here (task/git-cliff/actionlint/
+  # lychee/gitleaks via ocx.lock, npm in release.yml, @lhci/cli in
+  # package.json). An unpinned `uvx zizmor` would resolve to whatever is
+  # latest on PyPI at run time — a security scanner that silently changes
+  # its rule set between a local run and CI is not a gate you can reason
+  # about, and it is one more unreviewed package fetched into a build.
+  lint:workflows:
+    desc: Zizmor security scan over .github/ (needs uv/uvx on PATH)
+    cmds:
+      - uvx zizmor@1.29.0 --min-severity medium --config .github/zizmor.yml .github/
+
+  secrets:
+    desc: Scan the working tree and history for committed secrets
+    cmds:
+      - gitleaks detect --source . --redact
+
+  audit:signatures:
+    desc: Verify every resolved dependency's npm registry signature
+    cmds:
+      - npm audit signatures
+
+  # quality:web is STANDALONE — deliberately NOT part of `verify`. It builds the
+  # committed fixture index at test/fixtures/quality-index/ into .lhci-site/,
+  # which .lighthouserc.cjs points `staticDistDir` at, then asserts the measured
+  # a11y/best-practices/SEO/perf floors.
+  #
+  # `npx lhci` runs the PINNED @lhci/cli devDependency out of node_modules/.bin
+  # (never `npx --yes @lhci/cli`, which would fetch an unpinned copy at run
+  # time). The two env vars below make a WSL shell behave like the Linux CI
+  # runner; both are inert on CI. See scripts/lhci-posix-tmpdir.cjs for why
+  # chrome-launcher's WSL branch otherwise writes Chrome profile directories
+  # into the working tree.
+  quality:web:
+    desc: Build the fixture catalog site and run Lighthouse CI (a11y/SEO/perf)
+    cmds:
+      - npm run build
+      - node dist/cli/index.js build --config test/fixtures/quality-index/catalog.config.json --out .lhci-site
+      # CHROME_PATH: honour an explicit one, else fall back to a puppeteer-cached
+      # Chrome if this machine has one. Empty on CI, where chrome-launcher finds
+      # the runner's preinstalled google-chrome on its own.
+      - >-
+        CHROME_PATH="${CHROME_PATH:-$(ls -d "$HOME"/.cache/puppeteer/chrome/*/chrome-linux64/chrome 2>/dev/null | tail -1)}"
+        NODE_OPTIONS="--require ./scripts/lhci-posix-tmpdir.cjs"
+        npx lhci autorun
+
+  # Regenerate CHANGELOG.md from the full git history.
+  changelog:
+    desc: Regenerate CHANGELOG.md from git history
+    cmds:
+      - git-cliff -o CHANGELOG.md
+
+  # Show what would land in the next release's changelog section.
+  changelog:preview:
+    desc: Preview unreleased changes
+    cmds:
+      - git-cliff --unreleased
+
+  # Full release preparation: compute the next version, write it into
+  # package.json (no commit, no tag), regenerate CHANGELOG.md, run the gate.
+  # After this succeeds the human reviews, then commits/tags/pushes manually —
+  # this task never touches git.
+  #
+  # Version selection:
+  #   task release:prepare BUMP=auto                 # git-cliff picks the bump from commits
+  #   task release:prepare BUMP=minor                # force a bump level
+  #   task release:prepare BUMP=auto VERSION=0.2.0   # pin an exact version (v prefix optional)
+  #
+  # BUMP is a required enum: with interactive mode (.taskrc.yml) and a TTY it
+  # renders a selection menu; on CI / no TTY it must be passed on the CLI.
+  release:prepare:
+    desc: 'Prepare a release (BUMP=auto|patch|minor|major, optional VERSION=x.y.z)'
+    requires:
+      vars:
+        - name: BUMP
+          enum: [auto, patch, minor, major]
+    vars:
+      # git-cliff computes the next version from git history. `auto` lets it
+      # pick the bump from conventional commits; otherwise BUMP forces the
+      # level. VERSION pins an exact value and wins over BUMP.
+      NEXT_VERSION:
+        sh: |
+          if [ -n "{{.VERSION}}" ]; then
+            printf 'v%s' "{{.VERSION | default "" | trimPrefix "v"}}"
+          elif [ "{{.BUMP}}" = "auto" ]; then
+            git-cliff --bumped-version
+          else
+            git-cliff --bumped-version --bump "{{.BUMP}}"
+          fi
+    cmds:
+      - echo "Next version:{{.NEXT_VERSION}}"
+      - npm version "{{.NEXT_VERSION | trimPrefix "v"}}" --no-git-tag-version
+      - git-cliff --tag "{{.NEXT_VERSION}}" -o CHANGELOG.md
+      - task: verify
+      - |
+        echo ""
+        echo "Release prepared ({{.NEXT_VERSION}}). Review the diff, then:"
+        echo "  git add -A && git commit -m 'chore(release): {{.NEXT_VERSION}}'"
+        echo "  git tag {{.NEXT_VERSION}}"
+        echo "  git push --atomic origin main {{.NEXT_VERSION}}"

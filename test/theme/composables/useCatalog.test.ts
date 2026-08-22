@@ -40,30 +40,81 @@ describe('useCatalog', () => {
     globalThis.fetch = vi.fn(() => Promise.resolve({ ok: false, status: 404 })) as unknown as typeof fetch
 
     const useCatalog = await freshUseCatalog()
-    const { catalog, load } = useCatalog()
+    const { catalog, error, load } = useCatalog()
     await load()
 
     expect(catalog.value).toEqual({ generated: null, packages: [] })
+    expect(error.value).toBeNull()
   })
 
-  test('a non-404 non-ok response also degrades to the empty catalog', async () => {
+  // C-604: a genuine 5xx must NOT be indistinguishable from a real empty
+  // index (S-02) — `error` is now set so a caller (CatalogPage) can render
+  // a distinct "failed to load" state instead of "no packages published yet".
+  test('a non-404 non-ok response sets error and leaves catalog empty', async () => {
     globalThis.fetch = vi.fn(() => Promise.resolve({ ok: false, status: 500 })) as unknown as typeof fetch
 
     const useCatalog = await freshUseCatalog()
-    const { catalog, load } = useCatalog()
+    const { catalog, error, load } = useCatalog()
     await load()
 
     expect(catalog.value).toEqual({ generated: null, packages: [] })
+    expect(error.value).toBe('HTTP 500')
   })
 
-  test('a thrown fetch also degrades to the empty catalog', async () => {
+  test('a thrown fetch (network error) sets error to its message', async () => {
     globalThis.fetch = vi.fn(() => Promise.reject(new Error('network down'))) as unknown as typeof fetch
 
     const useCatalog = await freshUseCatalog()
-    const { catalog, load } = useCatalog()
+    const { catalog, error, load } = useCatalog()
     await load()
 
     expect(catalog.value).toEqual({ generated: null, packages: [] })
+    expect(error.value).toBe('network down')
+  })
+
+  test('a thrown non-Error value falls back to a generic error message', async () => {
+    globalThis.fetch = vi.fn(() => Promise.reject('boom')) as unknown as typeof fetch
+
+    const useCatalog = await freshUseCatalog()
+    const { error, load } = useCatalog()
+    await load()
+
+    expect(error.value).toBe('Failed to load catalog')
+  })
+
+  test('malformed JSON on an ok response sets error, not a silent empty catalog', async () => {
+    globalThis.fetch = vi.fn(() =>
+      Promise.resolve({ ok: true, status: 200, json: () => Promise.reject(new Error('bad json')) }),
+    ) as unknown as typeof fetch
+
+    const useCatalog = await freshUseCatalog()
+    const { catalog, error, load } = useCatalog()
+    await load()
+
+    expect(catalog.value).toEqual({ generated: null, packages: [] })
+    expect(error.value).toBe('bad json')
+  })
+
+  test('a later successful load() after a failed one clears the earlier error', async () => {
+    const data = { generated: '2026-08-22T00:00:00Z', packages: [] }
+    let call = 0
+    globalThis.fetch = vi.fn(() => {
+      call++
+      return call === 1
+        ? Promise.resolve({ ok: false, status: 500 })
+        : Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(data) })
+    }) as unknown as typeof fetch
+
+    const useCatalog = await freshUseCatalog()
+    const { catalog, error, load } = useCatalog()
+    await load()
+    expect(error.value).toBe('HTTP 500')
+
+    // A failure is never cached (only the success path sets `cache`), so a
+    // second load() retries the network rather than replaying the failure.
+    await load()
+    expect(error.value).toBeNull()
+    expect(catalog.value).toEqual(data)
   })
 
   test('cache hit: a second load() reuses the module-level cache, no second fetch', async () => {

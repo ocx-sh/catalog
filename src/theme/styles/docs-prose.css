@@ -71,8 +71,10 @@
   margin: 0.3em 0;
 }
 
+/* WP6: --c-accent-text, not --c-accent — same small-static-text-on-light-
+ * background failure as base.css's own default `a` (see palette.css). */
 .docs-prose :where(a) {
-  color: var(--c-accent);
+  color: var(--c-accent-text);
   text-decoration: underline;
   text-decoration-color: transparent;
   transition: text-decoration-color 0.15s;

@@ -80,6 +80,12 @@ describe("C-005 css order — consumer css wins in the final cascade", () => {
 
             const themeIdx = concatenated.lastIndexOf(THEME_ACCENT);
             const consumerIdx = concatenated.lastIndexOf(CONSUMER_ACCENT);
+            // Proves the theme's OWN accent actually landed in the built
+            // output before comparing positions — without this, a build
+            // that silently dropped the theme's CSS entirely would leave
+            // `themeIdx === -1`, and `consumerIdx > -1` would then pass
+            // vacuously regardless of real cascade order.
+            expect(themeIdx).toBeGreaterThan(-1);
             expect(consumerIdx).toBeGreaterThan(-1);
             expect(consumerIdx).toBeGreaterThan(themeIdx);
           });

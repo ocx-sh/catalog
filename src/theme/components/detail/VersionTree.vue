@@ -478,8 +478,11 @@ function onMinorHover(minor: MinorGroup) {
   outline: none;
 }
 
+/* WP6: --c-accent-text, not --c-accent — 2.73:1 on this segment's own
+ * 8%-accent-tint background. Hover/focus above stay plain --c-accent
+ * (unaudited transient states, same as every other WP6 site). */
 .alias-segment.latest {
-  color: var(--c-accent);
+  color: var(--c-accent-text);
   font-weight: 600;
   background: color-mix(in srgb, var(--c-accent) 8%, transparent);
 }

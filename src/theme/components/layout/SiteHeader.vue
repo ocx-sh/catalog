@@ -8,6 +8,7 @@ import ThemeToggle from './ThemeToggle.vue'
 // SearchInput, which is WP-C scope).
 import { useCommandPalette } from '../../composables/useCommandPalette'
 import ExternalIcon from '../shared/ExternalIcon.vue'
+import { isExternalLink } from '../../utils/dom'
 
 // WP-10: the fixed skeleton (brand, search, theme toggle) always renders;
 // its CONTENT is consumer-config-driven — the wordmark and logo from C-002
@@ -36,21 +37,26 @@ const navItems = computed(() => (theme.value.nav ?? []) as HeaderNavItem[])
 // `themeConfig` behaves the same as a generated one.
 const wordmark = computed(() => (theme.value.brand?.wordmark ?? theme.value.brand?.title ?? '') as string)
 
+// WP6: `.brand-name` (the wordmark span) is `display: none` under 640px
+// (see the media query below) — Lighthouse's default a11y run uses mobile
+// emulation, so at that width the link's only remaining content was the
+// logo `<img>` (deliberately `alt=""`, decorative — see Logo.vue's own
+// docblock), leaving it with NO accessible name (axe `link-name`). An
+// `aria-label` on the anchor itself is viewport-independent — it doesn't
+// depend on which inline content CSS happens to be hiding — and still
+// satisfies WCAG 2.5.3 Label-in-Name since the visible wordmark text (when
+// shown) is a verbatim substring of it.
+const brandLabel = computed(() => (wordmark.value ? `${wordmark.value} — home` : 'Home'))
+
 function isActive(prefix: string): boolean {
   if (prefix === '/docs/') return route.path.startsWith('/docs/')
   return !route.path.startsWith('/docs/')
-}
-
-// Same heuristic VitePress's own DefaultTheme nav uses: a link carrying an
-// absolute URI scheme (or protocol-relative `//`) is external.
-function isExternal(link: string): boolean {
-  return /^([a-z][a-z\d+.-]*:|\/\/)/i.test(link)
 }
 </script>
 
 <template>
   <header class="site-header">
-    <a href="/" class="brand">
+    <a href="/" class="brand" :aria-label="brandLabel">
       <Logo class="brand-logo" />
       <span class="brand-name">{{ wordmark }}</span>
     </a>
@@ -75,12 +81,12 @@ function isExternal(link: string): boolean {
           :key="item.link"
           :href="item.link"
           class="nav-link"
-          :class="{ 'nav-link-external': isExternal(item.link) }"
-          :target="isExternal(item.link) ? '_blank' : undefined"
-          :rel="isExternal(item.link) ? 'noopener noreferrer' : undefined"
+          :class="{ 'nav-link-external': isExternalLink(item.link) }"
+          :target="isExternalLink(item.link) ? '_blank' : undefined"
+          :rel="isExternalLink(item.link) ? 'noopener noreferrer' : undefined"
         >
           {{ item.text }}
-          <ExternalIcon v-if="isExternal(item.link)" :size="11" />
+          <ExternalIcon v-if="isExternalLink(item.link)" :size="11" />
         </a>
       </nav>
       <span class="nav-divider" />
@@ -172,8 +178,11 @@ function isExternal(link: string): boolean {
   color: var(--c-text-1);
 }
 
+/* WP6: text color moves to --c-accent-text (2.99:1 on --c-surface with the
+ * plain --c-accent -> 5.42:1) — the underline stays --c-accent, a
+ * non-text/decorative use excluded from the WCAG text-contrast check. */
 .nav-link.active {
-  color: var(--c-accent);
+  color: var(--c-accent-text);
   border-bottom-color: var(--c-accent);
 }
 

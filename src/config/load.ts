@@ -195,12 +195,72 @@ function buildSourceEntry(rawEntry: unknown, index: number): SourceEntry {
   return { git: expectString(raw.git, `sources[${index}].git`), ref, dir, label, root };
 }
 
+/**
+ * Sentinel origin for `staysOnSite` below. `.invalid` is reserved by RFC 2606
+ * and can never resolve, so a value that somehow escaped the origin check
+ * still could not name a real host.
+ */
+const NAV_LINK_SENTINEL_ORIGIN = "https://ocx-catalog-nav-sentinel.invalid";
+
+/**
+ * Does `value` resolve to a path on the SAME origin it is resolved against?
+ *
+ * The check delegates to the real URL parser rather than pattern-matching the
+ * string, because "starts with `/` but is not `//`" is not the same question
+ * as "stays on this site", and the gap between them is an open redirect:
+ * `/\evil.example` and `/<TAB>/evil.example` both resolve to
+ * `https://evil.example` in every WHATWG-conformant parser (backslashes are
+ * normalized to `/` for special schemes; tabs and newlines are stripped
+ * before parsing). A second hand-rolled string check would just be a new
+ * place for browser behaviour to drift away from ours — the same reasoning
+ * `src/theme/utils/safeHref.ts` applies to wire-sourced absolute URLs.
+ *
+ * Returns `false` rather than throwing on an unparseable value (e.g. `//[`,
+ * an invalid IPv6 authority): the caller's fall-through reports it with the
+ * loader's own error shape.
+ */
+function staysOnSite(value: string): boolean {
+  try {
+    return new URL(value, `${NAV_LINK_SENTINEL_ORIGIN}/`).origin === NAV_LINK_SENTINEL_ORIGIN;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * `nav[].link` allowlist (C-605): an absolute `http:`/`https:` URL, or a
+ * path that genuinely resolves back onto this site's own origin. Mirrors
+ * `src/theme/utils/safeHref.ts`'s runtime http(s)-only allowlist for the
+ * absolute-URL half; the site-relative half is this loader's own addition,
+ * since `safeHref` only ever sees wire-sourced ABSOLUTE URLs, never a
+ * config-authored relative path like the existing `nav: [{ link: "/docs/" }]`
+ * fixture shape.
+ *
+ * Enforced at config-LOAD time, not just sanitized late by whatever renders
+ * it: a corporate mirror's `catalog.config.json` can be fork-PR-authored and
+ * this loader's output feeds a generated CI workflow for that consumer, so a
+ * `javascript:` (or `data:`, `vbscript:`, ...) value must fail the build
+ * outright rather than surviving to become a rendered `<a href>`. There is no
+ * render-time second line of defence: `SiteHeader.vue`, `SiteFooter.vue` and
+ * `EmptyState.vue` all bind this value straight to `:href`, and `dom.ts`'s
+ * `isExternalLink` would classify an escaping value as internal — so it would
+ * render without even `rel="noopener"`, looking like same-site navigation.
+ */
+function assertSafeNavLink(value: string, key: string): void {
+  if (value.startsWith("/") && staysOnSite(value)) {
+    return;
+  }
+  assertPlausibleUrl(value, key, SITE_URL_PROTOCOLS, 'an http(s) URL or a site-relative path starting with "/"');
+}
+
 function buildNavEntry(item: unknown, index: number): NavEntry {
   const raw = expectObject(item, `nav[${index}]`);
   expectExactKeys(raw, ["text", "link"], `nav[${index}]`);
+  const link = expectString(raw.link, `nav[${index}].link`);
+  assertSafeNavLink(link, `nav[${index}].link`);
   return {
     text: expectString(raw.text, `nav[${index}].text`),
-    link: expectString(raw.link, `nav[${index}].link`),
+    link,
   };
 }
 
@@ -299,6 +359,11 @@ function buildCi(value: unknown): CiConfig {
  *   particular is a site-root-relative HREF, never a path this package
  *   reads, so it gets no `PATH_ESCAPE` containment check (the asset itself
  *   ships via `publicDir`, which does).
+ * - Every `nav[].link` must be an absolute `http(s)` URL or a site-relative
+ *   path starting with `/` (never `//`, protocol-relative) -> `INVALID_TYPE`
+ *   otherwise (C-605) — see `assertSafeNavLink`'s own doc comment; a
+ *   `javascript:`/`data:` value is rejected here rather than surviving to a
+ *   rendered `<a href>` in a generated CI/site consumer.
  *
  * Label resolution seam: a source's display label can come from two places
  * — an explicit `label` in config, or (when absent) derivation from the

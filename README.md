@@ -42,10 +42,10 @@ the shape of each.
 npm install --save-dev @ocx-sh/catalog vitepress vue
 ```
 
-`vitepress` and `vue` are peer dependencies (this package never bundles
-them — it plugs a custom theme into your own VitePress install rather than
-shipping a fork of it). Match the versions this package's `package.json`
-declares under `peerDependencies`.
+Requires Node.js `>=20.19`. `vitepress` and `vue` are peer dependencies
+(this package never bundles them — it plugs a custom theme into your own
+VitePress install rather than shipping a fork of it). Match the versions
+this package's `package.json` declares under `peerDependencies`.
 
 ## Quickstart
 
@@ -165,7 +165,8 @@ ocx-catalog --help
 
 - **`build`** — renders every configured source to a static site.
   `--config` points at `catalog.config.json` (default: look for one in the
-  current directory); `--out` sets the output directory.
+  current directory); `--out` sets the output directory (default: `dist`,
+  relative to the current working directory).
 - **`dev`** — runs a local dev server with the catalog's hot-reloading
   preview. `--source` lets you point a single ad-hoc source at the dev server
   without writing a full config (mutually exclusive with `--config`).
@@ -310,6 +311,14 @@ own presentation output, free to change shape between versions. The wire
 contract — `/config.json`, `/p/<namespace>/<package>.json`,
 `/p/<namespace>/<package>/o/sha256/<hex>.json` — belongs to the index this
 tool reads, not to this tool itself.
+
+### `configVersion`
+
+An optional top-level `"configVersion": 1` forward-compat discriminator.
+Omit it and it's treated as `1` — the only value this release understands.
+A config file that names a version this release doesn't recognize fails
+loudly at load time (`UNSUPPORTED_VERSION`) rather than being silently
+parsed against the wrong schema.
 
 ## Config schema
 

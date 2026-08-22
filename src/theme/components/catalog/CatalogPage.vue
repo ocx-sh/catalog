@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { useData } from 'vitepress'
 import { useLocalStorage } from '@vueuse/core'
 import { SelectRoot, SelectTrigger, SelectPortal, SelectContent, SelectViewport, SelectItem, SelectItemText } from 'reka-ui'
 import { useCatalog } from '../../composables/useCatalog'
@@ -20,7 +21,14 @@ import EmptyState from './EmptyState.vue'
 // all search/filter state. (The command palette also calls `useCatalog()`,
 // lazily on first open, for its package results — see `useCatalog.ts` and
 // `search/SearchModal.vue`.)
-const { catalog, loading, load: loadCatalog } = useCatalog()
+const { catalog, loading, error, load: loadCatalog } = useCatalog()
+
+// C-607: the landing page had ZERO headings — an axe/Lighthouse a11y
+// failure (every page needs exactly one `<h1>`). Visually hidden is fine
+// here: the wordmark in SiteHeader already carries the visible brand
+// identity, this is purely a document-outline/screen-reader landmark.
+const { theme } = useData()
+const brandTitle = computed(() => (theme.value.brand?.title ?? '') as string)
 onMounted(() => {
   // Prefill from `/?q=` (detail-page keyword chips link here) BEFORE the
   // catalog fetch resolves — the grid's first paint is already filtered,
@@ -62,6 +70,7 @@ const SORT_LABELS = { name: 'name', updated: 'recent', created: 'newest' } as co
 const activePlatforms = ref<string[]>([])
 const activeKeywords = ref<string[]>([])
 const deprecatedOnly = ref(false)
+const yankedOnly = ref(false)
 
 const KEYWORD_CHIP_LIMIT = 8
 
@@ -76,6 +85,7 @@ const filtered = computed(() =>
     platforms: activePlatforms.value,
     keywords: activeKeywords.value,
     deprecatedOnly: deprecatedOnly.value,
+    yankedOnly: yankedOnly.value,
   }),
 )
 
@@ -89,12 +99,15 @@ const sorted = computed(() => {
   return sortInverted.value ? [...list].reverse() : list
 })
 
-// Tab order (owner spec #44, reaffirmed 2026-08-05 — the UX-overhaul
-// natural-stop pass was a regression): Tab walks search bar → first
-// card/row → next → …. Every toolbar affordance (chips, clear buttons,
-// sort, view toggle) and the card's own install box stays pulled out via
-// `tabindex="-1"` — mouse/"/"-reachable, never a Tab stop. Arrow keys
-// remain as a faster grid-shaped movement on top.
+// C-330 (owner-override, ADR Decision 3, supersedes owner spec #44 for
+// interactive toolbar controls): every toolbar affordance (chips, clear
+// buttons, sort, view toggle) is now a real Tab stop again — spec #44's
+// blanket `tabindex="-1"` made platform/keyword filtering, sort, and view
+// switching mouse-only, a WCAG 2.1.1 (A) failure the Lighthouse a11y gate
+// cannot pass with in place. Reversibility: two-way, recorded in the ADR;
+// the owner can reinstate it. Arrow keys remain as a faster grid-shaped
+// movement ACROSS cards once focus is already inside the grid/table — they
+// never replace Tab reaching the toolbar first.
 const ARROW_DELTA: Record<string, number> = { ArrowLeft: -1, ArrowRight: 1 }
 
 function onGridKeydown(event: KeyboardEvent) {
@@ -168,6 +181,7 @@ const activeFilterLabels = computed(() => [
   ...activePlatforms.value,
   ...activeKeywords.value,
   ...(deprecatedOnly.value ? ['deprecated'] : []),
+  ...(yankedOnly.value ? ['yanked'] : []),
 ])
 
 function togglePlatform(os: string) {
@@ -186,6 +200,7 @@ function clearFilters() {
   activePlatforms.value = []
   activeKeywords.value = []
   deprecatedOnly.value = false
+  yankedOnly.value = false
   query.value = ''
 }
 
@@ -217,11 +232,14 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 </script>
 
 <template>
-  <main class="catalog-page">
+  <main id="main-content" class="catalog-page">
+    <h1 class="visually-hidden">{{ brandTitle }}</h1>
     <template v-if="loading">
       <div class="toolbar-skeleton" />
       <SkeletonGrid />
     </template>
+
+    <EmptyState v-else-if="error" variant="error" :error-message="error" @retry="loadCatalog" />
 
     <EmptyState v-else-if="catalog.packages.length === 0" variant="no-data" />
 
@@ -235,9 +253,11 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
           :active-keywords="activeKeywords"
           :hidden-keyword-count="hiddenKeywordCount"
           :deprecated-active="deprecatedOnly"
+          :yanked-active="yankedOnly"
           @toggle-platform="togglePlatform"
           @toggle-keyword="toggleKeyword"
           @toggle-deprecated="deprecatedOnly = !deprecatedOnly"
+          @toggle-yanked="yankedOnly = !yankedOnly"
         />
         <div class="meta-row">
           <ResultMeta
@@ -248,41 +268,43 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
             :has-query="query.length > 0"
             @clear-filters="clearFilters"
           />
-          <SelectRoot v-model="sortBy">
-            <SelectTrigger class="sort-trigger" aria-label="Sort by" tabindex="-1">
-              <!-- Direction toggle lives INSIDE the box (owner spec, grimoire-
-                   index style): stop pointerdown/click so toggling never opens
-                   the select. Icon = narrow→wide bars for natural, wide→narrow
-                   for inverted. -->
-              <span
-                class="sort-dir-icon"
-                role="button"
-                :title="sortInverted ? 'natural order' : 'invert order'"
-                :aria-pressed="sortInverted"
-                @pointerdown.stop.prevent
-                @click.stop.prevent="sortInverted = !sortInverted"
-              >
-                <svg v-if="sortInverted" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 8 4-4 4 4" /><path d="M7 4v16" /><path d="M11 12h4" /><path d="M11 16h7" /><path d="M11 20h10" /></svg>
-                <svg v-else width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 16 4 4 4-4" /><path d="M7 20V4" /><path d="M11 4h4" /><path d="M11 8h7" /><path d="M11 12h10" /></svg>
-              </span>
-              <span class="sort-label">{{ SORT_LABELS[sortBy] }}</span>
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
-            </SelectTrigger>
-            <SelectPortal>
-              <SelectContent class="sort-dropdown" position="popper" :side-offset="6" align="end">
-                <SelectViewport>
-                  <SelectItem v-for="(label, key) in SORT_LABELS" :key="key" :value="key" class="sort-item">
-                    <SelectItemText>{{ label }}</SelectItemText>
-                  </SelectItem>
-                </SelectViewport>
-              </SelectContent>
-            </SelectPortal>
-          </SelectRoot>
+          <span class="sort-control">
+            <!-- C-607: pulled OUT of SelectTrigger as its own real <button> —
+                 a `role="button"` span nested inside SelectTrigger (itself an
+                 interactive control) is invalid ARIA (nested interactive),
+                 which axe's nested-interactive rule flags. Icon = narrow→wide
+                 bars for natural, wide→narrow for inverted. -->
+            <button
+              type="button"
+              class="sort-dir-btn"
+              :title="sortInverted ? 'natural order' : 'invert order'"
+              :aria-pressed="sortInverted"
+              @click="sortInverted = !sortInverted"
+            >
+              <svg v-if="sortInverted" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 8 4-4 4 4" /><path d="M7 4v16" /><path d="M11 12h4" /><path d="M11 16h7" /><path d="M11 20h10" /></svg>
+              <svg v-else width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 16 4 4 4-4" /><path d="M7 20V4" /><path d="M11 4h4" /><path d="M11 8h7" /><path d="M11 12h10" /></svg>
+            </button>
+            <SelectRoot v-model="sortBy">
+              <SelectTrigger class="sort-trigger" aria-label="Sort by">
+                <span class="sort-label">{{ SORT_LABELS[sortBy] }}</span>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
+              </SelectTrigger>
+              <SelectPortal>
+                <SelectContent class="sort-dropdown" position="popper" :side-offset="6" align="end">
+                  <SelectViewport>
+                    <SelectItem v-for="(label, key) in SORT_LABELS" :key="key" :value="key" class="sort-item">
+                      <SelectItemText>{{ label }}</SelectItemText>
+                    </SelectItem>
+                  </SelectViewport>
+                </SelectContent>
+              </SelectPortal>
+            </SelectRoot>
+          </span>
           <span class="view-toggle" role="group" aria-label="Catalog view">
-            <button type="button" title="Card view" tabindex="-1" :class="{ active: view === 'cards' }" @click="view = 'cards'">
+            <button type="button" title="Card view" :class="{ active: view === 'cards' }" @click="view = 'cards'">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /></svg>
             </button>
-            <button type="button" title="Table view" tabindex="-1" :class="{ active: view === 'table' }" @click="view = 'table'">
+            <button type="button" title="Table view" :class="{ active: view === 'table' }" @click="view = 'table'">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" /></svg>
             </button>
           </span>
@@ -297,12 +319,12 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
         @clear-search="query = ''"
       />
       <CatalogGrid v-else-if="view === 'cards'" @keydown="onGridKeydown">
-        <PackageCard
-          v-for="pkg in sorted"
-          :key="pkg.name"
-          :pkg="pkg"
-          :keyword-rank="keywordRank"
-        />
+        <li v-for="pkg in sorted" :key="pkg.name" class="catalog-grid-item">
+          <PackageCard
+            :pkg="pkg"
+            :keyword-rank="keywordRank"
+          />
+        </li>
       </CatalogGrid>
       <PackageTable v-else :packages="sorted" @keydown="onTableKeydown" />
     </template>
@@ -325,6 +347,29 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
+}
+
+/* C-607: the landing page's one required <h1> — visually hidden, not
+ * removed from the accessibility tree (unlike `display: none`). Same
+ * clip-based technique as SearchModal's own `.visually-hidden`. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* C-607: CatalogGrid is now a real <ul> (list semantics) and each card sits
+ * in its own <li> — `display: contents` drops the <li> from the box tree so
+ * the CARD (not the <li>) is still the actual CSS grid item, unchanged
+ * layout from before the list-semantics fix. */
+.catalog-grid-item {
+  display: contents;
 }
 
 .toolbar-skeleton {
@@ -357,69 +402,86 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   min-width: 0;
 }
 
-/* One shared control height — trigger and view toggle line up exactly. */
-.sort-trigger,
+/* One shared control height — the sort box and view toggle line up exactly. */
+.sort-control,
 .view-toggle {
   height: 28px;
   box-sizing: border-box;
+}
+
+/* C-607: the direction button and SelectTrigger used to be one nested
+ * interactive pair (axe nested-interactive violation) inside a single
+ * bordered box. They're now two real, independently-focusable siblings —
+ * this wrapper is that same bordered box, so the "one control" look is
+ * unchanged; :has() below re-creates the old whole-box hover/focus border
+ * (same pattern PackageCard.vue uses for its install-row hover). */
+.sort-control {
+  display: inline-flex;
+  align-items: stretch;
+  flex-shrink: 0;
+  /* Fixed width sized for the WIDEST label ("recent"/"newest") — the box
+   * must never resize with the selection. */
+  width: 118px;
+  background: var(--c-surface);
+  border: 1px solid var(--c-line);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  transition: border-color 0.15s;
+}
+
+.sort-control:has(.sort-trigger:hover),
+.sort-control:has(.sort-trigger:focus-visible) {
+  border-color: var(--c-accent);
+}
+
+.sort-dir-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 8px;
+  color: var(--c-text-3);
+  background: none;
+  border: none;
+  border-right: 1px solid var(--c-line);
+  cursor: pointer;
+  outline: none;
+}
+
+.sort-dir-btn:hover svg,
+.sort-dir-btn:focus-visible svg {
+  color: var(--c-accent);
 }
 
 .sort-trigger {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  flex-shrink: 0;
-  /* Fixed width sized for the WIDEST label ("recent"/"newest") — the box
-   * must never resize with the selection. */
-  width: 118px;
+  flex: 1;
+  min-width: 0;
   font-family: var(--font-mono);
   font-size: var(--text-xs);
   font-weight: 500;
   line-height: 1;
   color: var(--c-text-2);
-  background: var(--c-surface);
-  border: 1px solid var(--c-line);
-  border-radius: var(--radius-md);
-  padding: 0 9px 0 0;
+  background: none;
+  border: none;
+  padding: 0 9px;
   cursor: pointer;
-  transition: border-color 0.15s, color 0.15s;
-  /* Reka refocuses the trigger after selection — the UA focus ring then
-   * stacks with the hover border ("double bar"). The trigger is already
-   * pulled out of the Tab order (site convention: only cards are Tab
-   * stops), so the ring carries no keyboard-nav signal here; hover border
-   * is the one cue. */
+  transition: color 0.15s;
   outline: none;
 }
 
 .sort-label {
   flex: 1;
   text-align: left;
-  margin-left: 4px;
 }
 
 .sort-trigger:hover,
 .sort-trigger:focus-visible {
   color: var(--c-text-1);
-  border-color: var(--c-accent);
 }
 
 .sort-trigger svg {
   color: var(--c-text-3);
-}
-
-/* In-box direction toggle — full-height hit area with its own divider so
- * it reads as a distinct clickable segment. */
-.sort-dir-icon {
-  display: inline-flex;
-  align-items: center;
-  align-self: stretch;
-  padding: 0 8px;
-  border-right: 1px solid var(--c-line);
-  cursor: pointer;
-}
-
-.sort-dir-icon:hover svg {
-  color: var(--c-accent);
 }
 
 /* Joined two-button segment — same pattern as MetaRail's install toggle. */

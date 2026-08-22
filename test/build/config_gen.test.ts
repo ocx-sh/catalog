@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { readdir, readFile, writeFile } from "node:fs/promises";
+import { chmod, mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { createScratchRoot } from "../../src/build/scratch.js";
 import { synthesizePages, type PackageRoute } from "../../src/build/pages.js";
@@ -97,7 +97,11 @@ describe("C-005 generateConfig — settings carried from site/.vitepress/config.
     await withScratch(async (scratchRoot) => {
       await generateConfig(baseOptions(scratchRoot));
       const { config } = await readGenerated(scratchRoot);
-      expect(config).not.toMatch(/^\s*description:/m);
+      // Exactly 2 leading spaces: the top-level `defineConfig({...})` field
+      // indent — NOT a bare `/^\s*description:/m`, which also matches the
+      // UNRELATED `description:` key inside `detailPageMeta`'s (C-301)
+      // returned object literal, itself indented 4 spaces.
+      expect(config).not.toMatch(/^ {2}description:/m);
     });
   });
 
@@ -404,6 +408,118 @@ describe("C-005/C-008 generateConfig — themeConfig static-JSON injection", () 
       const { config } = await readGenerated(scratchRoot);
       expect(extractJsonStringField(config, "title")).toBe(hostile);
       expect(extractJsonStringField(config, "text")).toBe(hostile);
+    });
+  });
+});
+
+describe("C-302 generateConfig — dead descLookup themeConfig entry removed", () => {
+  it("themeConfig carries no descLookup key at all, even when descLookup resolves real package metadata", async () => {
+    await withScratch(async (scratchRoot) => {
+      await synthesizePages({ scratchRoot, srcDir: SRC_DIR, packages: [route(["kitware", "cmake"])] });
+      const descLookup = () => ({ title: "CMake", description: "Cross-platform build system generator." });
+      await generateConfig(baseOptions(scratchRoot, { descLookup }));
+      const { config } = await readGenerated(scratchRoot);
+      // The module-level DESC_LOOKUP const (transformHead/transformPageData's
+      // own lookup table) still carries the baked data — only the
+      // themeConfig.descLookup PROJECTION of it is gone.
+      expect(config).toContain('"title": "CMake"');
+      expect(config).not.toMatch(/descLookup:\s*DESC_LOOKUP/);
+      expect(config).not.toContain("themeConfig.descLookup");
+    });
+  });
+});
+
+describe("C-301 generateConfig — site-wide og:image/twitter:image from the brand logo", () => {
+  it("logo configured, no siteUrl -> both metas use the site-root-relative href", async () => {
+    await withScratch(async (scratchRoot) => {
+      const source = join(scratchRoot, "acme-logo.svg");
+      await writeFile(source, LOGO_BYTES, "utf8");
+      await generateConfig(baseOptions(scratchRoot, { brandLogoSource: source }));
+      const { config } = await readGenerated(scratchRoot);
+      expect(config).toContain('["meta", {"property":"og:image","content":"/acme-logo.svg"}]');
+      expect(config).toContain('["meta", {"name":"twitter:image","content":"/acme-logo.svg"}]');
+    });
+  });
+
+  it("logo configured WITH siteUrl -> both metas use the absolute URL", async () => {
+    await withScratch(async (scratchRoot) => {
+      const source = join(scratchRoot, "acme-logo.svg");
+      await writeFile(source, LOGO_BYTES, "utf8");
+      await generateConfig(
+        baseOptions(scratchRoot, { brandLogoSource: source, siteUrl: "https://mirror.example.test" }),
+      );
+      const { config } = await readGenerated(scratchRoot);
+      const absolute = "https://mirror.example.test/acme-logo.svg";
+      expect(config).toContain(`["meta", {"property":"og:image","content":${JSON.stringify(absolute)}}]`);
+      expect(config).toContain(`["meta", {"name":"twitter:image","content":${JSON.stringify(absolute)}}]`);
+    });
+  });
+
+  it("no logo configured -> neither meta is emitted", async () => {
+    await withScratch(async (scratchRoot) => {
+      await generateConfig(baseOptions(scratchRoot));
+      const { config } = await readGenerated(scratchRoot);
+      expect(config).not.toContain("og:image");
+      expect(config).not.toContain("twitter:image");
+    });
+  });
+});
+
+describe("C-301 generateConfig — color-scheme meta, unconditional", () => {
+  it("always emits a light-dark color-scheme meta, regardless of brand/siteUrl", async () => {
+    await withScratch(async (scratchRoot) => {
+      await generateConfig(baseOptions(scratchRoot));
+      const { config } = await readGenerated(scratchRoot);
+      expect(config).toContain('["meta", { name: "color-scheme", content: "light dark" }]');
+    });
+  });
+});
+
+describe("C-303 generateConfig — robots.txt emission", () => {
+  const robotsPath = (scratchRoot: string) => join(scratchRoot, SRC_DIR, "public", "robots.txt");
+
+  it("siteUrl given -> robots.txt is written to the public mount with a Sitemap: line", async () => {
+    await withScratch(async (scratchRoot) => {
+      await generateConfig(baseOptions(scratchRoot, { siteUrl: "https://mirror.example.test" }));
+      const robots = await readFile(robotsPath(scratchRoot), "utf8");
+      expect(robots).toContain("User-agent: *");
+      expect(robots).toContain("Sitemap: https://mirror.example.test/sitemap.xml");
+    });
+  });
+
+  it("siteUrl absent -> no robots.txt is written, generateConfig still succeeds", async () => {
+    await withScratch(async (scratchRoot) => {
+      await expect(generateConfig(baseOptions(scratchRoot))).resolves.not.toThrow();
+      await expect(readFile(robotsPath(scratchRoot), "utf8")).rejects.toThrow();
+    });
+  });
+
+  it("a non-EEXIST failure writing robots.txt propagates, never silently swallowed", async () => {
+    await withScratch(async (scratchRoot) => {
+      const publicDir = join(scratchRoot, SRC_DIR, "public");
+      await mkdir(publicDir, { recursive: true });
+      await chmod(publicDir, 0o500); // read+execute, no write -> EACCES creating robots.txt, not EEXIST
+      try {
+        await expect(
+          generateConfig(baseOptions(scratchRoot, { siteUrl: "https://mirror.example.test" })),
+        ).rejects.toThrow();
+      } finally {
+        await chmod(publicDir, 0o700); // restore so the scratch root's own dispose() can clean up
+      }
+    });
+  });
+
+  it("a publicDir-supplied robots.txt wins — this function never overwrites it", async () => {
+    await withScratch(async (scratchRoot) => {
+      const publicDirSource = join(scratchRoot, "consumer-public");
+      await mkdir(publicDirSource, { recursive: true });
+      const consumerRobots = "User-agent: *\nDisallow: /private\n";
+      await writeFile(join(publicDirSource, "robots.txt"), consumerRobots, "utf8");
+
+      await synthesizePages({ scratchRoot, srcDir: SRC_DIR, packages: [], publicDirSource });
+      await generateConfig(baseOptions(scratchRoot, { siteUrl: "https://mirror.example.test" }));
+
+      expect(await readFile(robotsPath(scratchRoot), "utf8")).toBe(consumerRobots);
     });
   });
 });

@@ -98,6 +98,16 @@ describe('filterPackages', () => {
     expect(filterPackages(packages, { deprecatedOnly: true }).map(p => p.name)).toEqual(['b'])
   })
 
+  // C-603: whole-package `status: 'yanked'` — parallel to deprecatedOnly.
+  test('yankedOnly restricts to status === "yanked"', () => {
+    const packages = [
+      pkg({ name: 'a', status: 'active' }),
+      pkg({ name: 'b', status: 'deprecated' }),
+      pkg({ name: 'c', status: 'yanked' }),
+    ]
+    expect(filterPackages(packages, { yankedOnly: true }).map(p => p.name)).toEqual(['c'])
+  })
+
   test('empty filter returns every package unchanged', () => {
     const packages = [pkg({ name: 'a' }), pkg({ name: 'b' })]
     expect(filterPackages(packages, {})).toEqual(packages)

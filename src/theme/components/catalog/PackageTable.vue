@@ -19,10 +19,12 @@ const oses = (p: CatalogPackage) =>
   [...new Set(p.platforms.map(x => x.split('/')[0]))].sort((a, b) => osRank(a) - osRank(b))
 
 // Right-click copy menu per row — same shared action list as the card's
-// install box (InstallRow): `ocx.sh/`-prefixed name + latest version tag.
+// install box (InstallRow): the wire-qualified name (`p.name`, already
+// carrying this deployment's own brand prefix — C-601, never a hardcoded
+// `ocx.sh/` re-synthesis) + latest version tag.
 const flavors = useInstallFlavors()
 const rowActions = (p: CatalogPackage) =>
-  buildTagCopyActions(`ocx.sh/${bare(p)}`, p.latestVersion, flavors.value)
+  buildTagCopyActions(p.name, p.latestVersion, flavors.value)
 const { copy: copyText } = useClipboard()
 </script>
 
@@ -35,6 +37,7 @@ const { copy: copyText } = useClipboard()
         <span class="t-title" :title="pkg.title">{{ pkg.title }}</span>
         <span class="t-bare" :title="bare(pkg)">{{ bare(pkg) }}</span>
         <span v-if="pkg.status === 'deprecated'" class="t-deprecated">DEPRECATED</span>
+        <span v-else-if="pkg.status === 'yanked'" class="t-deprecated t-yanked">YANKED</span>
       </span>
       <span class="t-desc">{{ pkg.description }}</span>
       <span class="t-version">{{ pkg.latestVersion ?? '—' }}</span>
@@ -155,6 +158,12 @@ const { copy: copyText } = useClipboard()
   padding: 1px 6px;
   letter-spacing: 0.05em;
   flex-shrink: 0;
+}
+
+/* Whole-package yanked (C-603) — same shape as .t-deprecated, warn tokens. */
+.t-yanked {
+  color: var(--c-warn);
+  border-color: var(--c-warn);
 }
 
 .t-desc {

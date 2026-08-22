@@ -1,0 +1,38 @@
+{
+  "name": "ocx.sh/contrib/mono",
+  "repository": "oci://ghcr.io/ocx-contrib/contrib/mono",
+  "owners": [
+    {
+      "github": "ocx-bot",
+      "github_id": 309019509
+    }
+  ],
+  "status": "active",
+  "deprecated_message": null,
+  "created": "2026-05-30",
+  "upstream": {
+    "org": "contrib",
+    "repository_url": "https://github.com/contrib/mono",
+    "disclaimer": "Unaffiliated mirror of the upstream contrib/mono project."
+  },
+  "desc": {
+    "digest": "sha256:ee4bdb69fb34e71143dffac7ced17616961c69172a124ddf0f2f470f34f13cbb",
+    "title": "mono",
+    "description": "A minimal package that ships a logo but no README, exercising the README empty state.",
+    "keywords": [
+      "example",
+      "logo"
+    ],
+    "logo": "sha256:f3dadf056bf6512b72cfa1b1660a8bb4eb5f9875abe03e30cf99e210d2a51c75"
+  },
+  "tags": {
+    "1.0.0": {
+      "content": "sha256:dc8d3002946200a1920b99630160fb754cf863091500a3e5e473e07413039533",
+      "observed": "2026-05-30T07:00:00Z"
+    },
+    "latest": {
+      "content": "sha256:dc8d3002946200a1920b99630160fb754cf863091500a3e5e473e07413039533",
+      "observed": "2026-05-30T07:00:00Z"
+    }
+  }
+}
