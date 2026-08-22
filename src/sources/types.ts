@@ -186,9 +186,11 @@ export class SourceError extends Error {
  * Wire field mapping (root JSON is snake_case per `schema/root.schema.json`;
  * `CatalogPackageRoot` is camelCase): `deprecated_message` -> always present
  * -> `deprecatedMessage` verbatim; `superseded_by` -> ABSENT when unset ->
- * `supersededBy: null`; `desc` -> JSON `null` -> `desc: null` (its own
- * `readme`/`logo` are each ABSENT when unset -> `null`); each `tags[*]`'s
- * `yanked` -> ABSENT when unset -> `null`.
+ * `supersededBy: null`; `repository` -> ABSENT when unset -> `repository:
+ * null` (C-501 — detail-page data only, `catalogEntry` never reads it, so it
+ * never reaches `/data/catalog/catalog.json`, C-503); `desc` -> JSON `null`
+ * -> `desc: null` (its own `readme`/`logo` are each ABSENT when unset ->
+ * `null`); each `tags[*]`'s `yanked` -> ABSENT when unset -> `null`.
  *
  * Unparseable JSON propagates as a `JSON.parse` failure, wrapped naming the
  * file. A parseable-but-schema-invalid root (a field this function
@@ -226,6 +228,13 @@ interface RawRoot {
   status: "active" | "deprecated" | "yanked";
   deprecated_message?: string | null;
   superseded_by?: string;
+  /** Physical OCI repository this entry points to, `oci://<host>/<path>`
+   * (`schema/root.schema.json`) — required on the wire, but kept optional
+   * here like `superseded_by`: `mapRoot` copies it through with `??`, never
+   * dereferences it unconditionally, so a root missing it (a hand-authored
+   * fixture, a non-conformant source) degrades to `null` rather than
+   * crashing (C-501: report, never invent). */
+  repository?: string;
   created: string;
   desc: RawDesc | null;
   tags: Record<string, RawTagEntry>;
@@ -335,6 +344,7 @@ function mapRoot(parsed: RawRoot): CatalogPackageRoot {
     status: parsed.status,
     deprecatedMessage: parsed.deprecated_message ?? null,
     supersededBy: parsed.superseded_by ?? null,
+    repository: parsed.repository ?? null,
     created: parsed.created,
     desc,
     tags,

@@ -1090,3 +1090,122 @@ describe("readUrlSource — default fetchImpl and warn (options omitted)", () =>
     expect(files.has(`p/ns/pkg/o/sha256/${hex}.svg`)).toBe(false);
   });
 });
+
+describe("readUrlSource — malformed root shape is named, never a raw TypeError (C-404)", () => {
+  // A hostile source controls both the root bytes AND the digest, so a
+  // malformed root passes digest verification and reaches `collectCasRefs`.
+  // Before this guard those fields surfaced as "Cannot convert undefined or
+  // null to object" / "x.slice is not a function" — a TypeError naming no
+  // file. Each case must instead name the wire path AND the offending field,
+  // matching `types.ts` `validateRootShape`.
+  async function errorFor(rootText: string): Promise<Error> {
+    const cacheDir = await tempCacheDir();
+    const rootBytes = utf8(rootText);
+    const rootDigest = sha256Digest(rootBytes);
+    const { impl } = fakeFetch([
+      ["/c/index.json", () => ({ status: 200, body: indexJson({ "ns/pkg": rootDigest }), headers: { ETag: '"e"' } })],
+      ["/p/ns/pkg.json", () => ({ status: 200, body: rootBytes })],
+    ]);
+    try {
+      await readUrlSource({ url: BASE_URL }, { cacheDir, fetchImpl: impl });
+    } catch (err) {
+      return err as Error;
+    }
+    throw new Error("expected readUrlSource to reject");
+  }
+
+  it("rejects a root whose top level is not a JSON object, naming the file", async () => {
+    const error = await errorFor("42");
+    expect(error).not.toBeInstanceOf(TypeError);
+    expect(error.message).toContain("p/ns/pkg.json");
+    expect(error.message).toContain("expected a JSON object");
+  });
+
+  it("rejects a JSON null root, naming the file", async () => {
+    const error = await errorFor("null");
+    expect(error).not.toBeInstanceOf(TypeError);
+    expect(error.message).toContain("p/ns/pkg.json");
+    expect(error.message).toContain("expected a JSON object");
+  });
+
+  it("rejects an absent tags field, naming file + field", async () => {
+    const error = await errorFor('{"name":"ocx.sh/ns/pkg","desc":null}');
+    expect(error).not.toBeInstanceOf(TypeError);
+    expect(error.message).toContain("p/ns/pkg.json");
+    expect(error.message).toContain('"tags"');
+  });
+
+  it("rejects a null tags field, naming file + field", async () => {
+    const error = await errorFor('{"name":"ocx.sh/ns/pkg","desc":null,"tags":null}');
+    expect(error).not.toBeInstanceOf(TypeError);
+    expect(error.message).toContain('"tags"');
+  });
+
+  it("rejects a non-string tags[*].content, naming file + tag", async () => {
+    const error = await errorFor('{"name":"ocx.sh/ns/pkg","desc":null,"tags":{"1.0.0":{"content":123}}}');
+    expect(error).not.toBeInstanceOf(TypeError);
+    expect(error.message).toContain("p/ns/pkg.json");
+    expect(error.message).toContain('tags["1.0.0"].content');
+  });
+
+  it("rejects a null tag entry (content missing entirely), naming file + tag", async () => {
+    const error = await errorFor('{"name":"ocx.sh/ns/pkg","desc":null,"tags":{"1.0.0":null}}');
+    expect(error).not.toBeInstanceOf(TypeError);
+    expect(error.message).toContain('tags["1.0.0"].content');
+  });
+
+  it("rejects an absent desc field, naming file + field", async () => {
+    const error = await errorFor('{"name":"ocx.sh/ns/pkg","tags":{}}');
+    expect(error).not.toBeInstanceOf(TypeError);
+    expect(error.message).toContain("p/ns/pkg.json");
+    expect(error.message).toContain('"desc"');
+  });
+
+  it("rejects a non-string desc.readme, naming file + field", async () => {
+    const error = await errorFor('{"name":"ocx.sh/ns/pkg","tags":{},"desc":{"readme":5}}');
+    expect(error).not.toBeInstanceOf(TypeError);
+    expect(error.message).toContain("p/ns/pkg.json");
+    expect(error.message).toContain('"desc.readme"');
+  });
+});
+
+describe("readUrlSource — /c/index.json entry-count cap (C-405)", () => {
+  it("rejects an index that declares more packages than the cap, before fanning out any package fetch", async () => {
+    const cacheDir = await tempCacheDir();
+    // 50_001 entries: one past the 50_000 cap. Keys/values need not be valid
+    // — the cap is checked before any per-package validation or fetch, so a
+    // one-byte digest value keeps the fixture small.
+    const packages: Record<string, string> = {};
+    for (let i = 0; i <= 50_000; i++) {
+      packages[`a/${i}`] = "x";
+    }
+    const { impl } = fakeFetch([
+      ["/c/index.json", () => ({ status: 200, body: indexJson(packages), headers: { ETag: '"big"' } })],
+    ]);
+
+    let error: Error | undefined;
+    try {
+      await readUrlSource({ url: BASE_URL }, { cacheDir, fetchImpl: impl });
+    } catch (err) {
+      error = err as Error;
+    }
+
+    expect(error).toBeInstanceOf(Error);
+    expect(error?.message).toContain("50001");
+    expect(error?.message).toContain("50000");
+  });
+
+  it("accepts an index at a normal size (the cap does not fire below the ceiling)", async () => {
+    const cacheDir = await tempCacheDir();
+    const root = rootJsonBytes({ name: "ocx.sh/ns/pkg" });
+    const rootDigest = sha256Digest(root);
+    const { impl } = fakeFetch([
+      ["/c/index.json", () => ({ status: 200, body: indexJson({ "ns/pkg": rootDigest }), headers: { ETag: '"e"' } })],
+      ["/p/ns/pkg.json", () => ({ status: 200, body: root })],
+    ]);
+
+    const files = await readUrlSource({ url: BASE_URL }, { cacheDir, fetchImpl: impl });
+
+    expect(files.has("p/ns/pkg.json")).toBe(true);
+  });
+});

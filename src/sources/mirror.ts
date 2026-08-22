@@ -8,7 +8,42 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { catalogIndex, serializeCatalog } from "../viewmodel/catalog.js";
-import { extractPackages, type ResolvedSourceFiles } from "./types.js";
+import { extractPackages, type ResolvedSourceFiles, type SourceWarning, type WirePath } from "./types.js";
+import { Semaphore } from "./walker.js";
+
+/** In-flight write cap for the mirror copy, matching `walker.ts`'s fetch cap
+ * (16). The per-source trees are written concurrently through one bounded
+ * `Semaphore` rather than serially awaited file-by-file — a large index is
+ * thousands of small writes whose latency is otherwise fully serialized
+ * (rev-perf, 2026-08-22, ~2.6x). */
+const MAX_WRITE_CONCURRENCY = 16;
+
+/** Size ceiling for a mirrored CAS CONTENT asset (a `desc.readme`/`desc.logo`
+ * blob — a `.md`/`.svg`/`.png` under `p/.../o/sha256/`). One that exceeds it
+ * is skipped and warned rather than served: a hostile or careless source can
+ * otherwise inflate `dist/` and bandwidth with a multi-megabyte blob behind a
+ * 34px logo tile (rev-perf, 2026-08-22). Package roots and OCI image indices
+ * (`.json`) are NOT capped here — they are structural, and skipping one would
+ * dangle a package rather than degrade gracefully the way a missing logo/
+ * readme does. `url` sources already bound each fetched blob at 8 MiB
+ * (`walker.ts` `MAX_RESPONSE_BYTES`); this is the equivalent guard for
+ * `path`/`git` sources, which read straight off disk with no fetch cap.
+ * ponytail: one flat ceiling for both readme and logo; split it only if a
+ * real readme ever legitimately needs more than a logo. */
+const MAX_CAS_ASSET_BYTES = 1024 * 1024;
+
+/** True for a CAS content blob (`p/.../o/sha256/<hex>.<ext>`, `ext` not
+ * `json`) — the paths `MAX_CAS_ASSET_BYTES` applies to. */
+function isCasContentAsset(wirePath: WirePath): boolean {
+  return wirePath.includes("/o/sha256/") && !wirePath.endsWith(".json");
+}
+
+/** Default sink for a mirror-time warning (an oversized CAS asset skipped) —
+ * stderr, prefixed like `build/sources_pipeline.ts`'s `warnToStderr`, so the
+ * skip is surfaced even when the caller passes no `warn` (its default). */
+function warnToStderr(message: string): void {
+  process.stderr.write(`ocx-catalog: ${message}\n`);
+}
 
 /** Writes `bytes` at `<distDir>/<relPath>`, creating parent directories, and
  * records `relPath` into `written` — the one write primitive every path this
@@ -103,14 +138,40 @@ export function compareQualifiedIds(
   return 0;
 }
 
-export async function mirrorSources(sources: readonly ResolvedSourceFiles[], distDir: string): Promise<MirrorResult> {
+export async function mirrorSources(
+  sources: readonly ResolvedSourceFiles[],
+  distDir: string,
+  warn: SourceWarning = warnToStderr,
+): Promise<MirrorResult> {
   const written: string[] = [];
+  const semaphore = new Semaphore(MAX_WRITE_CONCURRENCY);
+  const writes: Promise<void>[] = [];
+
+  const enqueue = (relPath: string, bytes: Uint8Array | string): void => {
+    writes.push(
+      (async () => {
+        const release = await semaphore.acquire();
+        try {
+          await writeDistFile(distDir, relPath, bytes, written);
+        } finally {
+          release();
+        }
+      })(),
+    );
+  };
 
   for (const source of sources) {
     for (const [wirePath, bytes] of source.files) {
-      await writeDistFile(distDir, `index/${source.label}/${wirePath}`, bytes, written);
+      if (isCasContentAsset(wirePath) && bytes.byteLength > MAX_CAS_ASSET_BYTES) {
+        warn(
+          `skipping oversized CAS asset ${wirePath} in "${source.label}": ` +
+            `${bytes.byteLength} bytes exceeds the ${MAX_CAS_ASSET_BYTES}-byte cap`,
+        );
+        continue;
+      }
+      enqueue(`index/${source.label}/${wirePath}`, bytes);
       if (source.root) {
-        await writeDistFile(distDir, wirePath, bytes, written);
+        enqueue(wirePath, bytes);
       }
     }
 
@@ -119,10 +180,12 @@ export async function mirrorSources(sources: readonly ResolvedSourceFiles[], dis
     const catalogRelPath = source.root
       ? "data/catalog/catalog.json"
       : `index/${source.label}/data/catalog/catalog.json`;
-    await writeDistFile(distDir, catalogRelPath, catalog, written);
+    enqueue(catalogRelPath, catalog);
   }
 
-  await writeDistFile(distDir, "_headers", renderHeaders(sources), written);
+  enqueue("_headers", renderHeaders(sources));
+
+  await Promise.all(writes);
 
   return { written };
 }

@@ -20,7 +20,7 @@
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { compareQualifiedIds, mirrorSources, renderHeaders } from "../../src/sources/mirror.js";
 import type { ResolvedSourceFiles, WirePath } from "../../src/sources/types.js";
 import { bytesEqual, rootJsonBytes, utf8 } from "./helpers.js";
@@ -209,6 +209,55 @@ describe("mirrorSources — writeDistFile containment backstop (BLOCK A belt-and
     // exact traversal target the PoC used (20 "../" from a deep tmp dir
     // resolves above filesystem root, so join() clamps it at "/tmp/canary").
     await expect(readFile(join(tmpdir(), "canary"))).rejects.toMatchObject({ code: "ENOENT" });
+  });
+});
+
+describe("mirrorSources — oversized CAS asset is skipped and warned (C-405)", () => {
+  // The MAX_CAS_ASSET_BYTES cap is 1 MiB; a content blob one byte past it is
+  // not served. A `.json` under o/sha256 (an OCI image index) is structural
+  // and NOT capped — skipping it would dangle a package, unlike a logo.
+  const OVER_CAP = new Uint8Array(1024 * 1024 + 1);
+  const HEX = "a".repeat(64);
+
+  function sourceWithOversizedLogo(): ResolvedSourceFiles {
+    return source("alpha", false, [
+      ["config.json", utf8("{}")],
+      ["p/ns/pkg.json", rootJsonBytes({ name: "ocx.sh/ns/pkg" })],
+      [`p/ns/pkg/o/sha256/${HEX}.svg`, OVER_CAP],
+      [`p/ns/pkg/o/sha256/${"b".repeat(64)}.md`, utf8("# small readme")],
+    ]);
+  }
+
+  it("skips the oversized blob (never on disk, absent from written) but keeps a normal one, and warns by name", async () => {
+    const distDir = await tempDistDir();
+    const warn = vi.fn();
+
+    const result = await mirrorSources([sourceWithOversizedLogo()], distDir, warn);
+
+    await expect(readAt(distDir, `index/alpha/p/ns/pkg/o/sha256/${HEX}.svg`)).rejects.toMatchObject({ code: "ENOENT" });
+    expect(result.written).not.toContain(`index/alpha/p/ns/pkg/o/sha256/${HEX}.svg`);
+    // The under-cap readme and the root are still mirrored.
+    expect(bytesEqual(await readAt(distDir, `index/alpha/p/ns/pkg/o/sha256/${"b".repeat(64)}.md`), utf8("# small readme"))).toBe(
+      true,
+    );
+    expect(result.written).toContain("index/alpha/p/ns/pkg.json");
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn.mock.calls[0][0]).toContain(`p/ns/pkg/o/sha256/${HEX}.svg`);
+  });
+
+  it("warns to stderr by default when no warn sink is passed (production path)", async () => {
+    const distDir = await tempDistDir();
+    const stderr = vi.spyOn(process.stderr, "write").mockReturnValue(true);
+    let emitted: string;
+    try {
+      await mirrorSources([sourceWithOversizedLogo()], distDir);
+      // Capture BEFORE mockRestore — it clears mock.calls.
+      emitted = stderr.mock.calls.map((call) => String(call[0])).join("");
+    } finally {
+      stderr.mockRestore();
+    }
+
+    expect(emitted).toContain(`p/ns/pkg/o/sha256/${HEX}.svg`);
   });
 });
 

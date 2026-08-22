@@ -10,6 +10,7 @@ import { readFile, readdir, realpath, stat } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import type { PathSourceEntry } from "../config/types.js";
 import { SourceError, type WirePath } from "./types.js";
+import { WIRE_ASSET_EXTENSIONS } from "./walker.js";
 
 /** Throws `SourceError("PATH_ESCAPE", ...)` unless `real` (already resolved
  * via `realpath`) stays within `rootReal` (also already realpath'd) —
@@ -129,12 +130,45 @@ async function tryIncludeFile(
   out.set(wirePath, await readFile(real));
 }
 
+/** Lowercased extension of `name` (after its last `.`), or `""` when it has
+ * none — the key `walkTree` filters against `WIRE_ASSET_EXTENSIONS`. Lower-
+ * cased so a case-variant real asset (`LOGO.PNG`) is never dropped; matching
+ * is deliberately permissive toward valid content, strict against everything
+ * outside the wire set. */
+function wireExtOf(name: string): string {
+  const dot = name.lastIndexOf(".");
+  return dot === -1 ? "" : name.slice(dot + 1).toLowerCase();
+}
+
 /** Recursively walks `wirePrefix` (`"p"`, at the moment there is only one
  * caller) into `out`, every entry `realpath`-verified against `rootReal`
  * before being followed — a symlinked file OR a symlinked subdirectory at
  * any depth is caught the moment it's visited, per this module's own
- * per-file containment contract. */
-async function walkTree(rootReal: string, root: string, wirePrefix: WirePath, out: Map<WirePath, Uint8Array>): Promise<void> {
+ * per-file containment contract.
+ *
+ * `visited` holds the realpath of every directory already walked. A symlink
+ * can make two wire paths resolve to the SAME real directory — a cycle
+ * (`p/x -> p`, which would otherwise recurse until the OS returns `ELOOP`) or
+ * a DAG (two aliases to one real subtree, which would otherwise re-read and
+ * re-emit it under each alias). Skipping an already-visited real directory
+ * bounds the walk to the finite set of real directories under `root`
+ * (rev-sec, 2026-08-22: a hostile symlink DAG hung the build).
+ *
+ * A dangling symlink (its target does not exist) makes `realpath` throw
+ * `ENOENT` — that entry is SKIPPED, matching `tryIncludeFile`'s existing
+ * tolerance of an absent optional file, rather than failing the whole read.
+ *
+ * Files are filtered to `WIRE_ASSET_EXTENSIONS`: a `path`/`git` source root
+ * is often a full checkout, so a non-wire extension under `p/` (an
+ * `.html`/`.js`/...) is dropped rather than mirrored verbatim into the
+ * same-origin `dist/` tree — see `walker.ts`'s `WIRE_ASSET_EXTENSIONS`. */
+async function walkTree(
+  rootReal: string,
+  root: string,
+  wirePrefix: WirePath,
+  out: Map<WirePath, Uint8Array>,
+  visited: Set<string>,
+): Promise<void> {
   const abs = join(root, ...wirePrefix.split("/"));
   let entries;
   try {
@@ -147,12 +181,20 @@ async function walkTree(rootReal: string, root: string, wirePrefix: WirePath, ou
   for (const dirent of entries) {
     const childWire: WirePath = `${wirePrefix}/${dirent.name}`;
     const childAbs = join(abs, dirent.name);
-    const real = await realpath(childAbs);
+    let real: string;
+    try {
+      real = await realpath(childAbs);
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+      continue; // dangling symlink — skip, like an absent optional file
+    }
     assertContained(rootReal, real, childWire);
     const stats = await stat(real);
     if (stats.isDirectory()) {
-      await walkTree(rootReal, root, childWire, out);
-    } else if (stats.isFile()) {
+      if (visited.has(real)) continue; // symlink cycle/DAG — already walked
+      visited.add(real);
+      await walkTree(rootReal, root, childWire, out, visited);
+    } else if (stats.isFile() && WIRE_ASSET_EXTENSIONS.has(wireExtOf(dirent.name))) {
       out.set(childWire, await readFile(real));
     }
   }
@@ -164,7 +206,7 @@ export async function readDirectoryTree(root: string): Promise<ReadonlyMap<WireP
 
   await tryIncludeFile(rootReal, root, "config.json", files);
   await tryIncludeFile(rootReal, root, "c/index.json", files);
-  await walkTree(rootReal, root, "p", files);
+  await walkTree(rootReal, root, "p", files, new Set());
 
   return files;
 }

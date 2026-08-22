@@ -158,6 +158,100 @@ describe("readDirectoryTree — wire-shape filtering", () => {
   });
 });
 
+describe("readDirectoryTree — symlink cycle/DAG termination (C-401)", () => {
+  it("terminates on a symlink cycle instead of recursing until ELOOP, and does not walk into the alias", async () => {
+    const root = await tempDir("catalog-path-cycle-");
+    await put(root, "p/ns/pkg.json", '{"name":"ocx.sh/ns/pkg"}');
+    // `p/ns/cycle` points back at its own parent `p/ns` — walking it naively
+    // recurses p/ns/cycle/cycle/... until the OS returns ELOOP.
+    await symlink(join(root, "p/ns"), join(root, "p/ns/cycle"));
+
+    const files = await readDirectoryTree(root);
+
+    expect(files.has("p/ns/pkg.json")).toBe(true);
+    // The already-visited real directory is skipped, never re-descended.
+    expect([...files.keys()].some((key) => key.includes("cycle"))).toBe(false);
+  });
+
+  it("emits a real file reachable through several symlink aliases exactly once (DAG dedup)", async () => {
+    const root = await tempDir("catalog-path-dag-");
+    const pkgBytes = utf8('{"name":"ocx.sh/ns/pkg"}');
+    await put(root, "p/ns/pkg.json", '{"name":"ocx.sh/ns/pkg"}');
+    // Two aliases to the same real subtree: a naive walk emits pkg.json three
+    // times (p/ns, p/alias1, p/alias2); the visited-set walk emits it once.
+    await symlink(join(root, "p/ns"), join(root, "p/alias1"));
+    await symlink(join(root, "p/ns"), join(root, "p/alias2"));
+
+    const files = await readDirectoryTree(root);
+
+    const copies = [...files.values()].filter((bytes) => bytesEqual(bytes, pkgBytes));
+    expect(copies).toHaveLength(1);
+  });
+});
+
+describe("readDirectoryTree — dangling symlink tolerance (C-402)", () => {
+  it("skips a dangling symlink under p/ and still reads the rest of the tree", async () => {
+    const root = await tempDir("catalog-path-dangling-");
+    await put(root, "p/ns/pkg.json", '{"name":"ocx.sh/ns/pkg"}');
+    // A symlink whose target does not exist — realpath throws ENOENT.
+    await symlink(join(root, "p/ns/does-not-exist"), join(root, "p/ns/dangling.json"));
+
+    const files = await readDirectoryTree(root);
+
+    expect(files.has("p/ns/pkg.json")).toBe(true);
+    expect(files.has("p/ns/dangling.json")).toBe(false);
+  });
+
+  it("rethrows a non-ENOENT realpath error walking p/ (ELOOP from a mutual symlink loop), never swallows it like a dangling link", async () => {
+    const root = await tempDir("catalog-path-eloop-");
+    await mkdir(join(root, "p"), { recursive: true });
+    // Two symlinks pointing at each other — realpath resolution never
+    // terminates and the OS returns ELOOP, a non-ENOENT error the walk must
+    // propagate rather than treat as an absent entry.
+    await symlink("b", join(root, "p", "a"));
+    await symlink("a", join(root, "p", "b"));
+
+    await expect(readDirectoryTree(root)).rejects.toMatchObject({ code: "ELOOP" });
+  });
+});
+
+describe("readDirectoryTree — p/ extension allowlist (C-403)", () => {
+  it("keeps every wire asset extension (json/md/svg/png) and drops anything else under p/", async () => {
+    const root = await tempDir("catalog-path-ext-");
+    await put(root, "p/ns/pkg.json", '{"name":"ocx.sh/ns/pkg"}');
+    await put(root, "p/ns/pkg/o/sha256/aaaa.json", "{}");
+    await put(root, "p/ns/pkg/o/sha256/bbbb.md", "# readme");
+    await put(root, "p/ns/pkg/o/sha256/cccc.svg", "<svg/>");
+    await put(root, "p/ns/pkg/o/sha256/dddd.png", "PNG");
+    // Hostile/irrelevant content a full-checkout source could carry under p/.
+    await put(root, "p/ns/pkg/o/sha256/evil.html", "<script>alert(1)</script>");
+    await put(root, "p/ns/evil.js", "alert(1)");
+
+    const files = await readDirectoryTree(root);
+
+    expect(new Set(files.keys())).toEqual(
+      new Set([
+        "p/ns/pkg.json",
+        "p/ns/pkg/o/sha256/aaaa.json",
+        "p/ns/pkg/o/sha256/bbbb.md",
+        "p/ns/pkg/o/sha256/cccc.svg",
+        "p/ns/pkg/o/sha256/dddd.png",
+      ]),
+    );
+  });
+
+  it("drops an extensionless file under p/ (no wire extension at all)", async () => {
+    const root = await tempDir("catalog-path-noext-");
+    await put(root, "p/ns/pkg.json", '{"name":"ocx.sh/ns/pkg"}');
+    await put(root, "p/ns/LICENSE", "MIT");
+
+    const files = await readDirectoryTree(root);
+
+    expect(files.has("p/ns/pkg.json")).toBe(true);
+    expect(files.has("p/ns/LICENSE")).toBe(false);
+  });
+});
+
 describe("resolveContainedRealPath", () => {
   it("returns the verified absolute path when relativeValue stays inside root", async () => {
     const root = await tempDir("catalog-path-contained-");

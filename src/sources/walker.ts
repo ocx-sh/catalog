@@ -43,6 +43,43 @@ const LOGO_EXT_CANDIDATES = ["svg", "png"] as const;
 /** `desc.readme` is schema-pinned to Markdown — no trial-and-error needed. */
 const README_EXT_CANDIDATES = ["md"] as const;
 
+/**
+ * Every file extension the wire contract places under `p/`: a package root
+ * and a CAS OCI image index are both `.json`; a `desc.readme` is one of
+ * `README_EXT_CANDIDATES`; a `desc.logo` is one of `LOGO_EXT_CANDIDATES`.
+ *
+ * `path.ts`'s directory walk (`path`/`git` sources) filters `p/` to exactly
+ * this set — a `path`/`git` source root is very often a full repository
+ * checkout, so an `.html`/`.js`/... file placed under `p/` would otherwise be
+ * copied byte-verbatim into the same-origin `dist/index/<label>/p/` tree and
+ * served next to the catalog. The `_headers` CSP `sandbox` is the primary
+ * control, but it is Cloudflare-Pages-only and inert on GitHub Pages / S3 /
+ * nginx / `dev`, so restricting the copied extensions is the defence that
+ * holds everywhere (rev-sec, 2026-08-22). A `url` source needs no such filter:
+ * it only ever fetches these exact wire paths by digest, never an arbitrary
+ * directory entry.
+ *
+ * Derived from the SAME candidate lists the `url` walker fetches assets by, so
+ * a new logo/readme type added there is honoured here too — never a second,
+ * narrower hardcoded set that could silently drop a valid asset.
+ */
+export const WIRE_ASSET_EXTENSIONS: ReadonlySet<string> = new Set<string>([
+  "json",
+  ...LOGO_EXT_CANDIDATES,
+  ...README_EXT_CANDIDATES,
+]);
+
+/** Maximum package count a `/c/index.json` may declare before the whole
+ * source is rejected. A hostile `url` source could otherwise declare an
+ * unbounded number of entries and fan the builder out to that many root +
+ * CAS fetches. The 8 MiB `MAX_RESPONSE_BYTES` body cap already bounds the
+ * index to ~100k entries; this tighter cap turns a would-be out-of-memory
+ * build into a fast, named rejection instead, while staying far above any
+ * real index — `index.ocx.sh` publishes ~124 packages, and the renderer's
+ * own practical build ceiling is a few thousand. ponytail: one flat ceiling;
+ * raise it here if a genuine mirror ever grows past it. */
+const MAX_INDEX_ENTRIES = 50_000;
+
 function sha256Digest(bytes: Uint8Array): string {
   return `sha256:${createHash("sha256").update(bytes).digest("hex")}`;
 }
@@ -139,7 +176,7 @@ function backoffDelayMs(attempt: number): number {
  * root's CAS references are only known once that root's bytes are parsed),
  * so a static `limit`-sized worker pool over a fixed array can't express
  * it; this is the smallest primitive that can. */
-class Semaphore {
+export class Semaphore {
   #available: number;
   readonly #queue: (() => void)[] = [];
 
@@ -370,27 +407,74 @@ async function loadOptionalAsset(
   return null;
 }
 
-interface RawRootForRefs {
-  readonly tags: Readonly<Record<string, { content: string }>>;
-  readonly desc: { readonly readme?: string; readonly logo?: string } | null;
+/** Reads a `desc.<field>` CAS reference: absent (`undefined`) degrades to
+ * `null`, but a present-but-non-string value is rejected BY NAME — the value
+ * feeds a cache/wire path (`loadOptionalAsset`'s `digest.slice`), so a
+ * non-string here would otherwise surface as a raw `TypeError` naming no file
+ * (rev-sec, 2026-08-22). */
+function descDigest(wirePath: WirePath, desc: Record<string, unknown> | null, field: "readme" | "logo"): string | null {
+  if (desc === null) return null;
+  const value = desc[field];
+  if (value === undefined) return null;
+  if (typeof value !== "string") {
+    throw new Error(`malformed root at ${wirePath}: "desc.${field}" must be a string when present`);
+  }
+  return value;
 }
 
-/** Pulls exactly the CAS-referencing digests a root names — every tag's
+/**
+ * Pulls exactly the CAS-referencing digests a root names — every tag's
  * `content`, plus `desc.readme`/`desc.logo` when set. Deliberately NOT
  * `extractPackages`'s full parse: the fetch layer only needs to know what
- * bytes to go get, not build a `CatalogPackageRoot`. */
-function collectCasRefs(rootBytes: Uint8Array): {
+ * bytes to go get, not build a `CatalogPackageRoot`.
+ *
+ * Every field it dereferences into a path is guarded by name (rev-sec,
+ * 2026-08-22): an absent `tags`, an absent/non-object `desc`, or a non-string
+ * `tags[*].content`/`desc.readme`/`desc.logo` each raise an `Error` naming the
+ * file AND the field — matching `types.ts` `validateRootShape`'s diagnostic
+ * quality, never a raw `TypeError` ("Cannot convert undefined or null to
+ * object") that names nothing. Thrown as a plain `Error` for the same reason
+ * `validateRootShape` does: `SourceErrorCode` is scoped to transport/digest/
+ * label failures, and `sources_pipeline.ts` already maps a plain malformed-
+ * root error to exit 65 (`DATA`). This is a narrower parse than
+ * `validateRootShape`, so it is deliberately lenient where leniency cannot
+ * crash — an array `tags`/`desc` is left for `extractPackages` (which runs on
+ * the same tree) to reject with its stricter, full-shape check. */
+function collectCasRefs(
+  wirePath: WirePath,
+  rootBytes: Uint8Array,
+): {
   tagDigests: readonly string[];
   readme: string | null;
   logo: string | null;
 } {
-  const parsed = JSON.parse(new TextDecoder().decode(rootBytes)) as RawRootForRefs;
-  const tagDigests = Object.values(parsed.tags).map((tag) => tag.content);
-  const desc = parsed.desc;
+  const parsed: unknown = JSON.parse(new TextDecoder().decode(rootBytes));
+  if (typeof parsed !== "object" || parsed === null) {
+    throw new Error(`malformed root at ${wirePath}: expected a JSON object at the top level`);
+  }
+  const obj = parsed as Record<string, unknown>;
+
+  if (typeof obj.tags !== "object" || obj.tags === null) {
+    throw new Error(`malformed root at ${wirePath}: "tags" is required and must be an object`);
+  }
+  const tagDigests: string[] = [];
+  for (const [tag, entry] of Object.entries(obj.tags as Record<string, unknown>)) {
+    const content = (entry as { content?: unknown } | null)?.content;
+    if (typeof content !== "string") {
+      throw new Error(`malformed root at ${wirePath}: tags["${tag}"].content is required and must be a string`);
+    }
+    tagDigests.push(content);
+  }
+
+  const descRaw = obj.desc;
+  if (descRaw !== null && typeof descRaw !== "object") {
+    throw new Error(`malformed root at ${wirePath}: "desc" is required and must be null or an object`);
+  }
+  const desc = descRaw as Record<string, unknown> | null;
   return {
     tagDigests,
-    readme: desc !== null ? (desc.readme ?? null) : null,
-    logo: desc !== null ? (desc.logo ?? null) : null,
+    readme: descDigest(wirePath, desc, "readme"),
+    logo: descDigest(wirePath, desc, "logo"),
   };
 }
 
@@ -436,7 +520,7 @@ async function processPackage(
   const rootBytes = await loadOrFetch(ctx, rootWirePath, digest, "json");
   files.set(rootWirePath, rootBytes);
 
-  const { tagDigests, readme, logo } = collectCasRefs(rootBytes);
+  const { tagDigests, readme, logo } = collectCasRefs(rootWirePath, rootBytes);
   const tasks: Promise<void>[] = [];
 
   for (const tagDigest of tagDigests) {
@@ -615,9 +699,13 @@ export async function readUrlSource(
   // creation I/O against the timer-draining loop.
   await mkdir(join(options.cacheDir, "cas"), { recursive: true });
   const { packages } = JSON.parse(new TextDecoder().decode(indexBytes)) as { packages: Record<string, string> };
-  await Promise.all(
-    Object.entries(packages).map(([qualifiedId, digest]) => processPackage(qualifiedId, digest, ctx, files)),
-  );
+  const entries = Object.entries(packages);
+  if (entries.length > MAX_INDEX_ENTRIES) {
+    throw new Error(
+      `${indexUrl}: c/index.json declares ${entries.length} packages, exceeding the ${MAX_INDEX_ENTRIES}-package maximum`,
+    );
+  }
+  await Promise.all(entries.map(([qualifiedId, digest]) => processPackage(qualifiedId, digest, ctx, files)));
 
   return files;
 }
