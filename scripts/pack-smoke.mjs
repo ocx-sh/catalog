@@ -10,7 +10,8 @@
  *      across module systems.
  *   4. Install the tarball into a fresh `mkdtemp` sandbox with npm scripts
  *      disabled (`--ignore-scripts`), then run `ocx-catalog --version` from
- *      the installed bin to prove the `bin` entry survived packing.
+ *      the installed bin to prove the `bin` entry survived packing (it must
+ *      print the version from this repo's package.json).
  *   5. From that same sandbox, `import.meta.resolve("@ocx-sh/catalog/theme")`
  *      to prove the theme subpath export + its `files` entry survived
  *      packing too — a full VitePress evaluation of the theme needs a
@@ -408,8 +409,11 @@ function installAndRunBin(step, tarballPath) {
     const binPath = join(installDir, "node_modules", ".bin", "ocx-catalog");
     const result = run(step, binPath, ["--version"], { cwd: installDir });
     const stdout = result.stdout.trim();
-    if (stdout !== "0.1.0") {
-      throw new Error(`${step}: expected installed bin to print "0.1.0", got "${stdout}"`);
+    const expectedVersion = JSON.parse(readFileSync(join(repoRoot, "package.json"), "utf8")).version;
+    if (stdout !== expectedVersion) {
+      throw new Error(
+        `${step}: expected installed bin to print "${expectedVersion}", got "${stdout}"`,
+      );
     }
     const themeUrl = assertSubpathResolves(step, installDir, "@ocx-sh/catalog/theme");
     process.stderr.write(`pack-smoke: "@ocx-sh/catalog/theme" resolves to ${themeUrl}\n`);
