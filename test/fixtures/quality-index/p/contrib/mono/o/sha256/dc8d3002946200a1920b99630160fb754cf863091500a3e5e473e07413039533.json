@@ -1,0 +1,1 @@
+{"schemaVersion":2,"mediaType":"application/vnd.oci.image.index.v1+json","manifests":[{"mediaType":"application/vnd.oci.image.manifest.v1+json","digest":"sha256:ce68205d2c8478f0170ed13068811b8f3f12bd665b9b1c482da6bc9d4dc94a96","size":481,"platform":{"architecture":"amd64","os":"linux"}}],"artifactType":"application/vnd.sh.ocx.package.v1"}

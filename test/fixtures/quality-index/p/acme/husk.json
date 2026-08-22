@@ -1,0 +1,50 @@
+{
+  "name": "ocx.sh/acme/husk",
+  "repository": "oci://ghcr.io/ocx-contrib/acme/husk",
+  "owners": [
+    {
+      "github": "ocx-bot",
+      "github_id": 309019509
+    }
+  ],
+  "status": "yanked",
+  "deprecated_message": "All builds withdrawn: a packaging defect dropped runtime shared libraries on musl systems.",
+  "created": "2025-03-19",
+  "upstream": {
+    "org": "acme",
+    "repository_url": "https://github.com/acme/husk",
+    "disclaimer": "Unaffiliated mirror of the upstream acme/husk project."
+  },
+  "desc": {
+    "digest": "sha256:49f5c628f1fe0bac5c86fe074651c18a9ea7b979cb6f4c634b081105b0ccf07a",
+    "title": "husk",
+    "description": "Withdrawn — every published build shipped a broken artifact. Retained for provenance only.",
+    "keywords": [
+      "cli",
+      "yanked"
+    ],
+    "readme": "sha256:a29236f50778a7e3f0e7f3e196cdbedf087e9de04b28d8a081bbf9712641e4d6"
+  },
+  "tags": {
+    "0.3.0": {
+      "content": "sha256:3b27c73e0bec943e3f4201b7dc3b19f168006576c78c1910c41048a0e3a3dcf7",
+      "observed": "2025-03-19T11:00:00Z",
+      "yanked": {
+        "reason": "Missing shared libraries on musl targets.",
+        "at": "2025-04-01T00:00:00Z"
+      }
+    },
+    "0.2.0": {
+      "content": "sha256:3b27c73e0bec943e3f4201b7dc3b19f168006576c78c1910c41048a0e3a3dcf7",
+      "observed": "2025-02-10T08:30:00Z"
+    },
+    "latest": {
+      "content": "sha256:3b27c73e0bec943e3f4201b7dc3b19f168006576c78c1910c41048a0e3a3dcf7",
+      "observed": "2025-03-19T11:00:00Z",
+      "yanked": {
+        "reason": "Missing shared libraries on musl targets.",
+        "at": "2025-04-01T00:00:00Z"
+      }
+    }
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "$schema": "../../../src/config/schema/catalog.config.schema.json",
+  "sources": [
+    {
+      "path": ".",
+      "root": true
+    }
+  ],
+  "brand": {
+    "title": "Quality Fixture Catalog",
+    "wordmark": "quality.ocx.test",
+    "logo": "./brand/logo.svg"
+  },
+  "siteUrl": "https://quality.ocx.test",
+  "description": "A committed OCX index fixture that drives the Lighthouse CI quality gate.",
+  "favicon": "/logo.svg"
+}

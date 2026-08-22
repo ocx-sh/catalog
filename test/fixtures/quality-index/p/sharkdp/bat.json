@@ -1,0 +1,60 @@
+{
+  "name": "ocx.sh/sharkdp/bat",
+  "repository": "oci://ghcr.io/ocx-contrib/sharkdp/bat",
+  "owners": [
+    {
+      "github": "ocx-bot",
+      "github_id": 309019509
+    }
+  ],
+  "status": "active",
+  "deprecated_message": null,
+  "created": "2026-08-04",
+  "upstream": {
+    "org": "sharkdp",
+    "repository_url": "https://github.com/sharkdp/bat",
+    "disclaimer": "Unaffiliated mirror. bat is a project of David Peter (sharkdp)."
+  },
+  "desc": {
+    "digest": "sha256:c8a7a70573f5b1d848de9d26a1b8dedf77d6aff61ce3e36b4932999c04019044",
+    "title": "bat",
+    "description": "A cat clone with syntax highlighting for 150+ languages, Git integration, and automatic paging.",
+    "keywords": [
+      "bat",
+      "cat",
+      "pager",
+      "syntax-highlighting",
+      "git",
+      "cli",
+      "rust"
+    ],
+    "readme": "sha256:1564e4071d28d33d1bfef0f753510b21a0610ca73c16b32f1048551c5928d558",
+    "logo": "sha256:b1780af7d9674a19377804c2b8c1e1a76910ab0d5cef0279c5e2da3fad44a8e8"
+  },
+  "tags": {
+    "0": {
+      "content": "sha256:53376688378bcec7a526eb1fe66dad2ae0a7d3c07da32616822b5a8600af8886",
+      "observed": "2026-08-03T22:48:33Z"
+    },
+    "0.25.0": {
+      "content": "sha256:53376688378bcec7a526eb1fe66dad2ae0a7d3c07da32616822b5a8600af8886",
+      "observed": "2026-08-03T22:48:33Z"
+    },
+    "0.25": {
+      "content": "sha256:53376688378bcec7a526eb1fe66dad2ae0a7d3c07da32616822b5a8600af8886",
+      "observed": "2026-08-03T22:48:33Z"
+    },
+    "latest": {
+      "content": "sha256:53376688378bcec7a526eb1fe66dad2ae0a7d3c07da32616822b5a8600af8886",
+      "observed": "2026-08-03T22:48:33Z"
+    },
+    "0.24.9": {
+      "content": "sha256:53376688378bcec7a526eb1fe66dad2ae0a7d3c07da32616822b5a8600af8886",
+      "observed": "2026-06-01T10:00:00Z",
+      "yanked": {
+        "reason": "Regression in --paging=never; use 0.25.0.",
+        "at": "2026-06-05T12:00:00Z"
+      }
+    }
+  }
+}

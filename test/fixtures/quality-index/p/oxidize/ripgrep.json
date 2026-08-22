@@ -1,0 +1,49 @@
+{
+  "name": "ocx.sh/oxidize/ripgrep",
+  "repository": "oci://ghcr.io/ocx-contrib/oxidize/ripgrep",
+  "owners": [
+    {
+      "github": "ocx-bot",
+      "github_id": 309019509
+    }
+  ],
+  "status": "active",
+  "deprecated_message": null,
+  "created": "2026-01-20",
+  "upstream": {
+    "org": "BurntSushi",
+    "repository_url": "https://github.com/BurntSushi/ripgrep",
+    "disclaimer": "Unaffiliated mirror of the upstream ripgrep project."
+  },
+  "desc": {
+    "digest": "sha256:5e20f00db7221c7cdfcbd8d52dc5844829d62680d4ac477246e52b6cd87a875d",
+    "title": "ripgrep",
+    "description": "Recursively search directories for a regex pattern while respecting .gitignore.",
+    "keywords": [
+      "search",
+      "grep",
+      "regex",
+      "cli",
+      "rust"
+    ],
+    "readme": "sha256:9375a45e701af3609c2ec5829f551032aea9fce3fc5bef9dbc498b8490d2b133"
+  },
+  "tags": {
+    "14": {
+      "content": "sha256:070618e7d116814ca95a5c9b22ce24ff36c40d8b96171450139e059d405dbff2",
+      "observed": "2026-07-15T14:05:00Z"
+    },
+    "14.1.1": {
+      "content": "sha256:070618e7d116814ca95a5c9b22ce24ff36c40d8b96171450139e059d405dbff2",
+      "observed": "2026-07-15T14:05:00Z"
+    },
+    "14.1": {
+      "content": "sha256:070618e7d116814ca95a5c9b22ce24ff36c40d8b96171450139e059d405dbff2",
+      "observed": "2026-07-15T14:05:00Z"
+    },
+    "latest": {
+      "content": "sha256:070618e7d116814ca95a5c9b22ce24ff36c40d8b96171450139e059d405dbff2",
+      "observed": "2026-07-15T14:05:00Z"
+    }
+  }
+}

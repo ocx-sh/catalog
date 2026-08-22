@@ -1,0 +1,50 @@
+{
+  "name": "ocx.sh/acme/legacy-tool",
+  "repository": "oci://ghcr.io/ocx-contrib/acme/legacy-tool",
+  "owners": [
+    {
+      "github": "ocx-bot",
+      "github_id": 309019509
+    }
+  ],
+  "status": "deprecated",
+  "deprecated_message": "Superseded by acme/gadget, which covers every legacy-tool workflow. Receives security fixes only.",
+  "superseded_by": "acme/gadget",
+  "created": "2024-06-03",
+  "upstream": {
+    "org": "acme",
+    "repository_url": "https://github.com/acme/legacy-tool",
+    "disclaimer": "Unaffiliated mirror of the upstream acme/legacy-tool project."
+  },
+  "desc": {
+    "digest": "sha256:56de8c01f224e4332d39f4a828403f3e27dff67daa67926f72ca49d417954744",
+    "title": "legacy-tool",
+    "description": "First-generation data-transform pipeline, superseded by acme/gadget.",
+    "keywords": [
+      "cli",
+      "json",
+      "transform",
+      "deprecated"
+    ],
+    "readme": "sha256:2e2c35d7a3df312077ac220be2bd0681c4f9c3f97059f6b21ccdb51aae934e86",
+    "logo": "sha256:63de9c23eb86027ea8f3b9f5cd2ec0e3568a1db9e97aa3203dd9afac59d8cb4f"
+  },
+  "tags": {
+    "2": {
+      "content": "sha256:4f8ca6e87a0abc96e9e6d4747f6da8ff02ed50ff648c4060b22285f45b6035ab",
+      "observed": "2025-11-02T18:20:00Z"
+    },
+    "2.1.0": {
+      "content": "sha256:4f8ca6e87a0abc96e9e6d4747f6da8ff02ed50ff648c4060b22285f45b6035ab",
+      "observed": "2025-11-02T18:20:00Z"
+    },
+    "2.1": {
+      "content": "sha256:4f8ca6e87a0abc96e9e6d4747f6da8ff02ed50ff648c4060b22285f45b6035ab",
+      "observed": "2025-11-02T18:20:00Z"
+    },
+    "latest": {
+      "content": "sha256:4f8ca6e87a0abc96e9e6d4747f6da8ff02ed50ff648c4060b22285f45b6035ab",
+      "observed": "2025-11-02T18:20:00Z"
+    }
+  }
+}

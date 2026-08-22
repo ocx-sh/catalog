@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none" role="img">
+  <title>mono</title>
+  <rect x="96" y="96" width="320" height="320" rx="48" fill="#0ea5e9"/>
+  <path d="M176 256 L240 320 L336 192" stroke="#bae6fd" stroke-width="34" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
