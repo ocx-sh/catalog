@@ -20,6 +20,7 @@ import { findLatestVersion, variantNames } from "./version_order.js";
 import type {
   Catalog,
   CatalogEntry,
+  CatalogPackageDetail,
   CatalogPackageRoot,
   CatalogSourcePackage,
 } from "./types.js";
@@ -28,10 +29,10 @@ const textDecoder = new TextDecoder("utf-8");
 
 /**
  * Ported from Python `_live_tag_content_digests` (`core/render.py:84-90`) —
- * this module's one caller of the two the Python function serves
- * (`_reachable_digests`, the other, has no TS port surface here — the
- * catalog emitter never prunes CAS content). Order is immaterial: only ever
- * iterated as a set.
+ * one of the two callers the Python function serves (`_reachable_digests`,
+ * the other, has no TS port surface here — the catalog emitter never prunes
+ * CAS content). `catalogPlatforms` is this module's one TS caller. Order is
+ * immaterial: only ever iterated as a set.
  */
 function liveTagContentDigests(root: CatalogPackageRoot): ReadonlySet<string> {
   const digests = new Set<string>();
@@ -436,3 +437,78 @@ function ensureAsciiEscape(jsonText: string): string {
   }
   return out;
 }
+
+// ---------------------------------------------------------------------------
+// Detail-page-only additions (C-501/C-502/C-503, ADR Decision 4, 2026-08-22
+// WP5). Everything below is new renderer capability, not a Python port, and
+// is DELIBERATELY never called by `catalogEntry`/`catalogIndex` above — the
+// boundary that keeps `/data/catalog/catalog.json` byte-stable (C-503).
+// ---------------------------------------------------------------------------
+
+const LICENSE_ANNOTATION = "org.opencontainers.image.licenses";
+const SOURCE_ANNOTATION = "org.opencontainers.image.source";
+const REVISION_ANNOTATION = "org.opencontainers.image.revision";
+
+/**
+ * Reads one OCI annotation key off an already-parsed `annotations` object.
+ * Absent key -> `undefined`: a real, spec-legal case (OCI `annotations` is
+ * an open, optional string map — not every build embeds every key). Present
+ * but not a string -> throws naming the digest and key: the OCI image-spec
+ * defines `annotations` as `map[string]string`, so a non-string value there
+ * is a wire-contract violation to REPORT, never silently coerce or drop
+ * (contrast `catalogPlatforms`'s lenient treatment of a missing/malformed
+ * `platform` object, which the image-index schema documents as a legitimate,
+ * expected shape for an attestation/referrer descriptor — an annotation
+ * value of the wrong type has no such documented meaning).
+ */
+function readAnnotation(annotations: Readonly<Record<string, unknown>>, key: string, digest: string): string | undefined {
+  const value = annotations[key];
+  if (value === undefined) {
+    return undefined;
+  }
+  if (typeof value !== "string") {
+    throw new Error(`annotation "${key}" for digest ${digest} is present but not a string`);
+  }
+  return value;
+}
+
+/**
+ * Reads `org.opencontainers.image.{licenses,source,revision}` off ONE
+ * already-parsed image-index object's `annotations` (C-600).
+ *
+ * Its one shipped caller is the theme's client-side `useImageIndex.ts`
+ * composable, which fetches exactly one image index at a time (whichever tag
+ * is currently active/hovered) over HTTP and wraps this in a
+ * malformed-degrades-to-`{}` guard — a decoration field must never take the
+ * detail page down. It lives here, in the viewmodel, rather than in the
+ * composable so the wire-shape validation rules below stay in the module
+ * that owns every other wire read; a second hand-rolled annotation parser in
+ * the theme is exactly the drift class `subsystem-theme.md` warns about.
+ *
+ * An index carrying no `annotations` key at all returns `{}` (spec-legal:
+ * `annotations` itself is optional) — this is NOT the same as "malformed";
+ * only a PRESENT `annotations` that isn't an object at all is rejected as
+ * malformed (throws naming `digest`), mirroring `validateRootShape`'s
+ * "guard exactly what's dereferenced" discipline. A missing/non-string
+ * individual annotation value likewise throws naming `digest` and the key
+ * (via `readAnnotation`).
+ */
+export function readImageIndexAnnotations(index: { annotations?: unknown }, digest: string): CatalogPackageDetail {
+  const annotations = index.annotations;
+  if (annotations === undefined) {
+    return {};
+  }
+  if (typeof annotations !== "object" || annotations === null || Array.isArray(annotations)) {
+    throw new Error(`image index for digest ${digest} has a malformed "annotations" value`);
+  }
+  const fields = annotations as Record<string, unknown>;
+  const license = readAnnotation(fields, LICENSE_ANNOTATION, digest);
+  const sourceRepository = readAnnotation(fields, SOURCE_ANNOTATION, digest);
+  const revision = readAnnotation(fields, REVISION_ANNOTATION, digest);
+  return {
+    ...(license !== undefined ? { license } : {}),
+    ...(sourceRepository !== undefined ? { sourceRepository } : {}),
+    ...(revision !== undefined ? { revision } : {}),
+  };
+}
+
