@@ -92,7 +92,7 @@ improvement, not a fact about the current baseline.
 
 - **Discriminated unions**: tag every union with a `kind`/`type` literal field. TS
   narrows exhaustively in a `switch`.
-- **`satisfies`** (used in `src/viewmodel/catalog.ts`): validates a value conforms
+- **`satisfies`** (used in `src/theme/index.mts`): validates a value conforms
   to a type without widening the inferred type — `const config = { … } satisfies
   Config` instead of `const config: Config = { … }` when you still want
   autocomplete on the literal values.

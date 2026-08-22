@@ -28,12 +28,13 @@ surfaces this package owns versus reads, and the non-goals →
 [`product-context.md`](./.claude/rules/product-context.md). Canonical; do
 not restate it here.
 
-> **Status: pre-1.0, unpublished.** `0.1.0` is complete and gated but not on
-> npm — it waits on the `@ocx-sh` org and a manual first publish. There is
-> **no GitHub remote yet**: this is a local-only checkout that
-> [`ocx-sh/index`](https://github.com/ocx-sh/index) consumes through a
-> `file:../ocx-catalog` dependency. Until it publishes, the index's own CI
-> cannot build it, and that is expected.
+> **Status: pre-1.0.** `0.1.0` is published to npm — a one-time manual
+> bootstrap publish, since npm trusted publishing cannot pre-provision a new
+> package name. The GitHub remote
+> [`ocx-sh/catalog`](https://github.com/ocx-sh/catalog) exists. The `v0.1.1`
+> tag was cut but **not** published (only `0.1.0` is on the registry). The
+> one release step still pending is owner-only: registering the npm Trusted
+> Publisher (see [Release](#release)).
 
 ## Rule Catalog
 
@@ -45,22 +46,33 @@ already open; the catalog covers everything before that.
 
 ## Commands
 
-Plain npm scripts — there is **no `task` runner** here.
+`taskfile.yml` (go-task, provisioned via `ocx.toml`/`ocx.lock`) is the
+canonical local + CI surface — CI runs the same `task <name>` a developer
+runs, byte for byte, so local and CI execute identical checks. No `ocx run --`
+prefix is needed there: `ocx-sh/setup-ocx` activates the project, which puts
+every tool `ocx.lock` pins on `PATH` for the steps that follow. The plain npm
+scripts still exist underneath; `task` wraps them.
 
 ```sh
-npm run lint              # eslint (typescript-eslint, flat config)
-npm run typecheck         # tsc --noEmit && tsc -p tsconfig.theme.json
-npm test                  # vitest run --coverage — the gate, see below
-npm run build             # tsc -> dist/ (postbuild chmods the CLI entry)
-node scripts/pack-smoke.mjs   # publint + attw + a real pack/install smoke
+task                # → verify (the default)
+task verify         # the four-gate quality run: lint → typecheck → test → pack-smoke
+task lint           # npm run lint (eslint, flat config)
+task typecheck      # npm run typecheck (tsc --noEmit && tsc -p tsconfig.theme.json)
+task test           # npm test (vitest run --coverage — 100% gate)
+task pack-smoke     # node scripts/pack-smoke.mjs (publint + attw + real pack/install)
+task build          # npm run build (tsc -> dist/; postbuild chmods the CLI entry)
+task changelog:preview   # git-cliff --unreleased
+task release:prepare BUMP=auto|patch|minor|major   # see Release
 ```
 
-`npm test`, `npm run lint`, `npm run typecheck` and `node
-scripts/pack-smoke.mjs` together are the local equivalent of CI. Run all
-four before calling anything done.
+`task verify` is the local equivalent of the CI quality gate — run it before
+calling anything done. Repo-hygiene tasks (`lint:actions`, `lint:links`,
+`secrets`, `lint:workflows`) and `quality:web` (Lighthouse CI over a fixture
+site) run standalone, not as part of `verify`.
 
-CI (`.github/workflows/ci.yml`) runs six jobs: `lint`, `typecheck`, `test`,
-`pack-verify`, `workflows-lint` (zizmor), `audit-signatures`.
+CI (`.github/workflows/ci.yml`) runs: `lint`, `typecheck`, `test`,
+`pack-verify`, `workflows-lint` (zizmor), `audit-signatures`, `repo-checks`
+(actionlint/lychee/gitleaks), and `web-quality` (Lighthouse CI).
 
 ## Quality Gate
 
@@ -87,8 +99,8 @@ refs only** — a mutable ref is never carried forward. See
 
 ## Workflow
 
-- **Branch + PR + merge.** No remote exists yet, so commits land on `main`
-  locally; once the GitHub repo is created, switch to branch + PR.
+- **Branch + PR + merge** against the `ocx-sh/catalog` GitHub remote — the
+  active workflow; never commit straight to `main`.
 - Commits: [Conventional Commits](https://www.conventionalcommits.org/)
   (`feat:`, `fix:`, `ci:`, `chore:`, `docs:`, `test:`). No `Co-Authored-By`
   trailers.
@@ -136,5 +148,14 @@ via **npm trusted publishing (OIDC)** with `--provenance`. The publish job
 uses `npm ci --ignore-scripts`: it holds `id-token: write`, so a lifecycle
 script from any transitive dependency could otherwise mint an npm token.
 
-**The first publish must be manual** — trusted publishing cannot be
-configured for a package name that does not exist yet.
+`task release:prepare BUMP=<level>` prepares a release locally: it computes
+the next version (git-cliff), writes it into `package.json`, regenerates
+`CHANGELOG.md`, and runs `verify` — then prints the manual commit/tag/push
+steps. It never commits, tags, or pushes.
+
+`0.1.0` was published manually to bootstrap the package name (done — trusted
+publishing cannot pre-provision a name that does not exist yet). The one
+remaining release step is owner-only: register the npm Trusted Publisher for
+`@ocx-sh/catalog` scoped to repo `ocx-sh/catalog`, workflow `release.yml`,
+branch `main`. Until then a `v*` tag runs the gate but the publish job is
+inert. `--provenance` also needs the GitHub repo public at tag-push time.

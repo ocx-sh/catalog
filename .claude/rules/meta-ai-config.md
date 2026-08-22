@@ -133,6 +133,14 @@ survives the pointer being deleted. Phase advancement is a deliberate
 decision encoded as a `Step` transition, never an automatic side effect of a
 commit landing.
 
+Plans' sibling artifacts — ADRs (`adr_*.md`) and research write-ups
+(`research_*.md`) — live in `.claude/artifacts/`, plain markdown, **not**
+gitignored (unlike `.claude/state/plans/`): they're the durable record of a
+plan's own research and decisions, so they're committed alongside the code
+they informed. `AGENTS.md`'s Workflow section names both paths for a
+newcomer; this section is the canonical description of the plan-state half
+of that pair.
+
 ## Anti-Patterns
 
 1. **A global rule over 200 lines** — same problem as a bloated `AGENTS.md`.

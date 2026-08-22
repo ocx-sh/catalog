@@ -38,6 +38,21 @@ index's URL shapes or field semantics is not this repo's call to make —
 follow whatever the index's schema documents, and treat a malformed root as
 a data error to report, not a shape to silently coerce.
 
+## Deployment precondition: `_headers`
+
+Every mirrored `/p/*` prefix is untrusted, same-origin content (a README,
+logo, or package root a configured source handed this renderer, never
+authored by it). The one control sandboxing that content —
+`Content-Security-Policy: sandbox` + `X-Content-Type-Options: nosniff` on
+`/p/*` and `/index/<label>/p/*` — ships as a Cloudflare Pages/Netlify
+`_headers` file (`src/sources/mirror.ts`'s `renderHeaders`). It is a **hard
+deployment precondition**, not a nice-to-have: on a host that doesn't read
+`_headers` (GitHub Pages, a raw S3 bucket, nginx serving the `dist/` tree
+directly) the file ships but is inert, and in `ocx-catalog dev` it's never
+read at all. Deploying anywhere other than Cloudflare Pages/Netlify means
+translating `_headers`' rules into that host's own header mechanism
+yourself — this package does not.
+
 ## Non-goals
 
 - Not an index — stores no package pointers of its own, only what a
@@ -83,9 +98,11 @@ on).
 
 ## Status
 
-Pre-1.0, unpublished. `package.json` pins `0.1.0`; `.github/workflows/release.yml`
-documents the release lane as inert until the owner creates the `@ocx-sh` npm
-org and configures npm trusted publishing for this package name — both
-manual, one-time, owner-only steps. Until then there is no way to `npm
-install @ocx-sh/catalog` from the registry; the only consumer today
-(`ocx-sh/index`) depends on it via a `file:` sibling-checkout path.
+Pre-1.0, published. `0.1.0` is on the npm registry — a one-time manual
+bootstrap publish, since npm trusted publishing cannot pre-provision a
+package name that doesn't exist yet. The GitHub remote
+[`ocx-sh/catalog`](https://github.com/ocx-sh/catalog) exists and is public. A
+`v0.1.1` tag was cut but **never published** (the CI publish job failed on a
+missing npm Trusted Publisher registration — owner-only, still pending); only
+`0.1.0` is installable today. Any consumer, not just `ocx-sh/index`, can now
+`npm install @ocx-sh/catalog` from the registry.

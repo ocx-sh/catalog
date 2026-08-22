@@ -18,9 +18,6 @@ not copies. Team-shared — commit it.
   (untrusted index ingestion), `src/ci/**` + `templates/**` (rendered CI
   workflows), `.github/workflows/**` (OIDC publish pipeline).
 - Worktrees: default `.agents/worktrees/` (gitignored).
-- Federation lead: `../index` — this repo participates as satellite key
-  `cat` for plan(s): `catalog-extraction`. Run hex orchestrators from the
-  lead, not here.
 
 ## Preferences
 
@@ -47,3 +44,8 @@ perspectives:
   Vue theme.
 
 ## Memory
+
+- Active plan: `.claude/state/plans/plan_sota_release_ready.md` (tier high) —
+  SOTA + release-ready single-PR round on branch `feat/sota-release-ready`.
+  Inputs: `.claude/artifacts/research_initial_review_2026-08-22.md`,
+  `.claude/artifacts/adr_tooling_and_quality_gate_2026-08-22.md`.
