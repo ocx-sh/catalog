@@ -125,7 +125,16 @@ async function boot(
     favicon,
     descLookup: catalog.descLookup,
   });
-  const server = await createServer(scratchRoot.path, { port, strictPort: port !== undefined });
+  // host pinned to IPv4 loopback: Vite's default (`localhost`) binds whichever
+  // address family the machine's resolver returns first, so "port already in
+  // use" (S-003, exit UNAVAILABLE) would depend on which loopback family a
+  // conflicting listener happens to hold — deterministic bind, deterministic
+  // error semantics.
+  const server = await createServer(scratchRoot.path, {
+    host: "127.0.0.1",
+    port,
+    strictPort: port !== undefined,
+  });
   await server.listen();
   return { scratchRoot, server };
 }

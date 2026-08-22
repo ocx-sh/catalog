@@ -16,7 +16,8 @@ describe("C-009/S-005 pack verification gate", () => {
    *      resolution across module systems).
    *   4. Install the tarball into a fresh `mkdtemp` sandbox with npm scripts
    *      disabled (`--ignore-scripts`), then run the installed
-   *      `ocx-catalog --version` bin and confirm it prints "0.1.0".
+   *      `ocx-catalog --version` bin and confirm it prints the version
+   *      from this repo's package.json.
    *   5. Fail the whole run if any npm pack/publish output contains the
    *      string "auto-corrected" (npm silently rewriting the manifest, e.g.
    *      dropping `bin`, is a hard failure, not a warning).
