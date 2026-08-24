@@ -44,7 +44,15 @@
  *      empirically: it hangs against an unreachable registry rather than
  *      failing fast), so it's opt-in — `npm test` stays offline-safe by
  *      default; `release.yml`'s own dry-run guard is the enforced copy at
- *      release time regardless of this flag.
+ *      release time regardless of this flag. One registry rejection is
+ *      tolerated there and only there: between a release and the next
+ *      version bump the version in `package.json` is already published, so
+ *      the dry-run can only ever return E403 — for a reason that says
+ *      nothing about the artifact, on every PR. The normalization output the
+ *      guard actually reads is produced before that rejection, so it is
+ *      still checked; every other non-zero exit stays fatal. `release.yml`
+ *      publishes a version that does not exist yet, so its own copy is
+ *      unaffected and must keep failing hard.
  *   8. Assert the npm major version this script runs under EQUALS
  *      `EXPECTED_NPM_MAJOR` and fail otherwise, so a pack-format change in a
  *      future npm major does not silently pass.
@@ -103,6 +111,15 @@ function assertNpmMajor() {
     );
   }
   return { version, major };
+}
+
+/** npm's own wording when the version in package.json is already on the
+ * registry (`E403`). Matched, not assumed from the exit status, so a genuine
+ * publish failure never slips through as "expected". */
+const ALREADY_PUBLISHED = /cannot publish over the previously published versions/i;
+
+function pkgVersion() {
+  return JSON.parse(readFileSync(join(repoRoot, "package.json"), "utf8")).version;
 }
 
 function assertNoAutoCorrect(step, outputs) {
@@ -444,10 +461,37 @@ function runPublishDryRunGuard(step) {
     );
     return;
   }
-  const result = run(step, "npm", ["publish", "--dry-run", "--provenance", "--access", "public"], {
+  const result = spawnSync("npm", ["publish", "--dry-run", "--provenance", "--access", "public"], {
     cwd: repoRoot,
+    encoding: "utf8",
   });
-  assertNoAutoCorrect(step, [result.stdout, result.stderr]);
+  if (result.error) {
+    throw new Error(`${step}: failed to spawn "npm": ${result.error.message}`);
+  }
+  const outputs = [result.stdout, result.stderr];
+  // The manifest normalization this guard reads happens BEFORE the registry
+  // rejects the version, so the output is still the evidence we need — scan it
+  // first, whatever the exit status was.
+  assertNoAutoCorrect(step, outputs);
+  if (result.status !== 0) {
+    // Between a release and the next version bump, package.json names a
+    // version that is already on the registry, so this dry-run can only ever
+    // fail with E403 — on every CI run of every PR, for a reason that has
+    // nothing to do with the packed artifact. That one rejection is expected
+    // and non-fatal (the normalization pass above already ran); anything else
+    // is a real failure.
+    if (outputs.some((output) => ALREADY_PUBLISHED.test(output))) {
+      process.stderr.write(
+        `${step}: registry rejected the dry-run because ${pkgVersion()} is already published — ` +
+          `expected on a non-release commit; the manifest-normalization check above still ran\n`,
+      );
+      return;
+    }
+    throw new Error(
+      `${step}: "npm publish --dry-run" exited ${String(result.status)}\n` +
+        `stdout:\n${result.stdout}\nstderr:\n${result.stderr}`,
+    );
+  }
 }
 
 function main() {
