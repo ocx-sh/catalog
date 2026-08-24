@@ -160,9 +160,15 @@ async function readOneSource(source: ResolvedSource, index: number, configDir: s
     // neither an explicit `label` nor a single package root is a hard error
     // (LABEL_DERIVATION_EMPTY), not an empty catalog.
     const label = resolveLabel(source, files);
-    const packages = extractPackages(files);
     const root = source.entry.root === true;
-    return { resolved: { label, files, root }, packages, wireBase: root ? "" : `index/${label}` };
+    const wireBase = root ? "" : `index/${label}`;
+    // Attached HERE, not inside `extractPackages`: that function reads one
+    // source's wire tree and cannot know where `mirror.ts` will mount it.
+    // `catalogEntry` builds this package's `logoUrl`/`readmeUrl` through it,
+    // so a non-root source's assets resolve to the `index/<label>/p/...`
+    // tree the mirror actually writes.
+    const packages = extractPackages(files).map((pkg) => ({ ...pkg, wireBase }));
+    return { resolved: { label, files, root }, packages, wireBase };
   } catch (err) {
     throw asBuildError(err, describeSource(index, source.entry));
   }

@@ -1,5 +1,6 @@
 import type { MaybeRefOrGetter } from 'vue'
 import { onMounted, ref, toValue, watch } from 'vue'
+import { wirePrefix } from '../utils/cas'
 
 // TS interfaces mirror the wire JSON field names 1:1 (snake_case) —
 // schema/root.schema.json is the source of truth, no camelCase translation
@@ -56,8 +57,11 @@ export interface PackageRoot {
 }
 
 /**
- * Fetches the wire package root at `/p/<ns>/<pkg>.json` (schema:
- * `root.schema.json`).
+ * Fetches the wire package root at `<wireBase>/p/<ns>/<pkg>.json` (schema:
+ * `root.schema.json`). `wireBase` is the mount prefix of the source this
+ * package came from — `''` (the site root) for the `root: true` source,
+ * `index/<label>` for every other; the detail page reads it off its own
+ * frontmatter. See `utils/cas.ts`'s `wirePrefix`.
  *
  * CAS gotcha: build any CAS asset URL (`casUrl()` from `utils/cas.ts`) from
  * the bare `<ns>/<pkg>` route params passed in here — NEVER from
@@ -70,7 +74,11 @@ export interface PackageRoot {
  * navigation between two different packages, so a plain one-shot
  * `onMounted` fetch would leave stale data on screen after such a nav.
  */
-export function usePackageRoot(ns: MaybeRefOrGetter<string>, pkg: MaybeRefOrGetter<string>) {
+export function usePackageRoot(
+  ns: MaybeRefOrGetter<string>,
+  pkg: MaybeRefOrGetter<string>,
+  wireBase: MaybeRefOrGetter<string> = '',
+) {
   const root = ref<PackageRoot | null>(null)
   const loading = ref(true)
   const error = ref<string | null>(null)
@@ -85,14 +93,18 @@ export function usePackageRoot(ns: MaybeRefOrGetter<string>, pkg: MaybeRefOrGett
 
   onMounted(() => {
     watch(
-      () => [toValue(ns), toValue(pkg)] as const,
-      async ([nsVal, pkgVal]) => {
+      // `wireBase` is watched alongside ns/pkg: the client router reuses this
+      // component instance across a nav, and two packages from DIFFERENT
+      // sources have different mount prefixes — dropping it from the watch
+      // source would refetch package B's root under source A's prefix.
+      () => [toValue(ns), toValue(pkg), toValue(wireBase)] as const,
+      async ([nsVal, pkgVal, baseVal]) => {
         const token = ++requestToken
         loading.value = true
         error.value = null
         notFound.value = false
         try {
-          const resp = await fetch(`/p/${nsVal}/${pkgVal}.json`)
+          const resp = await fetch(`${wirePrefix(baseVal)}/p/${nsVal}/${pkgVal}.json`)
           if (token !== requestToken) return
           if (resp.status === 404) {
             notFound.value = true

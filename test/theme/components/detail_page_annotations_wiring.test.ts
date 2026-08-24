@@ -12,7 +12,9 @@ import { afterEach, describe, expect, test, vi } from 'vitest'
 import { ref } from 'vue'
 
 const relativePath = ref('widgets/tool.md')
-vi.mock('vitepress', () => ({ useData: () => ({ page: ref({ relativePath: relativePath.value }) }) }))
+vi.mock('vitepress', () => ({
+  useData: () => ({ page: ref({ relativePath: relativePath.value }), frontmatter: ref({ layout: 'detail' }) }),
+}))
 
 const DetailPage = (await import('../../../src/theme/components/detail/DetailPage.vue')).default
 

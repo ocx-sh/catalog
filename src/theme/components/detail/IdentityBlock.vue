@@ -20,6 +20,9 @@ const props = defineProps<{
    * `latest` tag has no versioned alias) — DetailPage computes this once
    * from the version table and shares it with MetaRail too. */
   latestVersionLabel: string | null
+  /** Mount prefix of the source this package came from — see
+   * `utils/cas.ts`'s `wirePrefix`. Omitted for the `root: true` source. */
+  wireBase?: string
 }>()
 
 const title = computed(() => props.root.desc?.title ?? props.bareName.split('/').pop() ?? props.bareName)
@@ -43,7 +46,9 @@ const menuActions = computed(() => buildTagCopyActions(qualifiedDisplayName.valu
 // Logo fallback chain: svg -> png -> monogram tile (see utils/cas.ts's
 // ponytail note on why extension guess-and-retry is needed at all) —
 // `useImageFallback` owns the shared retry-chain mechanics.
-const logoCandidates = computed(() => LOGO_EXT_CANDIDATES.map(ext => casUrl(props.bareName, props.root.desc?.logo, ext)))
+const logoCandidates = computed(() =>
+  LOGO_EXT_CANDIDATES.map(ext => casUrl(props.bareName, props.root.desc?.logo, ext, props.wireBase ?? '')),
+)
 const { src: logoSrc, onError: onLogoError } = useImageFallback(logoCandidates)
 
 const hue = computed(() => monogramHue(props.bareName))

@@ -23,7 +23,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { compareQualifiedIds, mirrorSources, renderHeaders } from "../../src/sources/mirror.js";
 import type { ResolvedSourceFiles, WirePath } from "../../src/sources/types.js";
-import { bytesEqual, rootJsonBytes, utf8 } from "./helpers.js";
+import { bytesEqual, rootJsonBytes, sha256Digest, utf8 } from "./helpers.js";
 
 function source(
   label: string,
@@ -137,6 +137,39 @@ describe("mirrorSources — per-source catalog.json, sorted by qualified package
     const catalog = JSON.parse(new TextDecoder().decode(raw)) as { packages: unknown[] };
 
     expect(catalog.packages).toHaveLength(1);
+  });
+
+  // A per-source catalog sits at `/index/<label>/data/catalog/catalog.json`
+  // and is read by a browser at that URL, so the asset links inside it must
+  // resolve against the SAME prefix the loop just wrote this source's files
+  // to. Emitting `/p/...` here pointed every logo and README at the root
+  // source's tree — a different source's packages entirely, or a 404.
+  it("a non-root source's catalog links assets under its own /index/<label>/ prefix", async () => {
+    const distDir = await tempDistDir();
+    const logo = utf8("<svg xmlns='http://www.w3.org/2000/svg'/>");
+    const logoHex = sha256Digest(logo).slice("sha256:".length);
+    await mirrorSources(
+      [
+        source("alpha", false, [
+          [
+            "p/aaa/pkg.json",
+            rootJsonBytes({
+              name: "ocx.sh/aaa/pkg",
+              desc: { title: "Pkg", description: "", keywords: [], logo: sha256Digest(logo) },
+            }),
+          ],
+          [`p/aaa/pkg/o/sha256/${logoHex}.svg`, logo],
+        ]),
+      ],
+      distDir,
+    );
+
+    const raw = await readAt(distDir, "index/alpha/data/catalog/catalog.json");
+    const catalog = JSON.parse(new TextDecoder().decode(raw)) as { packages: { logoUrl: string | null }[] };
+
+    expect(catalog.packages[0]?.logoUrl).toBe(`/index/alpha/p/aaa/pkg/o/sha256/${logoHex}.svg`);
+    // And the bytes really are there, so the URL is not merely well-formed.
+    await expect(readAt(distDir, `index/alpha/p/aaa/pkg/o/sha256/${logoHex}.svg`)).resolves.toEqual(logo);
   });
 
   it("never writes catalog.json into the source's own mirrored tree (it is a derived artifact, not part of files)", async () => {

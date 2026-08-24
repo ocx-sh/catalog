@@ -140,6 +140,36 @@ describe("C-005/S-008 synthesizePages — depth-N -> file mapping", () => {
       expect(content).toMatch(/^\s*layout:\s*detail\s*$/m);
     });
   });
+
+  // The multi-source mount prefix's ONLY channel to the browser: a
+  // client-side wire fetch on a detail page has no other way to learn that
+  // its source was mirrored under `index/<label>/` rather than at the site
+  // root. DetailPage.vue reads this key back off `useData().frontmatter` and
+  // hands it to usePackageRoot / useImageIndex / utils/cas.ts.
+  it("a non-root source's page carries its wireBase in frontmatter", async () => {
+    await withScratch(async (scratchRoot) => {
+      await synthesizePages({
+        scratchRoot,
+        srcDir: SRC_DIR,
+        packages: [{ segments: ["kitware", "cmake"], wireBase: "index/corp" }],
+      });
+      const content = await readFile(join(scratchRoot, SRC_DIR, "kitware", "cmake.md"), "utf8");
+      expect(content).toMatch(/^\s*layout:\s*detail\s*$/m);
+      expect(content).toMatch(/^\s*wireBase:\s*'index\/corp'\s*$/m);
+    });
+  });
+
+  // The root:true source keeps byte-identical frontmatter to what this
+  // function wrote before wireBase existed — an emitted `wireBase: ''` would
+  // be dead weight on every page of the single-source case that is the
+  // overwhelming majority of deployments.
+  it("the root:true source's page omits the wireBase key entirely", async () => {
+    await withScratch(async (scratchRoot) => {
+      await synthesizePages({ scratchRoot, srcDir: SRC_DIR, packages: [route(["kitware", "cmake"])] });
+      const content = await readFile(join(scratchRoot, SRC_DIR, "kitware", "cmake.md"), "utf8");
+      expect(content).toBe("---\nlayout: detail\n---\n");
+    });
+  });
 });
 
 describe("C-005/S-006 synthesizePages — docs mount placement", () => {

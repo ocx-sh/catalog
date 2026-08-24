@@ -1,5 +1,14 @@
 // CAS (content-addressed storage) URL helper for catalog/detail components.
 //
+// `wireBase` is the mount prefix of the source a package came from — `''`
+// (the site root) for the `root: true` source, `index/<label>` for every
+// other, matching where `sources/mirror.ts` wrote that source's tree. It
+// reaches the browser through the detail page's own frontmatter
+// (`build/pages.ts`'s `packagePageContent`). `wirePrefix` is re-exported
+// from the view model rather than re-declared here — `useImageIndex.ts`
+// already imports that module in the browser bundle, so there is no
+// build-split reason to own a second copy of a one-line function.
+//
 // Builds the `/p/<ns>/<pkg>/o/sha256/<hex>.<ext>` shape locked by
 // `adr_locked_observation_index_format.md` D2. Components reference these
 // URLs directly instead of duplicating blob bytes into `/data/catalog/**`
@@ -18,6 +27,10 @@
 // `demo:seed`-sourced README (readability-letter placeholder digests, e.g.
 // "kkkk...") never fetched despite the exact CAS path existing and
 // returning 200 (confirmed via curl + Playwright network capture).
+import { wirePrefix } from '../../viewmodel/catalog.js'
+
+export { wirePrefix }
+
 const DIGEST_RE = /^sha256:([a-z0-9]{64})$/
 
 /**
@@ -27,12 +40,18 @@ const DIGEST_RE = /^sha256:([a-z0-9]{64})$/
  * shape (defensive: a malformed/absent digest degrades to "no asset", never
  * a broken request).
  */
-export function casUrl(pkgName: string, digest: string | null | undefined, ext: string): string | null {
+export function casUrl(
+  pkgName: string,
+  digest: string | null | undefined,
+  ext: string,
+  wireBase = '',
+): string | null {
   if (!digest) return null
   const match = DIGEST_RE.exec(digest)
   if (!match) return null
-  return `/p/${pkgName}/o/sha256/${match[1]}.${ext}`
+  return `${wirePrefix(wireBase)}/p/${pkgName}/o/sha256/${match[1]}.${ext}`
 }
+
 
 // ponytail: the wire schema's `desc.logo` digest carries no extension (CAS
 // filenames are `.svg` or `.png`, ADR D2), so a logo URL can't be built from

@@ -11,7 +11,11 @@ import { ref } from "vue";
 
 const relativePath = ref("widgets/tool.md");
 vi.mock("vitepress", () => ({
-  useData: () => ({ page: ref({ relativePath: relativePath.value }), isDark: ref(false) }),
+  useData: () => ({
+    page: ref({ relativePath: relativePath.value }),
+    frontmatter: ref({ layout: 'detail' }),
+    isDark: ref(false),
+  }),
 }));
 
 const PackageCard = (await import("../../../src/theme/components/catalog/PackageCard.vue")).default;

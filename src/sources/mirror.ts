@@ -175,7 +175,13 @@ export async function mirrorSources(
       }
     }
 
-    const sorted = [...extractPackages(source.files)].sort(compareQualifiedIds);
+    // Same placement this loop just wrote the source's own files to, so the
+    // per-source catalog's `logoUrl`/`readmeUrl` point at that copy rather
+    // than at the site root — see `viewmodel/catalog.ts`'s `wirePrefix`.
+    const wireBase = source.root ? "" : `index/${source.label}`;
+    const sorted = [...extractPackages(source.files)]
+      .map((pkg) => ({ ...pkg, wireBase }))
+      .sort(compareQualifiedIds);
     const catalog = serializeCatalog(catalogIndex(sorted));
     const catalogRelPath = source.root
       ? "data/catalog/catalog.json"

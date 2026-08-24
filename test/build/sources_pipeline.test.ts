@@ -91,6 +91,49 @@ const WIRE_TREE: Readonly<Record<string, Uint8Array>> = {
   "p/acme/tools/gadget.json": GADGET_ROOT,
 };
 
+/** One `packages[]` row of `/data/catalog/catalog.json`, narrowed to the two
+ * URL fields under test — the emitter's own `CatalogEntry` is not imported
+ * here on purpose: this asserts against the SERIALIZED bytes a browser
+ * fetches, not against the type that produced them. */
+interface CatalogRow {
+  namespace: string;
+  package: string;
+  logoUrl: string | null;
+  readmeUrl: string | null;
+}
+
+const LOGO_BYTES = utf8("<svg xmlns='http://www.w3.org/2000/svg'/>");
+const LOGO_DIGEST = sha256Digest(LOGO_BYTES);
+const LOGO_HEX = LOGO_DIGEST.slice("sha256:".length);
+const README_BYTES = utf8("# Thing\n");
+const README_DIGEST = sha256Digest(README_BYTES);
+const README_HEX = README_DIGEST.slice("sha256:".length);
+
+/** A one-package wire tree whose root publishes BOTH desc assets, with the
+ * CAS blobs actually present — a dangling digest would throw instead, so the
+ * URL assertions below can only be reached by a complete tree. */
+function ASSET_TREE(name: string): Readonly<Record<string, Uint8Array>> {
+  const wirePath = name.split("/").slice(1).join("/");
+  return {
+    "config.json": CONFIG_JSON,
+    [`p/${wirePath}.json`]: rootJsonBytes({
+      name,
+      created: "2026-01-01",
+      desc: {
+        title: "Thing",
+        description: "A thing.",
+        keywords: [],
+        readme: README_DIGEST,
+        logo: LOGO_DIGEST,
+      },
+      tags: { "1.0.0": { content: IMAGE_INDEX_DIGEST, observed: "2026-01-02T00:00:00Z" } },
+    }),
+    [`p/${wirePath}/o/sha256/${IMAGE_INDEX_HEX}.json`]: IMAGE_INDEX,
+    [`p/${wirePath}/o/sha256/${LOGO_HEX}.svg`]: LOGO_BYTES,
+    [`p/${wirePath}/o/sha256/${README_HEX}.md`]: README_BYTES,
+  };
+}
+
 function pathSource(entryPath: string, extra: { root?: boolean; label?: string } = {}): ResolvedSource {
   const { root, label } = extra;
   return {
@@ -148,6 +191,38 @@ describe("sources_pipeline resolveCatalog — path source", () => {
 
     expect(catalog.sources[0]).toMatchObject({ label: "upstream", root: false });
     expect(catalog.routes.map((route) => route.wireBase)).toEqual(["index/upstream", "index/upstream"]);
+  });
+
+  // The bug this pins: `wireBase` reached `routes` from the very first
+  // release but never reached the CATALOG, so every non-root source's
+  // `logoUrl`/`readmeUrl` in `/data/catalog/catalog.json` pointed at `/p/**`
+  // — the site root, which only ever holds the `root: true` source's mirror
+  // copy. The bytes existed the whole time, one directory over under
+  // `/index/<label>/p/**`, and the grid's image-fallback chain swallowed
+  // every 404 into a monogram tile.
+  it("each package's catalog logoUrl/readmeUrl carries ITS OWN source's wireBase", async () => {
+    const dir = await tempDir("catalog-pipeline-assets-");
+    await writeTree(join(dir, "home"), ASSET_TREE("ocx.sh/acme/widget"));
+    await writeTree(join(dir, "corp"), ASSET_TREE("corp.example/beta/thing"));
+
+    const catalog = await resolveCatalog(
+      [pathSource("home", { root: true }), pathSource("corp")],
+      dir,
+    );
+    const packages = (JSON.parse(catalog.catalogJson) as { packages: CatalogRow[] }).packages;
+    const byId = new Map(packages.map((row) => [`${row.namespace}/${row.package}`, row]));
+
+    // Root source -> site root, exactly as before this field existed.
+    expect(byId.get("acme/widget")).toMatchObject({
+      logoUrl: `/p/acme/widget/o/sha256/${LOGO_HEX}.svg`,
+      readmeUrl: `/p/acme/widget/o/sha256/${README_HEX}.md`,
+    });
+    // Non-root source -> the `index/<label>/` tree `mirror.ts` actually
+    // wrote. Label is derived from the root name's first segment.
+    expect(byId.get("beta/thing")).toMatchObject({
+      logoUrl: `/index/corp.example/p/beta/thing/o/sha256/${LOGO_HEX}.svg`,
+      readmeUrl: `/index/corp.example/p/beta/thing/o/sha256/${README_HEX}.md`,
+    });
   });
 
   it("a package present in two sources resolves to the FIRST configured source", async () => {

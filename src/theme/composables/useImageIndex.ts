@@ -1,4 +1,5 @@
 import { ref } from 'vue'
+import { wirePrefix } from '../utils/cas'
 import { readImageIndexAnnotations } from '../../viewmodel/catalog.js'
 import type { CatalogPackageDetail } from '../../viewmodel/types.js'
 
@@ -63,7 +64,12 @@ function safeReadDetail(index: ImageIndex, digest: string): CatalogPackageDetail
 const cache = new Map<string, ImageIndex>()
 const inFlight = new Map<string, Promise<ImageIndex | null>>()
 
-async function fetchImageIndex(ns: string, pkg: string, digest: string): Promise<ImageIndex | null> {
+async function fetchImageIndex(
+  ns: string,
+  pkg: string,
+  digest: string,
+  wireBase: string,
+): Promise<ImageIndex | null> {
   const cached = cache.get(digest)
   if (cached) return cached
 
@@ -73,7 +79,7 @@ async function fetchImageIndex(ns: string, pkg: string, digest: string): Promise
   const hex = digest.replace(/^sha256:/, '')
   const promise = (async (): Promise<ImageIndex | null> => {
     try {
-      const resp = await fetch(`/p/${ns}/${pkg}/o/sha256/${hex}.json`)
+      const resp = await fetch(`${wirePrefix(wireBase)}/p/${ns}/${pkg}/o/sha256/${hex}.json`)
       if (!resp.ok) return null
       const data: ImageIndex = await resp.json()
       cache.set(digest, data)
@@ -89,11 +95,17 @@ async function fetchImageIndex(ns: string, pkg: string, digest: string): Promise
 }
 
 /**
- * Lazy fetch of the OCI image index a tag resolved to (`/p/<ns>/<pkg>/o/
- * sha256/<hex>.json` — stored verbatim as the registry served it). `ns`/
- * `pkg` are the bare route params (same CAS gotcha as `usePackageRoot` —
- * never `root.name`); `digest` is a tag's `tags[tag].content` value
- * (`sha256:<hex>`), which is the image index's own digest.
+ * Lazy fetch of the OCI image index a tag resolved to
+ * (`<wireBase>/p/<ns>/<pkg>/o/sha256/<hex>.json` — stored verbatim as the
+ * registry served it). `ns`/`pkg` are the bare route params (same CAS gotcha
+ * as `usePackageRoot` — never `root.name`); `digest` is a tag's
+ * `tags[tag].content` value (`sha256:<hex>`), which is the image index's own
+ * digest; `wireBase` is the mount prefix of the source the package came from
+ * (see `utils/cas.ts`'s `wirePrefix`).
+ *
+ * The module-level cache stays keyed by `digest` ALONE, deliberately: a
+ * digest is a content address, so the same digest under two sources is the
+ * same bytes. Only the URL a miss is fetched from varies by `wireBase`.
  *
  * Pure fetch + module-level cache only — no grouping/version logic here
  * (that's `utils/version.ts`'s `buildVersionTable`). Callers that trigger
@@ -115,10 +127,10 @@ export function useImageIndex() {
   // stale) call's response overwrite the second's.
   let requestToken = 0
 
-  async function load(ns: string, pkg: string, digest: string) {
+  async function load(ns: string, pkg: string, digest: string, wireBase = '') {
     const token = ++requestToken
     loading.value = true
-    const result = await fetchImageIndex(ns, pkg, digest)
+    const result = await fetchImageIndex(ns, pkg, digest, wireBase)
     if (token !== requestToken) return
     imageIndex.value = result
     detail.value = result ? safeReadDetail(result, digest) : {}

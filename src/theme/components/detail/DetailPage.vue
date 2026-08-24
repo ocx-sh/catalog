@@ -26,13 +26,20 @@ const HOVER_DEBOUNCE_MS = 180
 // `ns` is always the first segment, `pkg` is every remaining segment
 // rejoined (never re-split), matching every existing fetch/CAS URL builder
 // below (`${ns}/${pkg}` reproduces the full logical name for any depth).
-const { page } = useData()
+const { page, frontmatter } = useData()
+// Per-source wire mount prefix, written into this page's frontmatter by
+// `build/pages.ts`'s `packagePageContent` — `''` for the `root: true`
+// source, `index/<label>` for every other configured source. It is the only
+// channel a client-side fetch has to the placement `sources/mirror.ts`
+// actually used; without it every wire request on a non-root source's page
+// goes to the site root and 404s.
+const wireBase = computed(() => (typeof frontmatter.value.wireBase === 'string' ? frontmatter.value.wireBase : ''))
 const segments = computed(() => page.value.relativePath.replace(/\.md$/, '').split('/'))
 const ns = computed(() => segments.value[0] ?? '')
 const pkg = computed(() => segments.value.slice(1).join('/'))
 const bareName = computed(() => `${ns.value}/${pkg.value}`)
 
-const { root, loading, error, notFound } = usePackageRoot(ns, pkg)
+const { root, loading, error, notFound } = usePackageRoot(ns, pkg, wireBase)
 
 const table = computed(() => (root.value ? buildVersionTable(root.value.tags, root.value.status) : null))
 const defaultRow = computed(() => table.value?.rows.find(r => r.isDefault) ?? null)
@@ -49,13 +56,13 @@ let hoverTimer: ReturnType<typeof setTimeout> | null = null
 // debounce: a deliberate pick should swap the Platforms card right away.
 function onInstallSelect(tag: string) {
   const digest = root.value?.tags[tag]?.content
-  if (digest) loadImageIndex(ns.value, pkg.value, digest)
+  if (digest) loadImageIndex(ns.value, pkg.value, digest, wireBase.value)
 }
 
 function onTagHover(digest: string) {
   if (hoverTimer) clearTimeout(hoverTimer)
   hoverTimer = setTimeout(() => {
-    loadImageIndex(ns.value, pkg.value, digest)
+    loadImageIndex(ns.value, pkg.value, digest, wireBase.value)
   }, HOVER_DEBOUNCE_MS)
 }
 
@@ -63,7 +70,7 @@ onMounted(() => {
   watch(defaultRow, (row) => {
     if (!row?.primaryTag || !root.value) return
     const digest = root.value.tags[row.primaryTag]?.content
-    if (digest) loadImageIndex(ns.value, pkg.value, digest)
+    if (digest) loadImageIndex(ns.value, pkg.value, digest, wireBase.value)
   }, { immediate: true })
 })
 </script>
@@ -95,7 +102,12 @@ onMounted(() => {
       />
       <YankedBanner v-else-if="root.status === 'yanked'" />
 
-      <IdentityBlock :root="root" :bare-name="bareName" :latest-version-label="defaultRow?.preciseAliasTag ?? null" />
+      <IdentityBlock
+        :root="root"
+        :bare-name="bareName"
+        :wire-base="wireBase"
+        :latest-version-label="defaultRow?.preciseAliasTag ?? null"
+      />
 
       <!-- ND-9: mandatory whenever upstream.disclaimer exists — reduced to a
            compact note below the identity block (owner finding: the boxed
@@ -131,7 +143,7 @@ onMounted(() => {
           @select-tag="onInstallSelect"
         />
 
-        <ReadmePane class="readme-section" :bare-name="bareName" :digest="root.desc?.readme ?? null" />
+        <ReadmePane class="readme-section" :bare-name="bareName" :wire-base="wireBase" :digest="root.desc?.readme ?? null" />
       </div>
     </template>
   </main>

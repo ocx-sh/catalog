@@ -167,6 +167,31 @@ function casRelpath(namespace: string, pkg: string, digest: string, ext: string)
 }
 
 /**
+ * Mount prefix for one source's mirrored wire tree — `""` for the
+ * `root: true` source (mirrored at the site root) and `/index/<label>` for
+ * every other configured source (`sources/mirror.ts`'s placement).
+ *
+ * Every wire URL this module emits into `/data/catalog/catalog.json` goes
+ * through it. Without it a non-root source's `logoUrl`/`readmeUrl` pointed
+ * at `/p/...`, which only ever holds the ROOT source's copy: the mirror had
+ * written those exact bytes to `/index/<label>/p/...` and every request
+ * 404'd, silently — `LogoTile`/`IdentityBlock` walk the svg->png candidate
+ * chain and leave the monogram standing, so a wholly logo-less, README-less
+ * multi-source catalog looked like a catalog whose packages publish no
+ * `__ocx.desc` at all.
+ *
+ * Exported for the browser side too: `src/theme/utils/cas.ts` re-exports it
+ * and builds its own CAS URLs through it, so both halves of a build agree by
+ * construction rather than by two copies staying in step. A live import is
+ * safe here where `WIRE_ASSET_EXTENSIONS`'s could not be — the dependency
+ * runs theme -> viewmodel, and `useImageIndex.ts` already pulls this module
+ * into the browser bundle for `readImageIndexAnnotations`.
+ */
+export function wirePrefix(wireBase: string): string {
+  return wireBase === "" ? "" : `/${wireBase}`;
+}
+
+/**
  * Ported from Python `_cas_url` (`core/render.py:136-149`). `null` when no
  * digest is configured. A configured digest missing from `extLookup` is a
  * dangling reference — trusted away upstream (`check_no_dangling_references`,
@@ -178,6 +203,7 @@ function casUrl(
   pkg: string,
   digest: string | null,
   extLookup: ReadonlyMap<string, string>,
+  wireBase: string,
 ): string | null {
   if (digest === null) {
     return null;
@@ -186,7 +212,7 @@ function casUrl(
   if (ext === undefined) {
     throw new Error(`dangling CAS reference: digest ${digest} missing from contentByDigest`);
   }
-  return "/" + casRelpath(namespace, pkg, digest, ext);
+  return `${wirePrefix(wireBase)}/${casRelpath(namespace, pkg, digest, ext)}`;
 }
 
 /**
@@ -306,6 +332,9 @@ export function catalogEntry(source: CatalogSourcePackage): CatalogEntry {
   const logoDigest = desc !== null ? desc.logo : null;
   const readmeDigest = desc !== null ? desc.readme : null;
   const derivedVariants = variantNames(Object.keys(root.tags));
+  // `?? ""` — `extractPackages` never sets this (see the field's own doc);
+  // an unattached package is the root source's, mounted at the site root.
+  const wireBase = source.wireBase ?? "";
 
   return {
     namespace,
@@ -323,8 +352,8 @@ export function catalogEntry(source: CatalogSourcePackage): CatalogEntry {
     ...(derivedVariants.length > 0 ? { variants: derivedVariants } : {}),
     tagCount: liveTagCount,
     platforms: catalogPlatforms(source),
-    logoUrl: casUrl(namespace, pkg, logoDigest, extLookup),
-    readmeUrl: casUrl(namespace, pkg, readmeDigest, extLookup),
+    logoUrl: casUrl(namespace, pkg, logoDigest, extLookup, wireBase),
+    readmeUrl: casUrl(namespace, pkg, readmeDigest, extLookup, wireBase),
   };
 }
 

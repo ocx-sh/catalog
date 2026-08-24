@@ -16,6 +16,9 @@ const props = defineProps<{
    * `usePackageRoot`'s CAS-gotcha docblock). */
   bareName: string
   digest: string | null
+  /** Mount prefix of the source this package came from — see
+   * `utils/cas.ts`'s `wirePrefix`. Omitted for the `root: true` source. */
+  wireBase?: string
 }>()
 
 const html = ref<string | null>(null)
@@ -31,7 +34,7 @@ async function load() {
     loading.value = false
     return
   }
-  const url = casUrl(props.bareName, props.digest, 'md')
+  const url = casUrl(props.bareName, props.digest, 'md', props.wireBase ?? '')
   if (!url) {
     failed.value = true
     loading.value = false
@@ -87,12 +90,12 @@ async function load() {
 }
 
 onMounted(load)
-watch(() => [props.bareName, props.digest], load)
+watch(() => [props.bareName, props.digest, props.wireBase], load)
 
 // Provenance popover actions — copy targets, not prose (owner spec).
 // URL resolved client-side only (popover never renders during SSG).
 const readmeUrl = computed(() => {
-  const path = props.digest ? casUrl(props.bareName, props.digest, 'md') : null
+  const path = props.digest ? casUrl(props.bareName, props.digest, 'md', props.wireBase ?? '') : null
   return path && typeof window !== 'undefined' ? `${window.location.origin}${path}` : null
 })
 

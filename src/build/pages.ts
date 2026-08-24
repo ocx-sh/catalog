@@ -50,19 +50,25 @@ import { Semaphore } from "../sources/walker.js";
  * frontmatter, or it would silently fall through to `DocLayout` instead of
  * rendering `DetailPage.vue`.
  *
- * ## Multi-source `wireBase` (C-004/C-006 coupling — plumbed, not yet consumed)
+ * ## Multi-source `wireBase` (C-004/C-006 coupling)
  *
  * `PackageRoute.wireBase` carries the per-source fetch-base prefix
  * (`""` for the config's `root:true` source, `"index/<label>"` for every
  * other configured source) that C-004's multi-source model assigns each
- * package's wire data. It is captured here so the synthesis contract does
- * not need to change again once it's consumed, but nothing downstream reads
- * it yet: `usePackageRoot.ts`/`useImageIndex.ts` fetch an unconditional
- * root-relative `/p/<ns>/<pkg>...` today (single-source assumption baked in
- * by WP-03's verbatim lift). Wiring `wireBase` through those composables'
- * fetch calls is WP-07/WP-10 territory (source layer lands the mirror
- * copy this prefix points at; WP-10 depends on WP-06). Until then this
- * engine only renders correctly for a single-source (or root-only) config.
+ * package's wire data. It is written into each synthesized page's
+ * frontmatter (`packagePageContent`), which is the only channel the
+ * client-side detail page has for it: `DetailPage.vue` reads it back off
+ * `useData().frontmatter` and hands it to `usePackageRoot`, `useImageIndex`
+ * and the two `utils/cas.ts` callers.
+ *
+ * It was plumbed here but unconsumed until 0.2.1, and everything downstream
+ * fetched an unconditional root-relative `/p/<ns>/<pkg>...` (a single-source
+ * assumption baked in by WP-03's verbatim lift). The mirror wrote a non-root
+ * source's tree to `index/<label>/p/**` while every URL naming it pointed at
+ * `/p/**`, so its package roots, image indices, logos and READMEs all 404'd
+ * — and the theme's image-fallback chains degrade silently, so the result
+ * read as "these packages publish no description" rather than as a broken
+ * fetch.
  *
  * ## Docs mount (S-006) placement
  *
@@ -99,7 +105,7 @@ export interface PackageRoute {
   readonly segments: readonly string[];
   /** This package's per-source wire-fetch mount prefix — `""` for the
    * root:true source, `"index/<label>"` otherwise. See the file doc's
-   * "Multi-source wireBase" section for its (currently unconsumed) status. */
+   * "Multi-source wireBase" section. */
   readonly wireBase: string;
 }
 
@@ -117,9 +123,24 @@ export interface SynthesizePagesOptions {
   readonly publicDirSource?: string;
 }
 
-/** The one frontmatter key every synthesized package page needs — see the
- * file doc's "Layout dispatch" section. */
-const PACKAGE_PAGE_CONTENT = "---\nlayout: detail\n---\n";
+/** Frontmatter for one synthesized package page: the `layout` key every
+ * page needs (see the file doc's "Layout dispatch" section), plus this
+ * package's `wireBase` when it has one.
+ *
+ * `wireBase` is how the per-source mount prefix reaches the BROWSER — the
+ * detail page's own wire fetches (`usePackageRoot`, `useImageIndex`,
+ * `ReadmePane`/`IdentityBlock` via `utils/cas.ts`) are client-side and have
+ * no other channel to it. Emitted only when non-empty, so the root source's
+ * pages keep byte-identical frontmatter to what this function has always
+ * written.
+ *
+ * Single-quoted: `labels.ts`'s `SAFE_LABEL_RE` already bounds a label to
+ * `[A-Za-z0-9._-]+` (no quote character can appear in one), and quoting
+ * keeps the value a YAML string regardless of what the label looks like. */
+function packagePageContent(wireBase: string): string {
+  const base = wireBase === "" ? "" : `wireBase: '${wireBase}'\n`;
+  return `---\nlayout: detail\n${base}---\n`;
+}
 
 /** Always synthesized — the catalog's own landing page (see the file doc's
  * "Root + 404 pages" section). */
@@ -150,7 +171,7 @@ export async function synthesizePages(options: SynthesizePagesOptions): Promise<
       try {
         const filePath = join(srcRoot, ...route.segments.slice(0, -1), `${route.segments[route.segments.length - 1]}.md`);
         await mkdir(join(filePath, ".."), { recursive: true });
-        await writeFile(filePath, PACKAGE_PAGE_CONTENT, "utf8");
+        await writeFile(filePath, packagePageContent(route.wireBase), "utf8");
       } finally {
         release();
       }

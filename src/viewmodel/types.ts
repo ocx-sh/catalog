@@ -93,6 +93,20 @@ export interface CatalogSourcePackage {
   readonly packageId: PackageId;
   readonly root: CatalogPackageRoot;
   readonly contentByDigest: Readonly<Record<string, Uint8Array>>;
+  /** Mount prefix of the mirrored wire tree this package's own source was
+   * written to (`build/sources_pipeline.ts`'s `wireBase`): `""` for the
+   * `root: true` source, `index/<label>` for every other configured source.
+   * `catalogEntry` builds `logoUrl`/`readmeUrl` through it, so a non-root
+   * source's assets point at `/index/<label>/p/...` — the tree `mirror.ts`
+   * actually wrote — rather than at the site root, where only the root
+   * source's copy exists.
+   *
+   * Optional, defaulting to `""`: `extractPackages` reads one source's wire
+   * tree and has no idea where that tree will be mounted, so it never sets
+   * this. The two callers that DO know the placement (`sources_pipeline.ts`
+   * for the merged catalog, `mirror.ts` for the per-source one) attach it
+   * afterwards. */
+  readonly wireBase?: string;
 }
 
 /**
