@@ -93,6 +93,54 @@
    * SearchModal + DocsMobileNav) — one dim value works over either theme. */
   --ocx-color-code-bg: #f6f8fa;
   --ocx-color-code-fg: #1b2129;
+
+  /* Monogram tile rotation (0-3), moved out of `utils/monogram.ts` where they
+   * were 16 hardcoded literals applied as inline styles — unreachable from a
+   * consumer stylesheet except with `!important`. Indexed 0-3 to match
+   * `monogramHue()`'s return value directly: a 1-based token name would put an
+   * off-by-one between the hash and the class, and a wrong hue "looks
+   * colourful" rather than looking broken.
+   *
+   * A bare number is legitimate here for the reason Radix's numeric scale is:
+   * the members are an arbitrary rotation set with no individual meaning.
+   *
+   * Values are preserved byte-for-byte from the old arrays and are NOT
+   * `color-mix()` derivations of the status tokens: three of the four tints
+   * predate WP6's a11y darkening (light -1 is #0e9f6e, not today's
+   * --ocx-color-success #0a7652) and light -3's tint is the DARK warning hue.
+   * Deriving them would silently change three of the four. */
+  --ocx-color-monogram-0: #d84a34;
+  --ocx-color-monogram-0-tint: rgba(255, 96, 71, 0.1);
+  --ocx-color-monogram-1: #0a7652;
+  --ocx-color-monogram-1-tint: rgba(14, 159, 110, 0.1);
+  --ocx-color-monogram-2: #6f5bd0;
+  --ocx-color-monogram-2-tint: rgba(111, 91, 208, 0.1);
+  --ocx-color-monogram-3: #9a6b13;
+  --ocx-color-monogram-3-tint: rgba(250, 184, 51, 0.16);
+
+
+  /* Code-fence roles. Deliberately ALIASES, not literals: one source of truth
+   * per role, so a mirror that rebrands `--ocx-color-keyword` moves the
+   * keyword colour in README fences (highlight.js) and docs fences (Shiki)
+   * together. A mirror that wants code to diverge from chrome overrides just
+   * the `-code-` name.
+   *
+   * These need no `.dark` twin — an alias inherits its source's light/dark
+   * swap. Only a token holding a LITERAL needs declaring in both blocks.
+   *
+   * Before this existed, Shiki carried its own 18 hardcoded hex values in
+   * `src/build/config_gen.ts`, still on the pre-WP6 palette (#6f5bd0/#0e9f6e/
+   * #9a6b13) that the a11y pass had already replaced for highlight.js — so the
+   * same language rendered in two different, differently-accessible palettes on
+   * one site. */
+  --ocx-color-code-comment: var(--ocx-color-fg-subtle);
+  --ocx-color-code-keyword: var(--ocx-color-keyword);
+  --ocx-color-code-string: var(--ocx-color-success);
+  --ocx-color-code-number: var(--ocx-color-warning);
+  --ocx-color-code-function: var(--ocx-color-fg);
+  --ocx-color-code-variable: var(--ocx-color-fg-muted);
+  --ocx-color-code-deleted: var(--ocx-color-accent-fg);
+
   --ocx-color-overlay: rgba(15, 18, 23, 0.55);
 }
 
@@ -121,5 +169,14 @@
 
   --ocx-color-code-bg: #14181f;
   --ocx-color-code-fg: #c8d0da;
+
+  --ocx-color-monogram-0: #ff8570;
+  --ocx-color-monogram-0-tint: rgba(255, 96, 71, 0.14);
+  --ocx-color-monogram-1: #3edea6;
+  --ocx-color-monogram-1-tint: rgba(62, 222, 166, 0.12);
+  --ocx-color-monogram-2: #c0b3ff;
+  --ocx-color-monogram-2-tint: rgba(192, 179, 255, 0.12);
+  --ocx-color-monogram-3: #fab833;
+  --ocx-color-monogram-3-tint: rgba(250, 184, 51, 0.12);
 }
 }

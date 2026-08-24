@@ -1,14 +1,11 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useData } from 'vitepress'
-import { MONOGRAM_HUES } from '../../utils/monogram'
+// Pure render — `hue`/`initials` are already-computed pure values (see
+// `monogramHue`/`monogramInitials`), so this component has no external reads
+// at all. It used to read core's `isDark` to pick a hue array in JS; the
+// light/dark swap now lives in palette.css with every other token, which
+// removed that dependency outright.
 
-// Pure render of `utils/monogram.ts`'s hue arrays — `hue`/`initials` are
-// already-computed pure values (see `monogramHue`/`monogramInitials`), so
-// this component itself is SSR-safe: its only external read is core's
-// `isDark`, the same established pattern as `ThemeToggle.vue`.
-
-const props = withDefaults(
+withDefaults(
   defineProps<{
     hue: number
     initials: string
@@ -18,18 +15,13 @@ const props = withDefaults(
   }>(),
   { size: 34 },
 )
-
-const { isDark } = useData()
-
-const palette = computed(() => (isDark.value ? MONOGRAM_HUES.dark : MONOGRAM_HUES.light))
-const textColor = computed(() => palette.value.text[props.hue])
-const bgColor = computed(() => palette.value.bg[props.hue])
 </script>
 
 <template>
   <div
     class="monogram-tile"
-    :style="{ width: `${size}px`, height: `${size}px`, color: textColor, background: bgColor }"
+    :class="`mg-${hue}`"
+    :style="{ width: `${size}px`, height: `${size}px` }"
   >
     {{ initials }}
   </div>
@@ -47,5 +39,12 @@ const bgColor = computed(() => palette.value.bg[props.hue])
   font-weight: 600;
   font-size: var(--ocx-text-md);
 }
+
+/* Hue rotation is a class, not an inline style: an inline style is beatable
+ * only by `!important`, so a mirror could never restyle a tile. */
+.monogram-tile.mg-0 { background: var(--ocx-color-monogram-0-tint); color: var(--ocx-color-monogram-0); }
+.monogram-tile.mg-1 { background: var(--ocx-color-monogram-1-tint); color: var(--ocx-color-monogram-1); }
+.monogram-tile.mg-2 { background: var(--ocx-color-monogram-2-tint); color: var(--ocx-color-monogram-2); }
+.monogram-tile.mg-3 { background: var(--ocx-color-monogram-3-tint); color: var(--ocx-color-monogram-3); }
 }
 </style>

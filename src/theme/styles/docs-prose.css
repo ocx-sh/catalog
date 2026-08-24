@@ -113,10 +113,17 @@
 
 /* Shiki fence output — `.shiki`, NOT DefaultTheme's `.vp-code`
  * (alpha.18 gotcha). Theme-following (owner decision 2026-08-05, revising
- * mock 1f's always-dark rule): dual-theme Shiki (config.mts) emits
- * --shiki-light/--shiki-dark vars per span; the rules below switch them on
- * `.dark`. The fence background is set separately, outside `@layer ocx` at
- * the bottom of this file — see that rule's own comment for why. */
+ * mock 1f's always-dark rule).
+ *
+ * Span colours need no rules here at all: the generated config registers ONE
+ * Shiki theme whose values are `var(--ocx-color-code-*)` references, which
+ * Shiki writes straight into each span's own `style` attribute, and those
+ * tokens already swap on `.dark` in palette.css. This replaced a dual-theme
+ * registration that emitted `--shiki-light`/`--shiki-dark` per span plus the
+ * two rules here that switched between them.
+ *
+ * The fence background is set separately, outside `@layer ocx` at the bottom
+ * of this file — see that rule's own comment for why. */
 .docs-prose :where(.shiki) {
   border: 1px solid var(--ocx-color-border);
   border-radius: var(--ocx-radius-lg);
@@ -124,16 +131,6 @@
   overflow-x: auto;
   font-size: 0.85em;
   line-height: 1.75;
-}
-
-.docs-prose :where(.shiki),
-.docs-prose :where(.shiki span) {
-  color: var(--shiki-light);
-}
-
-.dark .docs-prose :where(.shiki),
-.dark .docs-prose :where(.shiki span) {
-  color: var(--shiki-dark);
 }
 
 .docs-prose :where(.shiki code) {

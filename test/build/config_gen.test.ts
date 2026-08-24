@@ -180,14 +180,29 @@ describe("C-005 generateConfig — settings carried from site/.vitepress/config.
     });
   });
 
-  it("carries the OCX Shiki theme's light/dark hex values verbatim (byte-for-byte brand identity, C-008)", async () => {
+  it("drives the Shiki theme from --ocx-color-code-* tokens, never hardcoded hex", async () => {
     await withScratch(async (scratchRoot) => {
       await generateConfig(baseOptions(scratchRoot));
       const { config } = await readGenerated(scratchRoot);
-      // Spot-check editor.background for both modes — same hexes as
-      // site/.vitepress/config.mts's ocxCodeTheme(), never re-derived.
-      expect(config).toContain("#f6f8fa");
-      expect(config).toContain("#14181f");
+
+      // Assert the MECHANISM, not a sample value. The old form spot-checked
+      // two hex literals, which asserts nothing about whether a consumer can
+      // reach the colour — and a palette change silently invalidated it.
+      expect(config).toContain("var(--ocx-color-code-");
+      for (const role of ["comment", "string", "keyword", "number", "function", "variable", "deleted"]) {
+        expect(config).toContain(`v('${role}')`);
+      }
+
+      // ONE theme registration, not a light/dark pair: the tokens already swap
+      // on `.dark`, so a second registration would duplicate that mechanism.
+      expect(config).toContain("theme: ocxCodeTheme(),");
+      expect(config).not.toContain("ocxCodeTheme(\"light\")");
+
+      // No colour literal may survive into the generated config — this is the
+      // whole point of the change, and the reason `--shiki-light`/`-dark` and
+      // their docs-prose switch rules could be retired.
+      const withoutComments = config.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+      expect(withoutComments).not.toMatch(/#[0-9a-fA-F]{6}\b/);
     });
   });
 

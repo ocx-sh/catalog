@@ -21,5 +21,12 @@
   --ocx-space-6: 24px;
   --ocx-space-7: 28px;
   --ocx-space-8: 32px;
+
+  /* Elevation. The theme uses borders, not shadows, for surface hierarchy
+   * (see this file's header) — this is the one exception: a toast floats over
+   * content and has no surface to borrow a border from. Kept as a token
+   * anyway so a mirror can flatten or restyle it; it was the theme's only
+   * hardcoded colour outside the palette. */
+  --ocx-shadow-overlay: 0 4px 16px rgb(0 0 0 / 0.12);
 }
 }

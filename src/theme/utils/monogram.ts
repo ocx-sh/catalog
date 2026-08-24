@@ -1,29 +1,13 @@
 // Package-tile monogram — pure, deterministic, SSR/CSR-hydration-safe (a
 // function of its string input only: no Date, Math.random, or env reads).
+//
+// This module carries NO colour. The hue arrays that used to live here were 16
+// hardcoded literals applied as inline styles, which a consumer stylesheet
+// could only beat with `!important` — so a corporate mirror could never
+// rebrand a monogram tile. `monogramHue()` still picks the rotation index; the
+// colours are `--ocx-color-monogram-{0..3}` in palette.css, applied by an
+// `.mg-<index>` class in MonogramTile.vue / IdentityBlock.vue.
 
-/** Hue arrays verbatim from the design mock's x-dc data script (LT/LB/DT/DB) —
- * the same palette `PackageCard`/`MonogramTile` (WP-C) and `IdentityBlock`
- * (WP-D) tiles render from. Indexed 0-3 by `monogramHue()`.
- *
- * WP6 (theme a11y pass, 2026-08-22): `light.text[1]` darkened from the mock's
- * verbatim `#0e9f6e` to `#0a7652` — text-on-its-own-10%-tint-background was
- * 3.01:1 (PackageCard, tint over --ocx-color-surface) / 2.83:1 (IdentityBlock, tint
- * over --ocx-color-bg), both below WCAG AA's 4.5:1 for small text. `#0a7652` clears
- * both (4.89:1 / 4.57:1, relative-luminance formula) and matches
- * `palette.css`'s own `--ocx-color-success` token, which needed the identical fix for the
- * same reason (`--ocx-color-success` and this hue were the same verbatim green). `dark`
- * is untouched — `#3edea6` already clears 7.9:1+ on its own tint background
- * in both callers. */
-export const MONOGRAM_HUES = {
-  light: {
-    text: ['#d84a34', '#0a7652', '#6f5bd0', '#9a6b13'],
-    bg: ['rgba(255,96,71,.10)', 'rgba(14,159,110,.10)', 'rgba(111,91,208,.10)', 'rgba(250,184,51,.16)'],
-  },
-  dark: {
-    text: ['#ff8570', '#3edea6', '#c0b3ff', '#fab833'],
-    bg: ['rgba(255,96,71,.14)', 'rgba(62,222,166,.12)', 'rgba(192,179,255,.12)', 'rgba(250,184,51,.12)'],
-  },
-} as const
 
 /**
  * Deterministic djb2-style string hash → hue index in `[0, 3]`. Pure

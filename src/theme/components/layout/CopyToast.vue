@@ -29,7 +29,7 @@ const { message } = useToast()
   background: var(--ocx-color-surface);
   border: 1px solid var(--ocx-color-border);
   border-radius: var(--ocx-radius-lg);
-  box-shadow: 0 4px 16px rgb(0 0 0 / 0.12);
+  box-shadow: var(--ocx-shadow-overlay);
   font-family: var(--ocx-font-mono);
   font-size: var(--ocx-text-xs);
   color: var(--ocx-color-fg);

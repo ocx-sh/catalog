@@ -4,7 +4,7 @@ import { useCopyState } from '../../composables/useCopyState'
 import { useToast } from '../../composables/useToast'
 import { useImageFallback } from '../../composables/useImageFallback'
 import { casUrl, LOGO_EXT_CANDIDATES } from '../../utils/cas'
-import { monogramHue, monogramInitials, MONOGRAM_HUES } from '../../utils/monogram'
+import { monogramHue, monogramInitials } from '../../utils/monogram'
 import CopyIcon from '../shared/CopyIcon.vue'
 import CopyContextMenu, { buildTagCopyActions } from '../shared/CopyContextMenu.vue'
 import { useInstallFlavors } from '../../composables/useInstallFlavors'
@@ -53,15 +53,6 @@ const { src: logoSrc, onError: onLogoError } = useImageFallback(logoCandidates)
 
 const hue = computed(() => monogramHue(props.bareName))
 const initials = computed(() => monogramInitials(props.bareName.split('/').pop() ?? props.bareName))
-// Both themes' hues passed as custom properties; CSS picks the active one
-// via the `.dark` class (same toggle mechanism as palette.css) — no JS
-// media query, SSR-safe.
-const monogramStyle = computed(() => ({
-  '--mg-bg-light': MONOGRAM_HUES.light.bg[hue.value],
-  '--mg-fg-light': MONOGRAM_HUES.light.text[hue.value],
-  '--mg-bg-dark': MONOGRAM_HUES.dark.bg[hue.value],
-  '--mg-fg-dark': MONOGRAM_HUES.dark.text[hue.value],
-}))
 </script>
 
 <template>
@@ -73,7 +64,7 @@ const monogramStyle = computed(() => ({
       class="identity-tile identity-logo"
       @error="onLogoError"
     >
-    <div v-else class="identity-tile identity-monogram" :style="monogramStyle">
+    <div v-else class="identity-tile identity-monogram" :class="`mg-${hue}`">
       {{ initials }}
     </div>
 
@@ -131,14 +122,15 @@ const monogramStyle = computed(() => ({
   font-family: var(--ocx-font-mono);
   font-size: var(--ocx-text-lg);
   font-weight: 600;
-  background: var(--mg-bg-light);
-  color: var(--mg-fg-light);
 }
 
-:global(.dark) .identity-monogram {
-  background: var(--mg-bg-dark);
-  color: var(--mg-fg-dark);
-}
+/* Hue rotation is a class, not an inline style: an inline style is beatable
+ * only by `!important`, so a mirror could never restyle a monogram. The
+ * `.dark` swap now happens in palette.css like every other token. */
+.identity-monogram.mg-0 { background: var(--ocx-color-monogram-0-tint); color: var(--ocx-color-monogram-0); }
+.identity-monogram.mg-1 { background: var(--ocx-color-monogram-1-tint); color: var(--ocx-color-monogram-1); }
+.identity-monogram.mg-2 { background: var(--ocx-color-monogram-2-tint); color: var(--ocx-color-monogram-2); }
+.identity-monogram.mg-3 { background: var(--ocx-color-monogram-3-tint); color: var(--ocx-color-monogram-3); }
 
 .identity-text {
   min-width: 0;

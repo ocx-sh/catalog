@@ -181,26 +181,40 @@ async function discoverPackageSegments(srcRoot: string): Promise<string[][]> {
   return walk(srcRoot, []);
 }
 
-/** `ocxCodeTheme`, verbatim from `site/.vitepress/config.mts` — a fixed
- * Shiki theme (C-008: this package ships one visual identity), emitted as
- * literal generated-file source since Shiki themes are build-time JSON that
- * can't read CSS custom properties. */
-const OCX_CODE_THEME_SOURCE = `function ocxCodeTheme(mode) {
-  const c = mode === 'light'
-    ? { bg: '#f6f8fa', fg: '#4b5665', comment: '#8a94a3', kw: '#6f5bd0', str: '#0e9f6e', num: '#9a6b13', fn: '#1b2129', vars: '#4b5665', accent: '#ff6047' }
-    : { bg: '#14181f', fg: '#9aa5b3', comment: '#606c7c', kw: '#c0b3ff', str: '#3edea6', num: '#fab833', fn: '#e7ebf1', vars: '#9aa5b3', accent: '#ff6047' }
+/** `ocxCodeTheme` — the Shiki theme, emitted as literal generated-file source.
+ *
+ * Every colour is a `var(--ocx-color-code-*)` reference rather than a hex.
+ * Shiki copies a `settings.foreground` value straight into the rendered
+ * `style` attribute without interpreting it, so a custom property reaches the
+ * browser intact and resolves there — the same mechanism Shiki's own
+ * `createCssVariablesTheme()` uses, without taking a direct dependency on a
+ * package this repo only has transitively through VitePress.
+ *
+ * This replaced 18 hardcoded hex values that no consumer stylesheet could
+ * reach. They were also stale: still the pre-WP6 palette (#6f5bd0/#0e9f6e/
+ * #9a6b13) that the a11y pass had already replaced for highlight.js, so docs
+ * fences and README fences rendered the same language in two different
+ * palettes, only one of which met AA.
+ *
+ * ONE theme, not a light/dark pair: the `--ocx-color-code-*` tokens already
+ * swap on `.dark` in palette.css, so a second registration would be a second
+ * mechanism doing the same job. That also retires the `--shiki-light`/
+ * `--shiki-dark` per-span pair and the `docs-prose.css` rules that switched
+ * between them. */
+const OCX_CODE_THEME_SOURCE = `function ocxCodeTheme() {
+  const v = (role) => \`var(--ocx-color-code-\${role})\`
   return {
-    name: \`ocx-\${mode}\`,
-    type: mode,
-    colors: { 'editor.background': c.bg, 'editor.foreground': c.fg },
+    name: 'ocx',
+    type: 'light',
+    colors: { 'editor.background': v('bg'), 'editor.foreground': v('variable') },
     tokenColors: [
-      { scope: ['comment', 'punctuation.definition.comment'], settings: { foreground: c.comment, fontStyle: 'italic' } },
-      { scope: ['string', 'string.quoted', 'constant.other.symbol'], settings: { foreground: c.str } },
-      { scope: ['keyword', 'storage.type', 'storage.modifier', 'support.type', 'entity.name.tag'], settings: { foreground: c.kw } },
-      { scope: ['constant.numeric', 'constant.language', 'constant.character', 'keyword.other.unit'], settings: { foreground: c.num } },
-      { scope: ['entity.name.function', 'support.function', 'entity.name.section', 'markup.heading'], settings: { foreground: c.fn, fontStyle: 'bold' } },
-      { scope: ['variable', 'variable.parameter', 'entity.other.attribute-name'], settings: { foreground: c.vars } },
-      { scope: ['markup.deleted'], settings: { foreground: c.accent } },
+      { scope: ['comment', 'punctuation.definition.comment'], settings: { foreground: v('comment'), fontStyle: 'italic' } },
+      { scope: ['string', 'string.quoted', 'constant.other.symbol'], settings: { foreground: v('string') } },
+      { scope: ['keyword', 'storage.type', 'storage.modifier', 'support.type', 'entity.name.tag'], settings: { foreground: v('keyword') } },
+      { scope: ['constant.numeric', 'constant.language', 'constant.character', 'keyword.other.unit'], settings: { foreground: v('number') } },
+      { scope: ['entity.name.function', 'support.function', 'entity.name.section', 'markup.heading'], settings: { foreground: v('function'), fontStyle: 'bold' } },
+      { scope: ['variable', 'variable.parameter', 'entity.other.attribute-name'], settings: { foreground: v('variable') } },
+      { scope: ['markup.deleted'], settings: { foreground: v('deleted') } },
     ],
   }
 }`;
@@ -343,7 +357,7 @@ export default defineConfig({
   ],${sitemapField}
   ignoreDeadLinks: [/^\\/p\\//],
   markdown: {
-    theme: { light: ocxCodeTheme("light"), dark: ocxCodeTheme("dark") },
+    theme: ocxCodeTheme(),
     headers: { level: [2, 3] },
   },
   themeConfig: {
