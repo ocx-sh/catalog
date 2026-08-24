@@ -104,8 +104,8 @@ const groups = computed<PlatformGroup[]>(() => {
      can still widen its own track instead of clipping. */
   grid-template-columns: 18px 1fr repeat(var(--arch-cols), minmax(3.5rem, auto));
   align-items: center;
-  row-gap: 10px;
-  column-gap: 10px;
+  row-gap: var(--ocx-space-4);
+  column-gap: var(--ocx-space-4);
 }
 
 .platform-row {
@@ -139,7 +139,7 @@ const groups = computed<PlatformGroup[]>(() => {
   background: var(--ocx-color-surface-subtle);
   border: var(--ocx-border-width) solid var(--ocx-color-border);
   border-radius: var(--ocx-radius-sm);
-  padding: 2px 7px;
+  padding: var(--ocx-space-1) var(--ocx-space-3);
 }
 
 .platform-empty {

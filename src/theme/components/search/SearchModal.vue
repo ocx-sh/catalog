@@ -229,7 +229,7 @@ function onContentKeydown(e: KeyboardEvent) {
   width: 1px;
   height: 1px;
   padding: 0;
-  margin: -1px;
+  margin: calc(-1 * var(--ocx-border-width));
   overflow: hidden;
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
@@ -270,8 +270,8 @@ function onContentKeydown(e: KeyboardEvent) {
 .palette-search-bar {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 0 16px;
+  gap: var(--ocx-space-4);
+  padding: 0 var(--ocx-space-5);
   height: 52px;
   flex-shrink: 0;
   border-bottom: var(--ocx-border-width) solid var(--ocx-color-border);
@@ -305,7 +305,7 @@ function onContentKeydown(e: KeyboardEvent) {
   color: var(--ocx-color-fg-subtle);
   border: var(--ocx-border-width) solid var(--ocx-color-border);
   border-radius: var(--ocx-radius-sm);
-  padding: 3px 7px;
+  padding: var(--ocx-space-2) var(--ocx-space-3);
   background: none;
 }
 
@@ -315,10 +315,10 @@ function onContentKeydown(e: KeyboardEvent) {
 
 .palette-results {
   overflow-y: auto;
-  padding: 8px;
+  padding: var(--ocx-space-3);
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--ocx-space-1);
 }
 
 .palette-group-label {
@@ -328,18 +328,18 @@ function onContentKeydown(e: KeyboardEvent) {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--ocx-color-fg-subtle);
-  margin: 10px 8px 4px;
+  margin: var(--ocx-space-4) var(--ocx-space-3) var(--ocx-space-2);
 }
 
 .palette-group-label:first-child {
-  margin-top: 4px;
+  margin-top: var(--ocx-space-2);
 }
 
 .palette-result {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 8px 10px;
+  gap: var(--ocx-space-1);
+  padding: var(--ocx-space-3) var(--ocx-space-4);
   border-radius: var(--ocx-radius-md);
 }
 
@@ -367,7 +367,7 @@ function onContentKeydown(e: KeyboardEvent) {
   font-family: var(--ocx-font-mono);
   font-size: var(--ocx-text-sm);
   color: var(--ocx-color-fg-subtle);
-  padding: 24px 10px;
+  padding: var(--ocx-space-6) var(--ocx-space-4);
   text-align: center;
 }
 

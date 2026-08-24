@@ -171,8 +171,8 @@ onMounted(() => {
 .detail-notfound {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 48px 0;
+  gap: var(--ocx-space-4);
+  padding: var(--ocx-space-9) 0;
   align-items: center;
   text-align: center;
 }
@@ -182,7 +182,7 @@ onMounted(() => {
 .back-link {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--ocx-space-3);
   font-family: var(--ocx-font-mono);
   font-size: var(--ocx-text-sm);
   font-weight: var(--ocx-font-weight-medium);
@@ -208,7 +208,7 @@ onMounted(() => {
      and with auto rows the grid distributes its height INTO row 1, shoving
      the readme ~100px below a short (collapsed) versions box. */
   grid-template-rows: min-content 1fr;
-  gap: 14px var(--ocx-space-7);
+  gap: var(--ocx-space-5) var(--ocx-space-7);
   align-items: start;
 }
 
@@ -216,7 +216,7 @@ onMounted(() => {
   grid-area: versions;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--ocx-space-4);
 }
 
 .readme-section {
@@ -230,7 +230,7 @@ onMounted(() => {
 .versions-header {
   display: flex;
   align-items: baseline;
-  gap: 12px;
+  gap: var(--ocx-space-4);
   flex-wrap: wrap;
 }
 
@@ -252,7 +252,7 @@ onMounted(() => {
   background: var(--ocx-color-surface);
   border: var(--ocx-border-width) solid var(--ocx-color-border);
   border-radius: var(--ocx-radius-lg);
-  padding: 4px 16px;
+  padding: var(--ocx-space-2) var(--ocx-space-5);
 }
 
 @media (max-width: 1199px) {
@@ -265,7 +265,7 @@ onMounted(() => {
   .detail-rail {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 14px;
+    gap: var(--ocx-space-5);
   }
 
   .detail-rail > :deep(.rail-block:last-child) {

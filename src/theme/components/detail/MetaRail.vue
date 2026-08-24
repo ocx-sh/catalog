@@ -402,7 +402,7 @@ const safeSourceUrl = computed(() => safeHref(props.root.source ?? props.detail?
 .meta-rail {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: var(--ocx-space-5);
 }
 
 /* Header OUTSIDE the box — mirrors the left column's versions-header /
@@ -413,7 +413,7 @@ const safeSourceUrl = computed(() => safeHref(props.root.source ?? props.detail?
 .rail-block {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--ocx-space-4);
 }
 
 .rail-header {
@@ -425,10 +425,10 @@ const safeSourceUrl = computed(() => safeHref(props.root.source ?? props.detail?
   background: var(--ocx-color-surface);
   border: var(--ocx-border-width) solid var(--ocx-color-border);
   border-radius: var(--ocx-radius-lg);
-  padding: 14px 16px;
+  padding: var(--ocx-space-5) var(--ocx-space-5);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--ocx-space-4);
 }
 
 .rail-heading {
@@ -449,14 +449,14 @@ const safeSourceUrl = computed(() => safeHref(props.root.source ?? props.detail?
 .install-toggle-wrap {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--ocx-space-4);
 }
 
 /* icon | combo rows — same two-column rhythm as .install-grid below. */
 .install-selects {
   display: grid;
   grid-template-columns: auto 1fr;
-  gap: 6px 16px;
+  gap: var(--ocx-space-3) var(--ocx-space-5);
   align-items: center;
 }
 
@@ -469,7 +469,7 @@ const safeSourceUrl = computed(() => safeHref(props.root.source ?? props.detail?
 .pin-trigger {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--ocx-space-3);
   width: 100%;
   height: 26px;
   font-family: var(--ocx-font-mono);
@@ -480,7 +480,7 @@ const safeSourceUrl = computed(() => safeHref(props.root.source ?? props.detail?
   background: var(--ocx-color-surface-subtle);
   border: var(--ocx-border-width) solid var(--ocx-color-border);
   border-radius: var(--ocx-radius-md);
-  padding: 0 9px;
+  padding: 0 var(--ocx-space-3);
   cursor: pointer;
   transition: border-color var(--ocx-duration-base);
   outline: none;
@@ -507,7 +507,7 @@ const safeSourceUrl = computed(() => safeHref(props.root.source ?? props.detail?
 /* Owner spec: horizontal rule between the selectors and the command grid. */
 .install-grid.with-divider {
   border-top: var(--ocx-border-width) solid var(--ocx-color-border);
-  padding-top: 12px;
+  padding-top: var(--ocx-space-4);
 }
 
 .install-grid {
@@ -517,7 +517,7 @@ const safeSourceUrl = computed(() => safeHref(props.root.source ?? props.detail?
      Column gap matches .rail-card's 16px horizontal padding so the icon
      sits visually centered between the card's left border and the bar. */
   grid-template-columns: auto 1fr;
-  gap: 6px 16px;
+  gap: var(--ocx-space-3) var(--ocx-space-5);
   align-items: stretch;
 }
 
@@ -536,12 +536,12 @@ const safeSourceUrl = computed(() => safeHref(props.root.source ?? props.detail?
 .install-command {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--ocx-space-3);
   width: 100%;
   background: var(--ocx-color-surface-subtle);
   border: var(--ocx-border-width) solid var(--ocx-color-border);
   border-radius: var(--ocx-radius-md);
-  padding: 7px 10px;
+  padding: var(--ocx-space-3) var(--ocx-space-4);
   font-family: var(--ocx-font-mono);
   cursor: pointer;
   transition: border-color var(--ocx-duration-base);
@@ -594,14 +594,14 @@ const safeSourceUrl = computed(() => safeHref(props.root.source ?? props.detail?
 .metadata-rows {
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: var(--ocx-space-3);
   font-family: var(--ocx-font-mono);
   font-size: var(--ocx-text-xs);
 }
 
 .metadata-row {
   display: flex;
-  gap: 8px;
+  gap: var(--ocx-space-3);
 }
 
 .metadata-key {
@@ -654,7 +654,7 @@ const safeSourceUrl = computed(() => safeHref(props.root.source ?? props.detail?
 .metadata-external {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
+  gap: var(--ocx-space-2);
 }
 
 .metadata-external svg {
@@ -666,7 +666,7 @@ const safeSourceUrl = computed(() => safeHref(props.root.source ?? props.detail?
 .keyword-chips {
   display: inline-flex;
   flex-wrap: wrap;
-  gap: 5px;
+  gap: var(--ocx-space-2);
 }
 
 .keyword-chip {
@@ -674,7 +674,7 @@ const safeSourceUrl = computed(() => safeHref(props.root.source ?? props.detail?
   font-weight: var(--ocx-font-weight-medium);
   color: var(--ocx-color-keyword);
   background: var(--ocx-color-keyword-tint);
-  padding: 2px 7px;
+  padding: var(--ocx-space-1) var(--ocx-space-3);
   border-radius: var(--ocx-radius-sm);
   border: var(--ocx-border-width) solid transparent;
   transition: border-color var(--ocx-duration-base);
@@ -704,7 +704,7 @@ const safeSourceUrl = computed(() => safeHref(props.root.source ?? props.detail?
 .pin-item {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--ocx-space-3);
   padding: 0.45rem 0.6rem;
   border-radius: var(--ocx-radius-sm);
   font-family: var(--ocx-font-mono);

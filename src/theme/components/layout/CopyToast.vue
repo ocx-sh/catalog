@@ -24,8 +24,8 @@ const { message } = useToast()
   z-index: var(--ocx-z-toast);
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 14px;
+  gap: var(--ocx-space-3);
+  padding: var(--ocx-space-3) var(--ocx-space-5);
   background: var(--ocx-color-surface);
   border: var(--ocx-border-width) solid var(--ocx-color-border);
   border-radius: var(--ocx-radius-lg);

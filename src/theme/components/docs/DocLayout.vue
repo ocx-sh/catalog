@@ -52,7 +52,7 @@ const { page } = useData()
   min-width: 0;
   display: flex;
   justify-content: center;
-  padding: 32px 40px 64px;
+  padding: var(--ocx-space-7) var(--ocx-space-8) var(--ocx-space-10);
 }
 
 .docs-prose {
@@ -63,7 +63,7 @@ const { page } = useData()
 .doc-outline {
   width: 180px;
   flex-shrink: 0;
-  padding: 36px 24px 0;
+  padding: var(--ocx-space-8) var(--ocx-space-6) 0;
   position: sticky;
   top: 54px;
   align-self: flex-start;
@@ -81,7 +81,7 @@ const { page } = useData()
   }
 
   .doc-prose-col {
-    padding: 24px 20px 80px;
+    padding: var(--ocx-space-6) var(--ocx-space-6) var(--ocx-space-11);
   }
 }
 }

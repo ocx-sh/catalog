@@ -102,8 +102,8 @@ function isActive(prefix: string): boolean {
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  gap: 24px;
-  padding: 0 24px;
+  gap: var(--ocx-space-6);
+  padding: 0 var(--ocx-space-6);
   border-bottom: var(--ocx-border-width) solid var(--ocx-color-border);
   background: var(--ocx-color-surface);
 }
@@ -111,7 +111,7 @@ function isActive(prefix: string): boolean {
 .brand {
   display: inline-flex;
   align-items: center;
-  gap: 9px;
+  gap: var(--ocx-space-3);
   color: var(--ocx-color-fg);
 }
 
@@ -139,12 +139,12 @@ function isActive(prefix: string): boolean {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 24px;
+  gap: var(--ocx-space-6);
 }
 
 .site-nav {
   display: inline-flex;
-  gap: 22px;
+  gap: var(--ocx-space-6);
   align-items: center;
 }
 
@@ -153,7 +153,7 @@ function isActive(prefix: string): boolean {
   font-size: var(--ocx-text-sm);
   font-weight: var(--ocx-font-weight-medium);
   color: var(--ocx-color-fg-muted);
-  padding: 16px 1px 14px;
+  padding: var(--ocx-space-5) var(--ocx-space-1) var(--ocx-space-5);
   border-bottom: var(--ocx-border-width-strong) solid transparent;
   white-space: nowrap;
 }
@@ -163,7 +163,7 @@ function isActive(prefix: string): boolean {
 .nav-link-external {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--ocx-space-2);
 }
 
 .nav-link-external svg {
@@ -197,13 +197,13 @@ function isActive(prefix: string): boolean {
 .search-trigger {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--ocx-space-3);
   width: clamp(220px, 30vw, 360px);
   height: 32px;
   color: var(--ocx-color-fg-subtle);
   border: var(--ocx-border-width) solid var(--ocx-color-border);
   border-radius: var(--ocx-radius-md);
-  padding: 0 10px;
+  padding: 0 var(--ocx-space-4);
   background: var(--ocx-color-surface-subtle);
   cursor: pointer;
   transition: border-color var(--ocx-duration-base), color var(--ocx-duration-base);
@@ -230,14 +230,14 @@ function isActive(prefix: string): boolean {
   font-weight: var(--ocx-font-weight-medium);
   border: var(--ocx-border-width) solid var(--ocx-color-border);
   border-radius: var(--ocx-radius-sm);
-  padding: 1px 5px;
+  padding: var(--ocx-space-1) var(--ocx-space-2);
   background: var(--ocx-color-surface);
 }
 
 @media (max-width: 640px) {
   .site-header {
-    gap: 12px;
-    padding: 0 16px;
+    gap: var(--ocx-space-4);
+    padding: 0 var(--ocx-space-5);
   }
 
   .brand-name {

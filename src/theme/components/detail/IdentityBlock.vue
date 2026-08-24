@@ -101,7 +101,7 @@ const initials = computed(() => monogramInitials(props.bareName.split('/').pop()
 @layer ocx {
 .identity-block {
   display: flex;
-  gap: 16px;
+  gap: var(--ocx-space-5);
   align-items: flex-start;
 }
 
@@ -136,13 +136,13 @@ const initials = computed(() => monogramInitials(props.bareName.split('/').pop()
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: var(--ocx-space-2);
 }
 
 .identity-title-row {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--ocx-space-4);
   flex-wrap: wrap;
 }
 
@@ -158,7 +158,7 @@ const initials = computed(() => monogramInitials(props.bareName.split('/').pop()
 .identity-name-badge {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: var(--ocx-space-3);
   font-family: var(--ocx-font-mono);
   font-size: var(--ocx-text-sm);
   font-weight: var(--ocx-font-weight-medium);
@@ -166,7 +166,7 @@ const initials = computed(() => monogramInitials(props.bareName.split('/').pop()
   background: var(--ocx-color-surface-subtle);
   border: var(--ocx-border-width) solid var(--ocx-color-border);
   border-radius: var(--ocx-radius-sm);
-  padding: 3px 9px;
+  padding: var(--ocx-space-2) var(--ocx-space-3);
   cursor: pointer;
 }
 
@@ -199,7 +199,7 @@ const initials = computed(() => monogramInitials(props.bareName.split('/').pop()
   color: var(--ocx-color-accent-fg);
   border: var(--ocx-border-width) solid var(--ocx-color-accent-hover);
   border-radius: var(--ocx-radius-sm);
-  padding: 2px 8px;
+  padding: var(--ocx-space-1) var(--ocx-space-3);
   letter-spacing: 0.05em;
 }
 
@@ -221,9 +221,9 @@ const initials = computed(() => monogramInitials(props.bareName.split('/').pop()
 
 .identity-keywords {
   display: flex;
-  gap: 6px;
+  gap: var(--ocx-space-3);
   flex-wrap: wrap;
-  margin-top: 2px;
+  margin-top: var(--ocx-space-1);
 }
 
 .identity-keyword {
@@ -232,7 +232,7 @@ const initials = computed(() => monogramInitials(props.bareName.split('/').pop()
   font-weight: var(--ocx-font-weight-medium);
   color: var(--ocx-color-keyword);
   background: var(--ocx-color-keyword-tint);
-  padding: 2px 8px;
+  padding: var(--ocx-space-1) var(--ocx-space-3);
   border-radius: var(--ocx-radius-sm);
   /* Transparent border reserved so the hover border doesn't shift layout. */
   border: var(--ocx-border-width) solid transparent;

@@ -71,7 +71,7 @@ function onDrawerClick(e: MouseEvent) {
   bottom: 16px;
   z-index: var(--ocx-z-drawer-backdrop);
   align-items: center;
-  gap: 6px;
+  gap: var(--ocx-space-3);
   font-family: var(--ocx-font-mono);
   font-size: var(--ocx-text-xs);
   font-weight: var(--ocx-font-weight-medium);
@@ -79,7 +79,7 @@ function onDrawerClick(e: MouseEvent) {
   background: var(--ocx-color-surface);
   border: var(--ocx-border-width) solid var(--ocx-color-border);
   border-radius: var(--ocx-radius-full);
-  padding: 8px 14px;
+  padding: var(--ocx-space-3) var(--ocx-space-5);
 }
 
 @media (max-width: 639px) {
@@ -103,15 +103,15 @@ function onDrawerClick(e: MouseEvent) {
   background: var(--ocx-color-surface);
   border-right: var(--ocx-border-width) solid var(--ocx-color-border);
   overflow-y: auto;
-  padding: 20px 0 32px;
+  padding: var(--ocx-space-6) 0 var(--ocx-space-7);
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: var(--ocx-space-6);
 }
 
 .docs-mobile-close {
   align-self: flex-end;
-  margin: 0 12px;
+  margin: 0 var(--ocx-space-4);
   display: inline-flex;
   align-items: center;
   justify-content: center;

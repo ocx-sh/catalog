@@ -145,14 +145,14 @@ const popoverKeywords = computed(() => {
 .chip {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--ocx-space-3);
   font-family: var(--ocx-font-mono);
   font-size: var(--ocx-text-xs);
   font-weight: var(--ocx-font-weight-medium);
   color: var(--ocx-color-fg-muted);
   border: var(--ocx-border-width) solid var(--ocx-color-border);
   border-radius: var(--ocx-radius-full);
-  padding: 4px 11px;
+  padding: var(--ocx-space-2) var(--ocx-space-4);
   background: var(--ocx-color-surface);
   cursor: pointer;
   transition:
@@ -189,7 +189,7 @@ const popoverKeywords = computed(() => {
   color: var(--ocx-color-fg-subtle);
   background: none;
   border: none;
-  padding: 4px 6px;
+  padding: var(--ocx-space-2) var(--ocx-space-3);
   cursor: pointer;
 }
 
@@ -205,7 +205,7 @@ const popoverKeywords = computed(() => {
   width: 1px;
   height: 18px;
   background: var(--ocx-color-border);
-  margin: 0 4px;
+  margin: 0 var(--ocx-space-2);
   flex-shrink: 0;
 }
 }
@@ -218,9 +218,9 @@ const popoverKeywords = computed(() => {
 .kw-popover {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--ocx-space-3);
   width: 280px;
-  padding: 10px;
+  padding: var(--ocx-space-4);
   background: var(--ocx-color-surface);
   border: var(--ocx-border-width) solid var(--ocx-color-border);
   border-radius: var(--ocx-radius-lg);
@@ -235,7 +235,7 @@ const popoverKeywords = computed(() => {
   background: var(--ocx-color-surface-subtle);
   border: var(--ocx-border-width) solid var(--ocx-color-border);
   border-radius: var(--ocx-radius-md);
-  padding: 6px 9px;
+  padding: var(--ocx-space-3) var(--ocx-space-3);
   outline: none;
 }
 
@@ -254,14 +254,14 @@ const popoverKeywords = computed(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--ocx-space-3);
   font-family: var(--ocx-font-mono);
   font-size: var(--ocx-text-xs);
   color: var(--ocx-color-fg-muted);
   background: none;
   border: none;
   border-radius: var(--ocx-radius-sm);
-  padding: 5px 8px;
+  padding: var(--ocx-space-2) var(--ocx-space-3);
   cursor: pointer;
   text-align: left;
 }
@@ -286,7 +286,7 @@ const popoverKeywords = computed(() => {
   font-size: var(--ocx-text-xs);
   color: var(--ocx-color-fg-subtle);
   margin: 0;
-  padding: 5px 8px;
+  padding: var(--ocx-space-2) var(--ocx-space-3);
 }
 }
 </style>

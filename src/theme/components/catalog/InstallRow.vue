@@ -57,12 +57,12 @@ function onClick(event: MouseEvent) {
 .install-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--ocx-space-3);
   width: 100%;
   background: var(--ocx-color-surface-subtle);
   border: var(--ocx-border-width) solid var(--ocx-color-border);
   border-radius: var(--ocx-radius-md);
-  padding: 6px 9px;
+  padding: var(--ocx-space-3) var(--ocx-space-3);
   font-family: var(--ocx-font-mono);
   cursor: pointer;
   transition: border-color var(--ocx-duration-base);

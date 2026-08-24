@@ -70,17 +70,17 @@ const safeSupersededBy = computed(() =>
 .deprecation-banner {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
+  gap: var(--ocx-space-4);
   background: color-mix(in srgb, var(--ocx-color-accent) 10%, transparent);
   border: var(--ocx-border-width) solid color-mix(in srgb, var(--ocx-color-accent) 45%, transparent);
   border-radius: var(--ocx-radius-lg);
-  padding: 11px 14px;
+  padding: var(--ocx-space-4) var(--ocx-space-5);
 }
 
 .deprecation-icon {
   color: var(--ocx-color-accent-hover);
   flex-shrink: 0;
-  margin-top: 1px;
+  margin-top: var(--ocx-space-1);
 }
 
 .deprecation-text {

@@ -108,11 +108,11 @@ const platforms = computed(() =>
 .package-card {
   display: flex;
   flex-direction: column;
-  gap: 9px;
+  gap: var(--ocx-space-3);
   background: var(--ocx-color-surface);
   border: var(--ocx-border-width) solid var(--ocx-color-border);
   border-radius: var(--ocx-radius-lg);
-  padding: 14px 14px 12px;
+  padding: var(--ocx-space-5) var(--ocx-space-5) var(--ocx-space-4);
   color: inherit;
   transition: border-color var(--ocx-duration-base);
 }
@@ -145,13 +145,13 @@ const platforms = computed(() =>
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: var(--ocx-space-1);
 }
 
 .card-title-row {
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  gap: var(--ocx-space-3);
 }
 
 .card-title {
@@ -193,7 +193,7 @@ const platforms = computed(() =>
   color: var(--ocx-color-fg-subtle);
   border: var(--ocx-border-width) solid var(--ocx-color-border);
   border-radius: var(--ocx-radius-sm);
-  padding: 2px 8px;
+  padding: var(--ocx-space-1) var(--ocx-space-3);
   letter-spacing: 0.05em;
 }
 
@@ -239,7 +239,7 @@ const platforms = computed(() =>
 
 .card-keywords {
   display: inline-flex;
-  gap: 6px;
+  gap: var(--ocx-space-3);
   flex-wrap: wrap;
 }
 
@@ -249,14 +249,14 @@ const platforms = computed(() =>
   font-weight: var(--ocx-font-weight-medium);
   color: var(--ocx-color-keyword);
   background: var(--ocx-color-keyword-tint);
-  padding: 2px 7px;
+  padding: var(--ocx-space-1) var(--ocx-space-3);
   border-radius: var(--ocx-radius-sm);
 }
 
 .card-platforms {
   display: inline-flex;
   align-items: center;
-  gap: 9px;
+  gap: var(--ocx-space-3);
   color: var(--ocx-color-fg-subtle);
   flex-shrink: 0;
 }

@@ -40,14 +40,14 @@ function isGroupActive(group: DocsNavGroup): boolean {
 .docs-sidebar {
   display: flex;
   flex-direction: column;
-  gap: 18px;
-  padding: 20px 12px 28px;
+  gap: var(--ocx-space-5);
+  padding: var(--ocx-space-6) var(--ocx-space-4) var(--ocx-space-7);
 }
 
 .docs-nav-group {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--ocx-space-1);
 }
 
 .docs-nav-label {
@@ -56,7 +56,7 @@ function isGroupActive(group: DocsNavGroup): boolean {
   font-weight: var(--ocx-font-weight-semibold);
   letter-spacing: 0.09em;
   color: var(--ocx-color-fg-subtle);
-  padding: 6px 12px;
+  padding: var(--ocx-space-3) var(--ocx-space-4);
 }
 
 .docs-nav-label:hover,
@@ -68,7 +68,7 @@ function isGroupActive(group: DocsNavGroup): boolean {
   font-family: var(--ocx-font-sans);
   font-size: var(--ocx-text-base);
   color: var(--ocx-color-fg-muted);
-  padding: 6px 12px;
+  padding: var(--ocx-space-3) var(--ocx-space-4);
   border-radius: var(--ocx-radius-md);
 }
 

@@ -187,7 +187,7 @@ async function copyAction(key: string, text: string) {
 .readme-pane {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--ocx-space-4);
 }
 
 .readme-heading {
@@ -203,10 +203,10 @@ async function copyAction(key: string, text: string) {
   background: var(--ocx-color-surface);
   border: var(--ocx-border-width) solid var(--ocx-color-border);
   border-radius: var(--ocx-radius-lg);
-  padding: 20px 24px;
+  padding: var(--ocx-space-6) var(--ocx-space-6);
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--ocx-space-4);
 }
 
 .readme-info {
@@ -249,7 +249,7 @@ async function copyAction(key: string, text: string) {
   font-size: var(--ocx-text-sm);
   color: var(--ocx-color-fg-subtle);
   text-align: center;
-  padding: 32px 0;
+  padding: var(--ocx-space-7) 0;
 }
 
 
@@ -278,7 +278,7 @@ async function copyAction(key: string, text: string) {
   font-family: var(--ocx-font-mono);
   font-size: var(--ocx-text-sm);
   background: var(--ocx-color-surface-subtle);
-  padding: 1px 5px;
+  padding: var(--ocx-space-1) var(--ocx-space-2);
   border-radius: var(--ocx-radius-sm);
 }
 
@@ -290,7 +290,7 @@ async function copyAction(key: string, text: string) {
   background: var(--ocx-color-code-bg);
   border: var(--ocx-border-width) solid var(--ocx-color-border);
   border-radius: var(--ocx-radius-lg);
-  padding: 12px 16px;
+  padding: var(--ocx-space-4) var(--ocx-space-5);
   overflow-x: auto;
 }
 
@@ -316,7 +316,7 @@ async function copyAction(key: string, text: string) {
 .readme-content :deep(.readme-copy)::before {
   content: '';
   position: absolute;
-  inset: 4px;
+  inset: var(--ocx-space-2);
   background-color: var(--ocx-color-fg-subtle);
   transition: background-color var(--ocx-duration-base);
   mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='9' y='9' width='13' height='13' rx='2' ry='2'/%3E%3Cpath d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'/%3E%3C/svg%3E") center / contain no-repeat;
@@ -410,7 +410,7 @@ async function copyAction(key: string, text: string) {
 .readme-content :deep(th),
 .readme-content :deep(td) {
   border: var(--ocx-border-width) solid var(--ocx-color-border);
-  padding: 6px 10px;
+  padding: var(--ocx-space-3) var(--ocx-space-4);
   font-size: var(--ocx-text-sm);
 }
 }

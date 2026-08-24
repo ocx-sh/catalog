@@ -71,7 +71,7 @@ onUnmounted(() => document.removeEventListener('click', onDocsCopyClick))
   top: -48px;
   left: 8px;
   z-index: var(--ocx-z-skip-link);
-  padding: 8px 14px;
+  padding: var(--ocx-space-3) var(--ocx-space-5);
   background: var(--ocx-color-surface);
   color: var(--ocx-color-fg);
   border: var(--ocx-border-width) solid var(--ocx-color-border);

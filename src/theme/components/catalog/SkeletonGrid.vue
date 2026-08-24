@@ -55,11 +55,11 @@ const PLACEHOLDER_COUNT = 9
 .skeleton-card {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--ocx-space-4);
   background: var(--ocx-color-surface);
   border: var(--ocx-border-width) solid var(--ocx-color-border);
   border-radius: var(--ocx-radius-lg);
-  padding: 14px;
+  padding: var(--ocx-space-5);
   animation: catalog-skeleton-pulse var(--ocx-duration-shimmer) ease-in-out infinite;
 }
 
@@ -85,7 +85,7 @@ const PLACEHOLDER_COUNT = 9
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--ocx-space-3);
 }
 
 .skeleton-line {

@@ -358,7 +358,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   width: 1px;
   height: 1px;
   padding: 0;
-  margin: -1px;
+  margin: calc(-1 * var(--ocx-border-width));
   overflow: hidden;
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
@@ -386,7 +386,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   gap: var(--ocx-space-3);
   /* Optical inset — flush-left plain text next to a column of rounded
    * boxes reads as misaligned. */
-  padding-left: 4px;
+  padding-left: var(--ocx-space-2);
   /* Mobile: sort + view toggle drop to their own line instead of
    * squeezing the count. */
   flex-wrap: wrap;
@@ -438,7 +438,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 .sort-dir-btn {
   display: inline-flex;
   align-items: center;
-  padding: 0 8px;
+  padding: 0 var(--ocx-space-3);
   color: var(--ocx-color-fg-subtle);
   background: none;
   border: none;
@@ -455,7 +455,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 .sort-trigger {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--ocx-space-3);
   flex: 1;
   min-width: 0;
   font-family: var(--ocx-font-mono);
@@ -465,7 +465,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   color: var(--ocx-color-fg-muted);
   background: none;
   border: none;
-  padding: 0 9px;
+  padding: 0 var(--ocx-space-3);
   cursor: pointer;
   transition: color var(--ocx-duration-base);
   outline: none;
@@ -501,7 +501,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   color: var(--ocx-color-fg-subtle);
   background: none;
   border: none;
-  padding: 0 9px;
+  padding: 0 var(--ocx-space-3);
   cursor: pointer;
 }
 

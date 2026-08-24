@@ -81,7 +81,7 @@ const { copy: copyText } = useClipboard()
   grid-template-columns: subgrid;
   align-items: center;
   gap: var(--ocx-space-3);
-  padding: 8px 14px;
+  padding: var(--ocx-space-3) var(--ocx-space-5);
   color: inherit;
   transition: background-color var(--ocx-duration-base);
 }
@@ -124,7 +124,7 @@ const { copy: copyText } = useClipboard()
 .t-name {
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  gap: var(--ocx-space-3);
   min-width: 0;
 }
 
@@ -156,7 +156,7 @@ const { copy: copyText } = useClipboard()
   color: var(--ocx-color-fg-subtle);
   border: var(--ocx-border-width) solid var(--ocx-color-border);
   border-radius: var(--ocx-radius-sm);
-  padding: 1px 6px;
+  padding: var(--ocx-space-1) var(--ocx-space-3);
   letter-spacing: 0.05em;
   flex-shrink: 0;
 }
@@ -188,7 +188,7 @@ const { copy: copyText } = useClipboard()
 .t-platforms {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: var(--ocx-space-3);
   color: var(--ocx-color-fg-subtle);
 }
 

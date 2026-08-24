@@ -17,8 +17,8 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  padding: 64px 24px;
+  gap: var(--ocx-space-4);
+  padding: var(--ocx-space-10) var(--ocx-space-6);
   text-align: center;
 }
 

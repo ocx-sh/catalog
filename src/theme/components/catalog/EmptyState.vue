@@ -85,7 +85,7 @@ defineEmits<{ 'clear-search': [], retry: [] }>()
   flex-direction: column;
   align-items: center;
   gap: var(--ocx-space-3);
-  padding: 44px 28px;
+  padding: var(--ocx-space-9) var(--ocx-space-7);
   text-align: center;
 }
 
@@ -114,7 +114,7 @@ defineEmits<{ 'clear-search': [], retry: [] }>()
 .empty-ctas {
   display: flex;
   gap: var(--ocx-space-2);
-  margin-top: 6px;
+  margin-top: var(--ocx-space-3);
 }
 
 .cta-secondary,
@@ -124,7 +124,7 @@ defineEmits<{ 'clear-search': [], retry: [] }>()
   font-size: var(--ocx-text-xs);
   font-weight: var(--ocx-font-weight-medium);
   border-radius: var(--ocx-radius-md);
-  padding: 7px 14px;
+  padding: var(--ocx-space-3) var(--ocx-space-5);
   cursor: pointer;
 }
 

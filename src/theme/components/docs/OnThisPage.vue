@@ -53,7 +53,7 @@ onBeforeUnmount(() => observer?.disconnect())
 .on-this-page {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--ocx-space-3);
 }
 
 .otp-label {
@@ -69,12 +69,12 @@ onBeforeUnmount(() => observer?.disconnect())
   font-size: var(--ocx-text-sm);
   color: var(--ocx-color-fg-muted);
   border-left: var(--ocx-border-width-strong) solid var(--ocx-color-border);
-  padding-left: 10px;
+  padding-left: var(--ocx-space-4);
   line-height: 1.4;
 }
 
 .otp-item-sub {
-  padding-left: 20px;
+  padding-left: var(--ocx-space-6);
   font-size: var(--ocx-text-xs);
 }
 

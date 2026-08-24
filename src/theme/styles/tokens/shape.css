@@ -13,14 +13,26 @@
   --ocx-radius-lg: 8px;
   --ocx-radius-full: 999px;
 
-  --ocx-space-1: 4px;
-  --ocx-space-2: 8px;
-  --ocx-space-3: 12px;
-  --ocx-space-4: 16px;
-  --ocx-space-5: 20px;
+  /* Spacing — Carbon-shaped, deliberately NON-uniform: dense at the small end,
+   * coarse at the large end. Both of the rigorous published scales (IBM Carbon
+   * 13 steps, Atlassian 14) are shaped this way, and neither contains 10, 14
+   * or 18px. The values this theme had accumulated did — along with 3, 5, 7, 9,
+   * 11 and 22px — which is drift, not a second intentional scale.
+   *
+   * A bare number is legitimate here for the same reason it is for Carbon: the
+   * scale is published in full and every step is a documented rung, so the
+   * number carries the meaning. */
+  --ocx-space-1: 2px;
+  --ocx-space-2: 4px;
+  --ocx-space-3: 8px;
+  --ocx-space-4: 12px;
+  --ocx-space-5: 16px;
   --ocx-space-6: 24px;
-  --ocx-space-7: 28px;
-  --ocx-space-8: 32px;
+  --ocx-space-7: 32px;
+  --ocx-space-8: 40px;
+  --ocx-space-9: 48px;
+  --ocx-space-10: 64px;
+  --ocx-space-11: 80px;
 
   /* Elevation. The theme uses borders, not shadows, for surface hierarchy
    * (see this file's header) — this is the one exception: a toast floats over

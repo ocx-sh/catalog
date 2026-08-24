@@ -42,15 +42,15 @@ const safeRepositoryUrl = computed(() => safeHref(props.repositoryUrl))
 .disclaimer-banner {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
+  gap: var(--ocx-space-3);
   border-left: var(--ocx-border-width-strong) solid var(--ocx-color-warning);
-  padding: 2px 0 2px 12px;
+  padding: var(--ocx-space-1) 0 var(--ocx-space-1) var(--ocx-space-4);
 }
 
 .disclaimer-icon {
   color: var(--ocx-color-warning);
   flex-shrink: 0;
-  margin-top: 2px;
+  margin-top: var(--ocx-space-1);
   width: 13px;
   height: 13px;
 }
@@ -72,7 +72,7 @@ const safeRepositoryUrl = computed(() => safeHref(props.repositoryUrl))
 .disclaimer-link {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
+  gap: var(--ocx-space-2);
   white-space: nowrap;
 }
 

@@ -85,7 +85,7 @@ defineExpose({
   align-items: center;
   gap: var(--ocx-space-3);
   height: 44px;
-  padding: 0 14px;
+  padding: 0 var(--ocx-space-5);
   background: var(--ocx-color-surface);
   border: var(--ocx-border-width-emphasis) solid var(--ocx-color-border);
   border-radius: var(--ocx-radius-lg);
@@ -124,7 +124,7 @@ defineExpose({
   color: var(--ocx-color-fg-subtle);
   border: var(--ocx-border-width) solid var(--ocx-color-border);
   border-radius: var(--ocx-radius-sm);
-  padding: 2px 6px;
+  padding: var(--ocx-space-1) var(--ocx-space-3);
   background: var(--ocx-color-surface-subtle);
 }
 
