@@ -223,6 +223,7 @@ function onContentKeydown(e: KeyboardEvent) {
 </template>
 
 <style scoped>
+@layer ocx {
 .visually-hidden {
   position: absolute;
   width: 1px;
@@ -378,5 +379,6 @@ function onContentKeydown(e: KeyboardEvent) {
   to {
     opacity: 1;
   }
+}
 }
 </style>

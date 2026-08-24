@@ -59,6 +59,7 @@ onUnmounted(() => document.removeEventListener('click', onDocsCopyClick))
 </template>
 
 <style scoped>
+@layer ocx {
 .theme-shell {
   min-height: 100vh;
   display: flex;
@@ -82,5 +83,6 @@ onUnmounted(() => document.removeEventListener('click', onDocsCopyClick))
 
 .skip-link:focus-visible {
   top: 8px;
+}
 }
 </style>

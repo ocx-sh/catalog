@@ -1,3 +1,4 @@
+@layer ocx {
 /* Color tokens — verbatim hex/rgba from the design mock (section 1h
  * "Foundations" + the x-dc data script's swatchesLight/swatchesDark/accents
  * arrays), .claude/artifacts/design_mock_site_redesign/OCX Index
@@ -120,4 +121,5 @@
 
   --c-code-bg: #14181f;
   --c-code-text: #c8d0da;
+}
 }

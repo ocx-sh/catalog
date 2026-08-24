@@ -84,6 +84,7 @@ const groups = computed<PlatformGroup[]>(() => {
 </template>
 
 <style scoped>
+@layer ocx {
 /* One shared grid for the whole card, not one grid per row — a grid's
    column tracks are sized (with `auto`) from the widest content *within
    that one grid container*. Nesting a separate grid per `.platform-row`
@@ -146,5 +147,6 @@ const groups = computed<PlatformGroup[]>(() => {
   font-size: var(--text-2xs);
   color: var(--c-text-3);
   margin: 0;
+}
 }
 </style>

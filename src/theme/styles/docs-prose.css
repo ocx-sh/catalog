@@ -1,3 +1,4 @@
+@layer ocx {
 /* Docs prose typography — scoped via the `.docs-prose` wrapper class that
  * `components/docs/DocLayout.vue` wraps around VitePress's rendered
  * `<Content/>` markdown output. `:where()` keeps every rule at zero
@@ -114,10 +115,9 @@
  * (alpha.18 gotcha). Theme-following (owner decision 2026-08-05, revising
  * mock 1f's always-dark rule): dual-theme Shiki (config.mts) emits
  * --shiki-light/--shiki-dark vars per span; the rules below switch them on
- * `.dark`. `!important` defeats Shiki's own inline
- * `style="background-color:…"` so the token keeps owning the fence bg. */
+ * `.dark`. The fence background is set separately, outside `@layer ocx` at
+ * the bottom of this file — see that rule's own comment for why. */
 .docs-prose :where(.shiki) {
-  background: var(--c-code-bg) !important;
   border: 1px solid var(--c-line);
   border-radius: var(--radius-lg);
   padding: 14px 18px;
@@ -232,4 +232,19 @@
 
 .docs-prose :where(tr:last-child td) {
   border-bottom: none;
+}
+}
+
+/* Deliberately OUTSIDE `@layer ocx`.
+ *
+ * `!important` here defeats Shiki's own inline `style="background-color:…"`
+ * so the token keeps owning the fence background. Inside the layer it would
+ * be unbeatable: layer order REVERSES for `!important`, so a layered
+ * `!important` outranks a consumer's own `!important` and locks them out
+ * permanently. Unlayered, a consumer can still win with `!important` — the
+ * same standing they have today. This is NOT an accessibility lock, so it
+ * does not qualify for the in-layer exception.
+ */
+.docs-prose :where(.shiki) {
+  background: var(--c-code-bg) !important;
 }

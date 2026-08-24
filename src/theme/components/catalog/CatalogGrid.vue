@@ -5,6 +5,7 @@
 </template>
 
 <style scoped>
+@layer ocx {
 /* C-607: real list semantics (`<ul>`) — callers wrap each item in an `<li>`
  * (`display: contents`, see CatalogPage.vue/SkeletonGrid.vue) so the grid
  * item itself is unchanged; this only strips the UA list box/marker. */
@@ -30,5 +31,6 @@
   .catalog-grid {
     grid-template-columns: 1fr;
   }
+}
 }
 </style>

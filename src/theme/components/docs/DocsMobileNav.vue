@@ -63,6 +63,7 @@ function onDrawerClick(e: MouseEvent) {
 </template>
 
 <style scoped>
+@layer ocx {
 .docs-mobile-trigger {
   display: none;
   position: fixed;
@@ -124,5 +125,6 @@ function onDrawerClick(e: MouseEvent) {
 
 .docs-mobile-close:hover {
   color: var(--c-text-1);
+}
 }
 </style>

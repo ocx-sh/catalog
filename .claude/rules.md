@@ -12,6 +12,8 @@ rule nobody finds before a glob happens to fire.
 | Code quality, any language | [quality-core.md](./rules/quality-core.md) |
 | TypeScript — strict mode, ESM, narrowing | [quality-typescript.md](./rules/quality-typescript.md) |
 | Vite / Vitest / VitePress build tooling | [quality-vite.md](./rules/quality-vite.md) |
+| CSS custom properties — naming, tiers, coverage honesty | [quality-design-tokens.md](./rules/quality-design-tokens.md) |
+| How a consumer's stylesheet wins — cascade layers, element seams, component hooks | [quality-css-overrides.md](./rules/quality-css-overrides.md) |
 | This package's own CI and release workflows | [quality-security.md](./rules/quality-security.md) |
 | The Vue 3 VitePress theme's conventions | [subsystem-theme.md](./rules/subsystem-theme.md) |
 | Reading indices — containment, CAS, labels, the mirror | [subsystem-sources.md](./rules/subsystem-sources.md) |
@@ -25,6 +27,7 @@ rule nobody finds before a glob happens to fire.
 |---|---|
 | `**/*.ts`, `**/*.tsx`, `**/*.mts`, `**/*.cts`, `**/tsconfig*.json` | [quality-typescript.md](./rules/quality-typescript.md) |
 | `**/vite.config.*`, `**/vitest.config.*`, `**/.vitepress/config.*` | [quality-vite.md](./rules/quality-vite.md) |
+| `**/*.css`, `**/*.scss`, `**/*.sass`, `**/*.less`, `**/*.styl`, `src/theme/**/*.vue` | [quality-design-tokens.md](./rules/quality-design-tokens.md), [quality-css-overrides.md](./rules/quality-css-overrides.md) |
 | `.github/workflows/**`, `.github/actions/**`, `.github/zizmor.yml` | [quality-security.md](./rules/quality-security.md) |
 | `src/theme/**` | [subsystem-theme.md](./rules/subsystem-theme.md) |
 | `src/sources/**`, `src/build/**` | [subsystem-sources.md](./rules/subsystem-sources.md) |

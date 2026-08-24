@@ -107,6 +107,7 @@ const monogramStyle = computed(() => ({
 </template>
 
 <style scoped>
+@layer ocx {
 .identity-block {
   display: flex;
   gap: 16px;
@@ -264,5 +265,6 @@ const monogramStyle = computed(() => ({
   .identity-keywords {
     justify-content: center;
   }
+}
 }
 </style>

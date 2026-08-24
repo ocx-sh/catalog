@@ -79,6 +79,7 @@ defineEmits<{ 'clear-search': [], retry: [] }>()
 </template>
 
 <style scoped>
+@layer ocx {
 .empty-state {
   display: flex;
   flex-direction: column;
@@ -155,5 +156,6 @@ defineEmits<{ 'clear-search': [], retry: [] }>()
 
 .cta-ghost:hover {
   color: var(--c-text-1);
+}
 }
 </style>

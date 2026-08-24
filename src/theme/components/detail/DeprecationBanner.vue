@@ -66,6 +66,7 @@ const safeSupersededBy = computed(() =>
 </template>
 
 <style scoped>
+@layer ocx {
 .deprecation-banner {
   display: flex;
   align-items: flex-start;
@@ -103,5 +104,6 @@ const safeSupersededBy = computed(() =>
 
 .deprecation-text a:hover {
   color: var(--c-accent-hover);
+}
 }
 </style>

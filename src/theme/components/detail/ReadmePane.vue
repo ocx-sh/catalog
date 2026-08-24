@@ -183,6 +183,7 @@ async function copyAction(key: string, text: string) {
 </template>
 
 <style scoped>
+@layer ocx {
 .readme-pane {
   display: flex;
   flex-direction: column;
@@ -412,9 +413,11 @@ async function copyAction(key: string, text: string) {
   padding: 6px 10px;
   font-size: var(--text-sm);
 }
+}
 </style>
 
 <style>
+@layer ocx {
 /* Unscoped — PopoverContent portals to <body> (same reasoning as
  * .copy-ctx-menu). */
 .readme-info-pop {
@@ -459,5 +462,6 @@ async function copyAction(key: string, text: string) {
 
 .readme-info-action svg {
   flex-shrink: 0;
+}
 }
 </style>

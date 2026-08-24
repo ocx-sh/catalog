@@ -120,6 +120,7 @@ async function handleClick() {
 </template>
 
 <style scoped>
+@layer ocx {
 .tag-badge {
   position: relative;
   display: inline-flex;
@@ -189,5 +190,6 @@ async function handleClick() {
   border-style: dashed;
   border-color: var(--c-warn);
   text-decoration: line-through;
+}
 }
 </style>

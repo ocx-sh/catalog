@@ -36,6 +36,7 @@ function isGroupActive(group: DocsNavGroup): boolean {
 </template>
 
 <style scoped>
+@layer ocx {
 .docs-sidebar {
   display: flex;
   flex-direction: column;
@@ -79,5 +80,6 @@ function isGroupActive(group: DocsNavGroup): boolean {
   color: var(--c-accent);
   background: color-mix(in srgb, var(--c-accent) 8%, transparent);
   font-weight: 500;
+}
 }
 </style>

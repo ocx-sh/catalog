@@ -10,6 +10,7 @@
 </template>
 
 <style scoped>
+@layer ocx {
 .not-found {
   flex: 1;
   display: flex;
@@ -44,5 +45,6 @@
 
 .not-found-link:hover {
   color: var(--c-accent-hover);
+}
 }
 </style>

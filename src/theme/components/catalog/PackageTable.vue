@@ -62,6 +62,7 @@ const { copy: copyText } = useClipboard()
 </template>
 
 <style scoped>
+@layer ocx {
 .package-table {
   display: grid;
   /* tile | title+name | desc | version | platforms | tag count.
@@ -210,5 +211,6 @@ const { copy: copyText } = useClipboard()
   .t-tags {
     display: none;
   }
+}
 }
 </style>

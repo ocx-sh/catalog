@@ -134,6 +134,7 @@ const popoverKeywords = computed(() => {
 </template>
 
 <style scoped>
+@layer ocx {
 .filter-chips {
   display: flex;
   align-items: center;
@@ -207,9 +208,11 @@ const popoverKeywords = computed(() => {
   margin: 0 4px;
   flex-shrink: 0;
 }
+}
 </style>
 
 <style>
+@layer ocx {
 /* Unscoped — PopoverContent portals to <body>, outside this component's
  * scoped-CSS subtree (same reasoning as .copy-ctx-menu). */
 .kw-popover {
@@ -284,5 +287,6 @@ const popoverKeywords = computed(() => {
   color: var(--c-text-3);
   margin: 0;
   padding: 5px 8px;
+}
 }
 </style>

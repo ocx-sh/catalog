@@ -31,6 +31,7 @@ const PLACEHOLDER_COUNT = 9
 </template>
 
 <style scoped>
+@layer ocx {
 /* Same `display: contents` reasoning as CatalogPage.vue's `.catalog-grid-item`
  * — the <li> is a list-semantics wrapper only, `.skeleton-card` stays the
  * actual CSS grid item so the placeholder layout is unchanged. */
@@ -101,5 +102,6 @@ const PLACEHOLDER_COUNT = 9
   height: 26px;
   border-radius: var(--radius-md);
   background: var(--c-surface-2);
+}
 }
 </style>

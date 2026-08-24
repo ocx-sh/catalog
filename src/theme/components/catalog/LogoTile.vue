@@ -52,6 +52,7 @@ watch(src, () => { loaded.value = false })
 </template>
 
 <style scoped>
+@layer ocx {
 .logo-tile {
   position: relative;
   display: inline-flex;
@@ -80,5 +81,6 @@ watch(src, () => { loaded.value = false })
 
 .logo-tile[data-state='ready'] .tile-under {
   opacity: 0;
+}
 }
 </style>

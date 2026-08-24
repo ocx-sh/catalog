@@ -3,6 +3,7 @@
 @import './tokens/shape.css';
 @import './docs-prose.css';
 
+@layer ocx {
 *,
 *::before,
 *::after {
@@ -74,4 +75,5 @@ button {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
 }

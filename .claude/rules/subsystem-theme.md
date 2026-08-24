@@ -100,6 +100,13 @@ Logos are always `<img src="…">`, never inlined raw SVG DOM — an
 
 - `defineProps<{...}>()` generic form only — no runtime `props: {...}`
   object declarations.
+- **Every `<style>` block's content is wrapped in `@layer ocx { … }`** — the
+  consumer-override contract, see
+  [`quality-css-overrides.md`](./quality-css-overrides.md). A new block is
+  wrapped too, or its rules silently outrank a consumer's stylesheet. The
+  wrapper is not indented into the rules, so a block's diff stays readable.
+  Never `!important` inside the layer except an accessibility lock (layer order
+  reverses for `!important`, which would lock consumers out permanently).
 - `<style scoped>` is the default. An unscoped `<style>` block is only for
   content that portals outside the component's DOM subtree (a reka-ui
   `*Portal`/`*Content`, e.g. `CopyContextMenu.vue`'s `.copy-ctx-menu`) —

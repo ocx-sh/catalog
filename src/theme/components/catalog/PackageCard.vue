@@ -104,6 +104,7 @@ const platforms = computed(() =>
 </template>
 
 <style scoped>
+@layer ocx {
 .package-card {
   display: flex;
   flex-direction: column;
@@ -264,9 +265,11 @@ const platforms = computed(() =>
   font-family: var(--font-mono);
   font-size: var(--text-xs);
 }
+}
 </style>
 
 <style>
+@layer ocx {
 /* Unscoped: `.install-row` lives inside `InstallRow.vue`'s own scoped
  * style, one component layer through `CopyContextMenu`'s slot passthrough —
  * a `scoped` selector here isn't guaranteed to reach across that boundary.
@@ -276,5 +279,6 @@ const platforms = computed(() =>
  * hover border without touching the box's unrelated hover style. */
 .package-card:has(.install-row:hover) {
   border-color: var(--c-line);
+}
 }
 </style>

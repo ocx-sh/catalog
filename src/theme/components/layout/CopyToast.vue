@@ -16,6 +16,7 @@ const { message } = useToast()
 </template>
 
 <style scoped>
+@layer ocx {
 .copy-toast {
   position: fixed;
   bottom: 20px;
@@ -48,5 +49,6 @@ const { message } = useToast()
 .copy-toast-leave-to {
   opacity: 0;
   transform: translateY(6px);
+}
 }
 </style>

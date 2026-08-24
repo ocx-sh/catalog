@@ -79,6 +79,7 @@ defineExpose({
 </template>
 
 <style scoped>
+@layer ocx {
 .search-input {
   display: flex;
   align-items: center;
@@ -139,5 +140,6 @@ defineExpose({
   color: var(--c-text-1);
   border-color: var(--c-accent);
   outline: none;
+}
 }
 </style>

@@ -173,6 +173,7 @@ function onSelect(action: CopyAction, copyText: (text: string) => void | Promise
 </template>
 
 <style>
+@layer ocx {
 /* Unscoped, own class names (`copy-ctx-*`, not TagBadge's `ctx-*`) — reka-ui
  * portals ContextMenuContent to <body>, outside any component's
  * scoped-CSS subtree, so `scoped` would never match it regardless. Visually
@@ -211,5 +212,6 @@ function onSelect(action: CopyAction, copyText: (text: string) => void | Promise
 @keyframes copy-ctx-fade-in {
   from { opacity: 0; transform: scale(0.96); }
   to { opacity: 1; transform: scale(1); }
+}
 }
 </style>

@@ -332,6 +332,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 </template>
 
 <style scoped>
+@layer ocx {
 .catalog-page {
   flex: 1;
   display: flex;
@@ -518,9 +519,11 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   color: var(--c-accent);
   background: color-mix(in srgb, var(--c-accent) 8%, transparent);
 }
+}
 </style>
 
 <style>
+@layer ocx {
 /* Unscoped — SelectContent portals to <body> (same reasoning as
  * .copy-ctx-menu / .kw-popover). Popper-positioned with a 6px offset so
  * the dropdown floats clear of the trigger instead of overlapping it. */
@@ -555,5 +558,6 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 
 .sort-item[data-state='checked'] {
   color: var(--c-accent);
+}
 }
 </style>

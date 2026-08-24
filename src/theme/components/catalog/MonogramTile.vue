@@ -36,6 +36,7 @@ const bgColor = computed(() => palette.value.bg[props.hue])
 </template>
 
 <style scoped>
+@layer ocx {
 .monogram-tile {
   display: flex;
   align-items: center;
@@ -45,5 +46,6 @@ const bgColor = computed(() => palette.value.bg[props.hue])
   font-family: var(--font-mono);
   font-weight: 600;
   font-size: var(--text-md);
+}
 }
 </style>

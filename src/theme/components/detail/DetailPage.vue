@@ -150,6 +150,7 @@ onMounted(() => {
 </template>
 
 <style scoped>
+@layer ocx {
 .detail-page {
   flex: 1;
   max-width: 1240px;
@@ -288,5 +289,6 @@ onMounted(() => {
     display: flex;
     flex-direction: column;
   }
+}
 }
 </style>

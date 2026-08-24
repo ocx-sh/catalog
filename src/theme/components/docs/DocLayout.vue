@@ -29,6 +29,7 @@ const { page } = useData()
 </template>
 
 <style scoped>
+@layer ocx {
 .doc-layout {
   flex: 1;
   display: flex;
@@ -82,5 +83,6 @@ const { page } = useData()
   .doc-prose-col {
     padding: 24px 20px 80px;
   }
+}
 }
 </style>

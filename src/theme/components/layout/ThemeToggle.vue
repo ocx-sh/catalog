@@ -58,6 +58,7 @@ function toggle() {
 </template>
 
 <style scoped>
+@layer ocx {
 .theme-toggle {
   display: inline-flex;
   align-items: center;
@@ -76,5 +77,6 @@ function toggle() {
 
 .theme-toggle:hover {
   color: var(--c-text-1);
+}
 }
 </style>

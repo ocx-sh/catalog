@@ -24,6 +24,7 @@
 </template>
 
 <style scoped>
+@layer ocx {
 .yanked-banner {
   display: flex;
   align-items: flex-start;
@@ -45,5 +46,6 @@
   font-size: var(--text-sm);
   line-height: 1.55;
   color: var(--c-text-1);
+}
 }
 </style>

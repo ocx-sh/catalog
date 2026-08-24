@@ -49,6 +49,7 @@ onBeforeUnmount(() => observer?.disconnect())
 </template>
 
 <style scoped>
+@layer ocx {
 .on-this-page {
   display: flex;
   flex-direction: column;
@@ -84,5 +85,6 @@ onBeforeUnmount(() => observer?.disconnect())
 .otp-item.active {
   color: var(--c-accent);
   border-left-color: var(--c-accent);
+}
 }
 </style>

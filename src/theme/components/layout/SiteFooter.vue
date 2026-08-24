@@ -64,6 +64,7 @@ onMounted(async () => {
 </template>
 
 <style scoped>
+@layer ocx {
 /* No margin-top: pages own their bottom padding, and the docs sidebar's
  * right border must run straight into this border-top (owner finding —
  * a gap between the two reads as the divider stopping short). */
@@ -91,5 +92,6 @@ onMounted(async () => {
 
 .footer-inner a:hover {
   color: var(--c-accent);
+}
 }
 </style>

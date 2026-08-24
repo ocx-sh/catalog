@@ -35,6 +35,7 @@ const safeRepositoryUrl = computed(() => safeHref(props.repositoryUrl))
 </template>
 
 <style scoped>
+@layer ocx {
 /* Compact note, not a boxed alert (owner finding) — warn-colored left bar
  * keeps it noticeable without dominating the page. ND-9 still holds: always
  * rendered, just quieter. */
@@ -81,5 +82,6 @@ const safeRepositoryUrl = computed(() => safeHref(props.repositoryUrl))
 
 .disclaimer-text a:hover {
   color: var(--c-accent-hover);
+}
 }
 </style>

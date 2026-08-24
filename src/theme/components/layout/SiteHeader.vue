@@ -96,6 +96,7 @@ function isActive(prefix: string): boolean {
 </template>
 
 <style scoped>
+@layer ocx {
 .site-header {
   height: 54px;
   flex-shrink: 0;
@@ -258,5 +259,6 @@ function isActive(prefix: string): boolean {
   .search-trigger-kbd {
     display: none;
   }
+}
 }
 </style>

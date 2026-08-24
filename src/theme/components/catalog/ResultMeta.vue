@@ -29,6 +29,7 @@ defineEmits<{ 'clear-filters': [] }>()
 </template>
 
 <style scoped>
+@layer ocx {
 .result-meta {
   display: flex;
   align-items: baseline;
@@ -65,5 +66,6 @@ defineEmits<{ 'clear-filters': [] }>()
   color: var(--c-accent-hover);
   outline: none;
   text-decoration: underline;
+}
 }
 </style>

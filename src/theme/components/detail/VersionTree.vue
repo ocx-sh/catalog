@@ -386,6 +386,7 @@ function onMinorHover(minor: MinorGroup) {
 </template>
 
 <style scoped>
+@layer ocx {
 /* Tag rows */
 .tag-row {
   display: flex;
@@ -698,9 +699,11 @@ function onMinorHover(minor: MinorGroup) {
     padding-left: 4.25rem;
   }
 }
+}
 </style>
 
 <style>
+@layer ocx {
 /* Popover — unscoped because it renders in a portal */
 .minor-popover {
   max-width: 360px;
@@ -724,5 +727,6 @@ function onMinorHover(minor: MinorGroup) {
 @keyframes popover-out {
   from { opacity: 1; transform: translateY(0); }
   to { opacity: 0; transform: translateY(-4px); }
+}
 }
 </style>

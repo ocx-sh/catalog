@@ -53,6 +53,7 @@ function onClick(event: MouseEvent) {
 </template>
 
 <style scoped>
+@layer ocx {
 .install-row {
   display: flex;
   align-items: center;
@@ -105,5 +106,6 @@ function onClick(event: MouseEvent) {
 
 .install-icon-check {
   color: var(--c-ok);
+}
 }
 </style>

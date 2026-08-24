@@ -398,6 +398,7 @@ const safeSourceUrl = computed(() => safeHref(props.root.source ?? props.detail?
 </template>
 
 <style scoped>
+@layer ocx {
 .meta-rail {
   display: flex;
   flex-direction: column;
@@ -682,9 +683,11 @@ const safeSourceUrl = computed(() => safeHref(props.root.source ?? props.detail?
 .keyword-chip:hover {
   border-color: var(--c-kw);
 }
+}
 </style>
 
 <style>
+@layer ocx {
 /* Unscoped — SelectContent portals to <body> (same reasoning as
  * .copy-ctx-menu). Own class names rather than reusing CatalogPage's
  * .sort-dropdown: that unscoped block only ships with the catalog chunk. */
@@ -726,5 +729,6 @@ const safeSourceUrl = computed(() => safeHref(props.root.source ?? props.detail?
   margin-left: auto;
   font-size: var(--text-2xs);
   color: var(--c-text-3);
+}
 }
 </style>
