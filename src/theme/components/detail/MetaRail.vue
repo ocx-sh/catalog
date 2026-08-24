@@ -386,6 +386,7 @@ const safeSourceUrl = computed(() => safeHref(props.root.source ?? props.detail?
                 v-for="kw in root.desc.keywords"
                 :key="kw"
                 class="keyword-chip"
+                data-slot="keyword"
                 :href="`/?q=${encodeURIComponent(kw)}`"
                 :title="`search packages: ${kw}`"
               >{{ kw }}</a>

@@ -89,6 +89,7 @@ const initials = computed(() => monogramInitials(props.bareName.split('/').pop()
           v-for="kw in keywords"
           :key="kw"
           class="identity-keyword"
+          data-slot="keyword"
           :href="`/?q=${encodeURIComponent(kw)}`"
           :title="`search packages: ${kw}`"
         >{{ kw }}</a>

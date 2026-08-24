@@ -54,7 +54,7 @@ const platforms = computed(() =>
 
 <template>
   <CopyContextMenu :actions="menuActions" :copy-text="menuCopy">
-    <a :href="`/${bareName}`" class="package-card">
+    <a :href="`/${bareName}`" class="package-card" data-slot="package-card">
     <div class="card-header">
       <LogoTile v-if="pkg.logoUrl || initials" :logo-url="pkg.logoUrl" :hue="hue" :initials="initials" />
       <div v-else class="card-tile-cube">
@@ -79,7 +79,7 @@ const platforms = computed(() =>
 
     <div class="card-meta">
       <span class="card-keywords">
-        <span v-for="kw in displayKeywords" :key="kw" class="card-keyword">{{ kw }}</span>
+        <span v-for="kw in displayKeywords" :key="kw" class="card-keyword" data-slot="keyword">{{ kw }}</span>
       </span>
       <span class="card-platforms">
         <svg
@@ -110,9 +110,9 @@ const platforms = computed(() =>
   flex-direction: column;
   gap: var(--ocx-space-3);
   background: var(--ocx-color-surface);
-  border: var(--ocx-border-width) solid var(--ocx-color-border);
-  border-radius: var(--ocx-radius-lg);
-  padding: var(--ocx-space-5) var(--ocx-space-5) var(--ocx-space-4);
+  border: var(--ocx-border-width) solid var(--ocx-package-card-border-color, var(--ocx-color-border));
+  border-radius: var(--ocx-package-card-radius, var(--ocx-radius-lg));
+  padding: var(--ocx-package-card-padding, var(--ocx-space-5) var(--ocx-space-5) var(--ocx-space-4));
   color: inherit;
   transition: border-color var(--ocx-duration-base);
 }
@@ -247,10 +247,10 @@ const platforms = computed(() =>
   font-family: var(--ocx-font-mono);
   font-size: var(--ocx-text-2xs);
   font-weight: var(--ocx-font-weight-medium);
-  color: var(--ocx-color-keyword);
-  background: var(--ocx-color-keyword-tint);
+  color: var(--ocx-keyword-color, var(--ocx-color-keyword));
+  background: var(--ocx-keyword-background, var(--ocx-color-keyword-tint));
   padding: var(--ocx-space-1) var(--ocx-space-3);
-  border-radius: var(--ocx-radius-sm);
+  border-radius: var(--ocx-keyword-radius, var(--ocx-radius-sm));
 }
 
 .card-platforms {

@@ -34,6 +34,11 @@
   --ocx-space-10: 64px;
   --ocx-space-11: 80px;
 
+  /* Layout constants. A token, not a component hook: a hook exists to let one
+   * component diverge from a shared value, and there is no shared header
+   * height to diverge from. Overriding the token IS the override. */
+  --ocx-header-height: 54px;
+
   /* Elevation. The theme uses borders, not shadows, for surface hierarchy
    * (see this file's header) — this is the one exception: a toast floats over
    * content and has no surface to borrow a border from. Kept as a token

@@ -44,15 +44,30 @@ Two, and only the second is public.
 |---|---|---|
 | **Primitive** | Private, may change any release | Raw values used by 2+ semantic tokens — today only the shared status hues. Never referenced by a component. |
 | **Semantic** | **Public API** — documented, versioned | Role-named tokens components read: surfaces, foregrounds, accent, status, code, monogram, shape, type. |
+| **Component hook** | **Public API** — small, curated | `--ocx-<component>-<property>`, override-only. See [`quality-css-overrides.md`](./quality-css-overrides.md) for the grammar. |
 
-There is no component tier and none should be added. A component needing a
-different colour gets a variant class, never a colour knob — a per-component
-colour property re-exports the implementation as API. Structural per-instance
-knobs (`--arch-cols`, `--mg-*`) already exist; they are **private internals**,
-not API, and are documented as such.
+The component tier is **override-only**: a hook is never *declared* by the
+theme, only *read* with a `var()` fallback to the semantic tier
+(`var(--ocx-package-card-radius, var(--ocx-radius-lg))`). Unset, the component
+tracks the global token, so a rebrand still reaches everything in one edit;
+only components a consumer deliberately opted out of diverge.
 
-Reference direction is downward only: semantic → primitive. A component never
-reads a primitive; that would discard the meaning the semantic layer carries.
+That is what separates it from the anti-pattern. The rule against per-component
+colour knobs bans a component holding an *independent second value*, not an
+*override point that falls through* — which is the shape SLDS, Ant Design,
+PrimeVue and MUI all ship. A hook that stores a value instead of falling back
+is the defect.
+
+Keep the set small. The finest-grained tier is the one that churns: Salesforce's
+own component-hook tier is unsupported in their current rewrite. Ship hooks for
+a handful of components, never speculatively.
+
+Structural per-instance knobs (`--arch-cols`, `--mg-*`) are a different thing —
+**private internals**, not API.
+
+Reference direction is downward only: component hook → semantic → primitive. A
+component never reads a primitive; that would discard the meaning the semantic
+layer carries.
 
 ## Naming
 

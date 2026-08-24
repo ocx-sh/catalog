@@ -55,7 +55,7 @@ function isActive(prefix: string): boolean {
 </script>
 
 <template>
-  <header class="site-header">
+  <header class="site-header" data-slot="site-header">
     <a href="/" class="brand" :aria-label="brandLabel">
       <Logo class="brand-logo" />
       <span class="brand-name">{{ wordmark }}</span>
@@ -98,14 +98,14 @@ function isActive(prefix: string): boolean {
 <style scoped>
 @layer ocx {
 .site-header {
-  height: 54px;
+  height: var(--ocx-header-height);
   flex-shrink: 0;
   display: flex;
   align-items: center;
   gap: var(--ocx-space-6);
   padding: 0 var(--ocx-space-6);
   border-bottom: var(--ocx-border-width) solid var(--ocx-color-border);
-  background: var(--ocx-color-surface);
+  background: var(--ocx-site-header-background, var(--ocx-color-surface));
 }
 
 .brand {
