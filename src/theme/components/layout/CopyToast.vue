@@ -21,13 +21,13 @@ const { message } = useToast()
   position: fixed;
   bottom: 20px;
   right: 20px;
-  z-index: 200;
+  z-index: var(--ocx-z-toast);
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 8px 14px;
   background: var(--ocx-color-surface);
-  border: 1px solid var(--ocx-color-border);
+  border: var(--ocx-border-width) solid var(--ocx-color-border);
   border-radius: var(--ocx-radius-lg);
   box-shadow: var(--ocx-shadow-overlay);
   font-family: var(--ocx-font-mono);
@@ -42,7 +42,7 @@ const { message } = useToast()
 
 .copy-toast-enter-active,
 .copy-toast-leave-active {
-  transition: opacity 0.15s, transform 0.15s;
+  transition: opacity var(--ocx-duration-base), transform var(--ocx-duration-base);
 }
 
 .copy-toast-enter-from,

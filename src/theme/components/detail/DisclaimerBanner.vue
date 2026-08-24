@@ -43,7 +43,7 @@ const safeRepositoryUrl = computed(() => safeHref(props.repositoryUrl))
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  border-left: 2px solid var(--ocx-color-warning);
+  border-left: var(--ocx-border-width-strong) solid var(--ocx-color-warning);
   padding: 2px 0 2px 12px;
 }
 

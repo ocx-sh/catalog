@@ -72,7 +72,7 @@ function toggle() {
   color: var(--ocx-color-fg-subtle);
   cursor: pointer;
   border-radius: var(--ocx-radius-sm);
-  transition: color 0.15s;
+  transition: color var(--ocx-duration-base);
 }
 
 .theme-toggle:hover {

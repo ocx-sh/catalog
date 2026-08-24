@@ -104,7 +104,7 @@ function isActive(prefix: string): boolean {
   align-items: center;
   gap: 24px;
   padding: 0 24px;
-  border-bottom: 1px solid var(--ocx-color-border);
+  border-bottom: var(--ocx-border-width) solid var(--ocx-color-border);
   background: var(--ocx-color-surface);
 }
 
@@ -124,7 +124,7 @@ function isActive(prefix: string): boolean {
 .brand-name {
   font-family: var(--ocx-font-mono);
   font-size: var(--ocx-text-base);
-  font-weight: 600;
+  font-weight: var(--ocx-font-weight-semibold);
   color: var(--ocx-color-fg);
 }
 
@@ -151,10 +151,10 @@ function isActive(prefix: string): boolean {
 .nav-link {
   font-family: var(--ocx-font-mono);
   font-size: var(--ocx-text-sm);
-  font-weight: 500;
+  font-weight: var(--ocx-font-weight-medium);
   color: var(--ocx-color-fg-muted);
   padding: 16px 1px 14px;
-  border-bottom: 2px solid transparent;
+  border-bottom: var(--ocx-border-width-strong) solid transparent;
   white-space: nowrap;
 }
 
@@ -201,12 +201,12 @@ function isActive(prefix: string): boolean {
   width: clamp(220px, 30vw, 360px);
   height: 32px;
   color: var(--ocx-color-fg-subtle);
-  border: 1px solid var(--ocx-color-border);
+  border: var(--ocx-border-width) solid var(--ocx-color-border);
   border-radius: var(--ocx-radius-md);
   padding: 0 10px;
   background: var(--ocx-color-surface-subtle);
   cursor: pointer;
-  transition: border-color 0.15s, color 0.15s;
+  transition: border-color var(--ocx-duration-base), color var(--ocx-duration-base);
 }
 
 .search-trigger:hover {
@@ -227,8 +227,8 @@ function isActive(prefix: string): boolean {
 .search-trigger-kbd {
   font-family: var(--ocx-font-mono);
   font-size: var(--ocx-text-2xs);
-  font-weight: 500;
-  border: 1px solid var(--ocx-color-border);
+  font-weight: var(--ocx-font-weight-medium);
+  border: var(--ocx-border-width) solid var(--ocx-color-border);
   border-radius: var(--ocx-radius-sm);
   padding: 1px 5px;
   background: var(--ocx-color-surface);

@@ -20,5 +20,12 @@
   --ocx-text-sm: 12.5px;
   --ocx-text-xs: 11.5px;
   --ocx-text-2xs: 10.5px;
+
+  /* Weight. CSS's own vocabulary, so the names carry no invented meaning.
+   * Mono never goes above 600 — see this file's header. */
+  --ocx-font-weight-regular: 400;
+  --ocx-font-weight-medium: 500;
+  --ocx-font-weight-semibold: 600;
+  --ocx-font-weight-bold: 700;
 }
 }

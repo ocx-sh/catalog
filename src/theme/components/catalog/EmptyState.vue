@@ -98,7 +98,7 @@ defineEmits<{ 'clear-search': [], retry: [] }>()
 .empty-title {
   font-family: var(--ocx-font-sans);
   font-size: var(--ocx-text-lg);
-  font-weight: 600;
+  font-weight: var(--ocx-font-weight-semibold);
   color: var(--ocx-color-fg);
 }
 
@@ -122,7 +122,7 @@ defineEmits<{ 'clear-search': [], retry: [] }>()
 .cta-ghost {
   font-family: var(--ocx-font-mono);
   font-size: var(--ocx-text-xs);
-  font-weight: 500;
+  font-weight: var(--ocx-font-weight-medium);
   border-radius: var(--ocx-radius-md);
   padding: 7px 14px;
   cursor: pointer;
@@ -131,7 +131,7 @@ defineEmits<{ 'clear-search': [], retry: [] }>()
 .cta-secondary {
   color: var(--ocx-color-fg-muted);
   background: none;
-  border: 1px solid var(--ocx-color-border);
+  border: var(--ocx-border-width) solid var(--ocx-color-border);
 }
 
 .cta-secondary:hover {
@@ -141,7 +141,7 @@ defineEmits<{ 'clear-search': [], retry: [] }>()
 .cta-outline {
   color: var(--ocx-color-accent);
   background: none;
-  border: 1px solid var(--ocx-color-accent-tint-border);
+  border: var(--ocx-border-width) solid var(--ocx-color-accent-tint-border);
 }
 
 .cta-outline:hover {
@@ -151,7 +151,7 @@ defineEmits<{ 'clear-search': [], retry: [] }>()
 .cta-ghost {
   color: var(--ocx-color-fg-muted);
   background: none;
-  border: 1px solid var(--ocx-color-border);
+  border: var(--ocx-border-width) solid var(--ocx-color-border);
 }
 
 .cta-ghost:hover {

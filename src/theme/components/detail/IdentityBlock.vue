@@ -121,7 +121,7 @@ const initials = computed(() => monogramInitials(props.bareName.split('/').pop()
   justify-content: center;
   font-family: var(--ocx-font-mono);
   font-size: var(--ocx-text-lg);
-  font-weight: 600;
+  font-weight: var(--ocx-font-weight-semibold);
 }
 
 /* Hue rotation is a class, not an inline style: an inline style is beatable
@@ -149,7 +149,7 @@ const initials = computed(() => monogramInitials(props.bareName.split('/').pop()
 .identity-title {
   font-family: var(--ocx-font-sans);
   font-size: var(--ocx-text-xl);
-  font-weight: 700;
+  font-weight: var(--ocx-font-weight-bold);
   color: var(--ocx-color-fg);
   line-height: 1.2;
   margin: 0;
@@ -161,10 +161,10 @@ const initials = computed(() => monogramInitials(props.bareName.split('/').pop()
   gap: 7px;
   font-family: var(--ocx-font-mono);
   font-size: var(--ocx-text-sm);
-  font-weight: 500;
+  font-weight: var(--ocx-font-weight-medium);
   color: var(--ocx-color-fg-muted);
   background: var(--ocx-color-surface-subtle);
-  border: 1px solid var(--ocx-color-border);
+  border: var(--ocx-border-width) solid var(--ocx-color-border);
   border-radius: var(--ocx-radius-sm);
   padding: 3px 9px;
   cursor: pointer;
@@ -183,7 +183,7 @@ const initials = computed(() => monogramInitials(props.bareName.split('/').pop()
 .identity-latest {
   font-family: var(--ocx-font-mono);
   font-size: var(--ocx-text-sm);
-  font-weight: 500;
+  font-weight: var(--ocx-font-weight-medium);
   color: var(--ocx-color-success);
 }
 
@@ -195,9 +195,9 @@ const initials = computed(() => monogramInitials(props.bareName.split('/').pop()
 .identity-deprecated {
   font-family: var(--ocx-font-mono);
   font-size: var(--ocx-text-2xs);
-  font-weight: 600;
+  font-weight: var(--ocx-font-weight-semibold);
   color: var(--ocx-color-accent-fg);
-  border: 1px solid var(--ocx-color-accent-hover);
+  border: var(--ocx-border-width) solid var(--ocx-color-accent-hover);
   border-radius: var(--ocx-radius-sm);
   padding: 2px 8px;
   letter-spacing: 0.05em;
@@ -229,14 +229,14 @@ const initials = computed(() => monogramInitials(props.bareName.split('/').pop()
 .identity-keyword {
   font-family: var(--ocx-font-mono);
   font-size: var(--ocx-text-2xs);
-  font-weight: 500;
+  font-weight: var(--ocx-font-weight-medium);
   color: var(--ocx-color-keyword);
   background: var(--ocx-color-keyword-tint);
   padding: 2px 8px;
   border-radius: var(--ocx-radius-sm);
   /* Transparent border reserved so the hover border doesn't shift layout. */
-  border: 1px solid transparent;
-  transition: border-color 0.15s;
+  border: var(--ocx-border-width) solid transparent;
+  transition: border-color var(--ocx-duration-base);
 }
 
 .identity-keyword:hover {

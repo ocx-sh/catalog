@@ -403,7 +403,7 @@ function onMinorHover(minor: MinorGroup) {
 
 /* Variant row */
 .variant-row {
-  border-bottom: 1px solid var(--ocx-color-border);
+  border-bottom: var(--ocx-border-width) solid var(--ocx-color-border);
 }
 
 .variant-row:last-child {
@@ -424,7 +424,7 @@ function onMinorHover(minor: MinorGroup) {
 .variant-label {
   font-family: var(--ocx-font-mono);
   font-size: var(--ocx-text-xs);
-  font-weight: 600;
+  font-weight: var(--ocx-font-weight-semibold);
   color: var(--ocx-color-fg);
   min-width: 5rem;
   flex-shrink: 0;
@@ -433,20 +433,20 @@ function onMinorHover(minor: MinorGroup) {
 .variant-label.default {
   color: var(--ocx-color-fg-subtle);
   font-style: italic;
-  font-weight: 400;
+  font-weight: var(--ocx-font-weight-regular);
 }
 
 .variant-label.other {
   color: var(--ocx-color-fg-subtle);
   font-style: italic;
-  font-weight: 400;
+  font-weight: var(--ocx-font-weight-regular);
 }
 
 /* Segmented alias-chain control (design mock 1c). */
 .alias-chain {
   display: inline-flex;
   align-items: stretch;
-  border: 1px solid var(--ocx-color-border);
+  border: var(--ocx-border-width) solid var(--ocx-color-border);
   border-radius: var(--ocx-radius-md);
   overflow: hidden;
   min-width: 0;
@@ -460,11 +460,11 @@ function onMinorHover(minor: MinorGroup) {
   justify-content: center;
   font-family: var(--ocx-font-mono);
   font-size: var(--ocx-text-xs);
-  font-weight: 500;
+  font-weight: var(--ocx-font-weight-medium);
   color: var(--ocx-color-fg-muted);
   background: none;
   border: none;
-  border-left: 1px solid var(--ocx-color-border);
+  border-left: var(--ocx-border-width) solid var(--ocx-color-border);
   padding: 0.25rem 0.6rem;
   cursor: pointer;
 }
@@ -484,14 +484,14 @@ function onMinorHover(minor: MinorGroup) {
  * (unaudited transient states, same as every other WP6 site). */
 .alias-segment.latest {
   color: var(--ocx-color-accent-fg);
-  font-weight: 600;
+  font-weight: var(--ocx-font-weight-semibold);
   background: color-mix(in srgb, var(--ocx-color-accent) 8%, transparent);
 }
 
 /* Copy feedback — check-icon fade (unified with TagBadge's pattern, not a
    text-color highlight — see components/shared/CopyIcon.vue docblock). */
 .alias-text {
-  transition: opacity 0.15s ease-in;
+  transition: opacity var(--ocx-duration-base) ease-in;
 }
 
 .alias-check {
@@ -500,17 +500,17 @@ function onMinorHover(minor: MinorGroup) {
   margin: auto;
   opacity: 0;
   color: var(--ocx-color-success);
-  transition: opacity 0.15s ease-in;
+  transition: opacity var(--ocx-duration-base) ease-in;
 }
 
 .alias-segment.copied .alias-text {
   opacity: 0;
-  transition: opacity 0.1s ease-out;
+  transition: opacity var(--ocx-duration-fast) ease-out;
 }
 
 .alias-segment.copied .alias-check {
   opacity: 1;
-  transition: opacity 0.1s ease-out;
+  transition: opacity var(--ocx-duration-fast) ease-out;
 }
 
 /* Yanked rolling tags (e.g. a yanked "latest") — sit next to the
@@ -555,7 +555,7 @@ function onMinorHover(minor: MinorGroup) {
   font-size: var(--ocx-text-2xs);
   font-family: var(--ocx-font-mono);
   flex-shrink: 0;
-  transition: all 0.15s;
+  transition: all var(--ocx-duration-base);
 }
 
 .expand-toggle:hover {
@@ -579,7 +579,7 @@ function onMinorHover(minor: MinorGroup) {
 }
 
 .chevron {
-  transition: transform 0.2s ease;
+  transition: transform var(--ocx-duration-moderate) ease;
 }
 
 .expand-toggle[data-state='open'] .chevron {
@@ -596,11 +596,11 @@ function onMinorHover(minor: MinorGroup) {
 }
 
 .variant-row-detail[data-state='open'] {
-  animation: row-open 200ms ease-out;
+  animation: row-open var(--ocx-duration-moderate) ease-out;
 }
 
 .variant-row-detail[data-state='closed'] {
-  animation: row-close 200ms ease-in;
+  animation: row-close var(--ocx-duration-moderate) ease-in;
 }
 
 @keyframes row-open {
@@ -709,14 +709,14 @@ function onMinorHover(minor: MinorGroup) {
   max-width: 360px;
   padding: 0.6rem;
   background: var(--ocx-color-surface);
-  border: 1px solid var(--ocx-color-border);
+  border: var(--ocx-border-width) solid var(--ocx-color-border);
   border-radius: var(--ocx-radius-lg);
-  z-index: 100;
-  animation: popover-in 150ms ease-out;
+  z-index: var(--ocx-z-popover);
+  animation: popover-in var(--ocx-duration-base) ease-out;
 }
 
 .minor-popover.closing {
-  animation: popover-out 200ms ease-in forwards;
+  animation: popover-out var(--ocx-duration-moderate) ease-in forwards;
 }
 
 @keyframes popover-in {

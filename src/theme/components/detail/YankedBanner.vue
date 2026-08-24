@@ -30,7 +30,7 @@
   align-items: flex-start;
   gap: 10px;
   background: var(--ocx-color-warning-tint);
-  border: 1px solid color-mix(in srgb, var(--ocx-color-warning) 45%, transparent);
+  border: var(--ocx-border-width) solid color-mix(in srgb, var(--ocx-color-warning) 45%, transparent);
   border-radius: var(--ocx-radius-lg);
   padding: 11px 14px;
 }

@@ -57,14 +57,14 @@ const PLACEHOLDER_COUNT = 9
   flex-direction: column;
   gap: 10px;
   background: var(--ocx-color-surface);
-  border: 1px solid var(--ocx-color-border);
+  border: var(--ocx-border-width) solid var(--ocx-color-border);
   border-radius: var(--ocx-radius-lg);
   padding: 14px;
-  animation: catalog-skeleton-pulse 1.6s ease-in-out infinite;
+  animation: catalog-skeleton-pulse var(--ocx-duration-shimmer) ease-in-out infinite;
 }
 
 .skeleton-card.offbeat {
-  animation-delay: 0.2s;
+  animation-delay: var(--ocx-duration-moderate);
 }
 
 .skeleton-row {

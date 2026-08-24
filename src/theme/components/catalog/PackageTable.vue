@@ -70,7 +70,7 @@ const { copy: copyText } = useClipboard()
    * eat the description's space; past the cap both truncate instead. */
   grid-template-columns: auto minmax(140px, 260px) 1fr auto auto auto;
   background: var(--ocx-color-surface);
-  border: 1px solid var(--ocx-color-border);
+  border: var(--ocx-border-width) solid var(--ocx-color-border);
   border-radius: var(--ocx-radius-lg);
   overflow: hidden;
 }
@@ -83,11 +83,11 @@ const { copy: copyText } = useClipboard()
   gap: var(--ocx-space-3);
   padding: 8px 14px;
   color: inherit;
-  transition: background-color 0.15s;
+  transition: background-color var(--ocx-duration-base);
 }
 
 .table-row + .table-row {
-  border-top: 1px solid var(--ocx-color-border);
+  border-top: var(--ocx-border-width) solid var(--ocx-color-border);
 }
 
 .table-row:hover,
@@ -131,7 +131,7 @@ const { copy: copyText } = useClipboard()
 .t-title {
   font-family: var(--ocx-font-sans);
   font-size: var(--ocx-text-sm);
-  font-weight: 600;
+  font-weight: var(--ocx-font-weight-semibold);
   color: var(--ocx-color-fg);
   white-space: nowrap;
   overflow: hidden;
@@ -152,9 +152,9 @@ const { copy: copyText } = useClipboard()
 .t-deprecated {
   font-family: var(--ocx-font-mono);
   font-size: var(--ocx-text-2xs);
-  font-weight: 600;
+  font-weight: var(--ocx-font-weight-semibold);
   color: var(--ocx-color-fg-subtle);
-  border: 1px solid var(--ocx-color-border);
+  border: var(--ocx-border-width) solid var(--ocx-color-border);
   border-radius: var(--ocx-radius-sm);
   padding: 1px 6px;
   letter-spacing: 0.05em;

@@ -70,15 +70,15 @@ onUnmounted(() => document.removeEventListener('click', onDocsCopyClick))
   position: absolute;
   top: -48px;
   left: 8px;
-  z-index: 300;
+  z-index: var(--ocx-z-skip-link);
   padding: 8px 14px;
   background: var(--ocx-color-surface);
   color: var(--ocx-color-fg);
-  border: 1px solid var(--ocx-color-border);
+  border: var(--ocx-border-width) solid var(--ocx-color-border);
   border-radius: var(--ocx-radius-md);
   font-family: var(--ocx-font-mono);
   font-size: var(--ocx-text-sm);
-  transition: top 0.15s;
+  transition: top var(--ocx-duration-base);
 }
 
 .skip-link:focus-visible {

@@ -240,11 +240,11 @@ function onContentKeydown(e: KeyboardEvent) {
   position: fixed;
   inset: 0;
   background: var(--ocx-color-overlay);
-  z-index: 100;
+  z-index: var(--ocx-z-popover);
 }
 
 .palette-overlay[data-state='open'] {
-  animation: palette-fade-in 120ms ease;
+  animation: palette-fade-in var(--ocx-duration-enter) ease;
 }
 
 .palette-content {
@@ -257,14 +257,14 @@ function onContentKeydown(e: KeyboardEvent) {
   display: flex;
   flex-direction: column;
   background: var(--ocx-color-surface);
-  border: 1px solid var(--ocx-color-border);
+  border: var(--ocx-border-width) solid var(--ocx-color-border);
   border-radius: var(--ocx-radius-lg);
   overflow: hidden;
-  z-index: 101;
+  z-index: var(--ocx-z-modal);
 }
 
 .palette-content[data-state='open'] {
-  animation: palette-fade-in 120ms ease;
+  animation: palette-fade-in var(--ocx-duration-enter) ease;
 }
 
 .palette-search-bar {
@@ -274,7 +274,7 @@ function onContentKeydown(e: KeyboardEvent) {
   padding: 0 16px;
   height: 52px;
   flex-shrink: 0;
-  border-bottom: 1px solid var(--ocx-color-border);
+  border-bottom: var(--ocx-border-width) solid var(--ocx-color-border);
 }
 
 .palette-search-icon {
@@ -303,7 +303,7 @@ function onContentKeydown(e: KeyboardEvent) {
   font-family: var(--ocx-font-mono);
   font-size: var(--ocx-text-2xs);
   color: var(--ocx-color-fg-subtle);
-  border: 1px solid var(--ocx-color-border);
+  border: var(--ocx-border-width) solid var(--ocx-color-border);
   border-radius: var(--ocx-radius-sm);
   padding: 3px 7px;
   background: none;
@@ -324,7 +324,7 @@ function onContentKeydown(e: KeyboardEvent) {
 .palette-group-label {
   font-family: var(--ocx-font-mono);
   font-size: var(--ocx-text-2xs);
-  font-weight: 600;
+  font-weight: var(--ocx-font-weight-semibold);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--ocx-color-fg-subtle);

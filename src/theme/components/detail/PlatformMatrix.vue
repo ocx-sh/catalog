@@ -121,7 +121,7 @@ const groups = computed<PlatformGroup[]>(() => {
 .platform-label {
   font-family: var(--ocx-font-sans);
   font-size: var(--ocx-text-sm);
-  font-weight: 500;
+  font-weight: var(--ocx-font-weight-medium);
   color: var(--ocx-color-fg);
 }
 
@@ -134,10 +134,10 @@ const groups = computed<PlatformGroup[]>(() => {
   text-align: center;
   font-family: var(--ocx-font-mono);
   font-size: var(--ocx-text-2xs);
-  font-weight: 500;
+  font-weight: var(--ocx-font-weight-medium);
   color: var(--ocx-color-fg-muted);
   background: var(--ocx-color-surface-subtle);
-  border: 1px solid var(--ocx-color-border);
+  border: var(--ocx-border-width) solid var(--ocx-color-border);
   border-radius: var(--ocx-radius-sm);
   padding: 2px 7px;
 }

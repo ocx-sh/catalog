@@ -376,7 +376,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 .toolbar-skeleton {
   height: 44px;
   background: var(--ocx-color-surface);
-  border: 1.5px solid var(--ocx-color-border);
+  border: var(--ocx-border-width-emphasis) solid var(--ocx-color-border);
   border-radius: var(--ocx-radius-lg);
 }
 
@@ -424,10 +424,10 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
    * must never resize with the selection. */
   width: 118px;
   background: var(--ocx-color-surface);
-  border: 1px solid var(--ocx-color-border);
+  border: var(--ocx-border-width) solid var(--ocx-color-border);
   border-radius: var(--ocx-radius-md);
   overflow: hidden;
-  transition: border-color 0.15s;
+  transition: border-color var(--ocx-duration-base);
 }
 
 .sort-control:has(.sort-trigger:hover),
@@ -442,7 +442,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   color: var(--ocx-color-fg-subtle);
   background: none;
   border: none;
-  border-right: 1px solid var(--ocx-color-border);
+  border-right: var(--ocx-border-width) solid var(--ocx-color-border);
   cursor: pointer;
   outline: none;
 }
@@ -460,14 +460,14 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   min-width: 0;
   font-family: var(--ocx-font-mono);
   font-size: var(--ocx-text-xs);
-  font-weight: 500;
+  font-weight: var(--ocx-font-weight-medium);
   line-height: 1;
   color: var(--ocx-color-fg-muted);
   background: none;
   border: none;
   padding: 0 9px;
   cursor: pointer;
-  transition: color 0.15s;
+  transition: color var(--ocx-duration-base);
   outline: none;
 }
 
@@ -488,7 +488,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 /* Joined two-button segment — same pattern as MetaRail's install toggle. */
 .view-toggle {
   display: inline-flex;
-  border: 1px solid var(--ocx-color-border);
+  border: var(--ocx-border-width) solid var(--ocx-color-border);
   border-radius: var(--ocx-radius-md);
   overflow: hidden;
   flex-shrink: 0;
@@ -506,7 +506,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 }
 
 .view-toggle button + button {
-  border-left: 1px solid var(--ocx-color-border);
+  border-left: var(--ocx-border-width) solid var(--ocx-color-border);
 }
 
 .view-toggle button:hover,
@@ -531,10 +531,10 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   min-width: 160px;
   padding: 0.35rem;
   background: var(--ocx-color-surface);
-  border: 1px solid var(--ocx-color-border);
+  border: var(--ocx-border-width) solid var(--ocx-color-border);
   border-radius: var(--ocx-radius-lg);
-  z-index: 100;
-  animation: copy-ctx-fade-in 0.12s ease-out;
+  z-index: var(--ocx-z-popover);
+  animation: copy-ctx-fade-in var(--ocx-duration-enter) ease-out;
 }
 
 .sort-item {
@@ -547,7 +547,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   color: var(--ocx-color-fg-muted);
   cursor: pointer;
   outline: none;
-  transition: background 0.1s, color 0.1s;
+  transition: background var(--ocx-duration-fast), color var(--ocx-duration-fast);
 }
 
 .sort-item:hover,

@@ -40,7 +40,7 @@ const { page } = useData()
 .doc-sidebar {
   width: 250px;
   flex-shrink: 0;
-  border-right: 1px solid var(--ocx-color-border);
+  border-right: var(--ocx-border-width) solid var(--ocx-color-border);
   position: sticky;
   top: 54px;
   align-self: stretch;

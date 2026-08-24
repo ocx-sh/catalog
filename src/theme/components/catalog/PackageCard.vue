@@ -110,11 +110,11 @@ const platforms = computed(() =>
   flex-direction: column;
   gap: 9px;
   background: var(--ocx-color-surface);
-  border: 1px solid var(--ocx-color-border);
+  border: var(--ocx-border-width) solid var(--ocx-color-border);
   border-radius: var(--ocx-radius-lg);
   padding: 14px 14px 12px;
   color: inherit;
-  transition: border-color 0.15s;
+  transition: border-color var(--ocx-duration-base);
 }
 
 .package-card:hover,
@@ -157,7 +157,7 @@ const platforms = computed(() =>
 .card-title {
   font-family: var(--ocx-font-sans);
   font-size: var(--ocx-text-md);
-  font-weight: 600;
+  font-weight: var(--ocx-font-weight-semibold);
   line-height: 1.3;
   color: var(--ocx-color-fg);
   /* One line always — a wrapped title makes the header taller and the tile
@@ -176,7 +176,7 @@ const platforms = computed(() =>
 .card-version {
   font-family: var(--ocx-font-mono);
   font-size: var(--ocx-text-xs);
-  font-weight: 500;
+  font-weight: var(--ocx-font-weight-medium);
   color: var(--ocx-color-fg-subtle);
 }
 
@@ -189,9 +189,9 @@ const platforms = computed(() =>
   margin-left: auto;
   font-family: var(--ocx-font-mono);
   font-size: var(--ocx-text-2xs);
-  font-weight: 600;
+  font-weight: var(--ocx-font-weight-semibold);
   color: var(--ocx-color-fg-subtle);
-  border: 1px solid var(--ocx-color-border);
+  border: var(--ocx-border-width) solid var(--ocx-color-border);
   border-radius: var(--ocx-radius-sm);
   padding: 2px 8px;
   letter-spacing: 0.05em;
@@ -246,7 +246,7 @@ const platforms = computed(() =>
 .card-keyword {
   font-family: var(--ocx-font-mono);
   font-size: var(--ocx-text-2xs);
-  font-weight: 500;
+  font-weight: var(--ocx-font-weight-medium);
   color: var(--ocx-color-keyword);
   background: var(--ocx-color-keyword-tint);
   padding: 2px 7px;

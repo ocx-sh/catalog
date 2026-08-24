@@ -87,9 +87,9 @@ defineExpose({
   height: 44px;
   padding: 0 14px;
   background: var(--ocx-color-surface);
-  border: 1.5px solid var(--ocx-color-border);
+  border: var(--ocx-border-width-emphasis) solid var(--ocx-color-border);
   border-radius: var(--ocx-radius-lg);
-  transition: border-color 0.15s;
+  transition: border-color var(--ocx-duration-base);
 }
 
 .search-input:focus-within {
@@ -120,9 +120,9 @@ defineExpose({
   flex-shrink: 0;
   font-family: var(--ocx-font-mono);
   font-size: var(--ocx-text-2xs);
-  font-weight: 500;
+  font-weight: var(--ocx-font-weight-medium);
   color: var(--ocx-color-fg-subtle);
-  border: 1px solid var(--ocx-color-border);
+  border: var(--ocx-border-width) solid var(--ocx-color-border);
   border-radius: var(--ocx-radius-sm);
   padding: 2px 6px;
   background: var(--ocx-color-surface-subtle);
@@ -132,7 +132,7 @@ defineExpose({
 .search-clear {
   cursor: pointer;
   line-height: inherit;
-  transition: color 0.15s, border-color 0.15s;
+  transition: color var(--ocx-duration-base), border-color var(--ocx-duration-base);
 }
 
 .search-clear:hover,

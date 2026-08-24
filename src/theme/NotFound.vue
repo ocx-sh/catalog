@@ -25,7 +25,7 @@
 .not-found-code {
   font-family: var(--ocx-font-mono);
   font-size: var(--ocx-text-2xl);
-  font-weight: 600;
+  font-weight: var(--ocx-font-weight-semibold);
   color: var(--ocx-color-fg-muted);
 }
 
@@ -39,7 +39,7 @@
 .not-found-link {
   font-family: var(--ocx-font-mono);
   font-size: var(--ocx-text-xs);
-  font-weight: 500;
+  font-weight: var(--ocx-font-weight-medium);
   color: var(--ocx-color-accent);
 }
 

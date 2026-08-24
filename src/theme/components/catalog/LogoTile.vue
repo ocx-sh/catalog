@@ -61,7 +61,7 @@ watch(src, () => { loaded.value = false })
 
 .logo-tile img,
 .logo-tile .tile-under {
-  transition: opacity 0.2s ease;
+  transition: opacity var(--ocx-duration-moderate) ease;
 }
 
 /* Bare logo — no box, background, or radius (owner finding); the monogram

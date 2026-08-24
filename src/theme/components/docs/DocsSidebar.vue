@@ -53,7 +53,7 @@ function isGroupActive(group: DocsNavGroup): boolean {
 .docs-nav-label {
   font-family: var(--ocx-font-mono);
   font-size: var(--ocx-text-2xs);
-  font-weight: 600;
+  font-weight: var(--ocx-font-weight-semibold);
   letter-spacing: 0.09em;
   color: var(--ocx-color-fg-subtle);
   padding: 6px 12px;
@@ -79,7 +79,7 @@ function isGroupActive(group: DocsNavGroup): boolean {
 .docs-nav-item.active {
   color: var(--ocx-color-accent);
   background: color-mix(in srgb, var(--ocx-color-accent) 8%, transparent);
-  font-weight: 500;
+  font-weight: var(--ocx-font-weight-medium);
 }
 }
 </style>

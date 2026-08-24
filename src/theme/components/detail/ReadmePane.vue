@@ -193,7 +193,7 @@ async function copyAction(key: string, text: string) {
 .readme-heading {
   font-family: var(--ocx-font-mono);
   font-size: var(--ocx-text-xs);
-  font-weight: 600;
+  font-weight: var(--ocx-font-weight-semibold);
   color: var(--ocx-color-fg-subtle);
   letter-spacing: 0.06em;
 }
@@ -201,7 +201,7 @@ async function copyAction(key: string, text: string) {
 .readme-card {
   position: relative;
   background: var(--ocx-color-surface);
-  border: 1px solid var(--ocx-color-border);
+  border: var(--ocx-border-width) solid var(--ocx-color-border);
   border-radius: var(--ocx-radius-lg);
   padding: 20px 24px;
   display: flex;
@@ -223,7 +223,7 @@ async function copyAction(key: string, text: string) {
   border: none;
   border-radius: var(--ocx-radius-md);
   cursor: pointer;
-  transition: color 0.15s, background-color 0.15s;
+  transition: color var(--ocx-duration-base), background-color var(--ocx-duration-base);
 }
 
 .readme-info:hover,
@@ -288,7 +288,7 @@ async function copyAction(key: string, text: string) {
 .readme-content :deep(pre) {
   position: relative;
   background: var(--ocx-color-code-bg);
-  border: 1px solid var(--ocx-color-border);
+  border: var(--ocx-border-width) solid var(--ocx-color-border);
   border-radius: var(--ocx-radius-lg);
   padding: 12px 16px;
   overflow-x: auto;
@@ -305,7 +305,7 @@ async function copyAction(key: string, text: string) {
   background: none;
   cursor: pointer;
   opacity: 0;
-  transition: opacity 0.15s;
+  transition: opacity var(--ocx-duration-base);
 }
 
 .readme-content :deep(pre:hover .readme-copy),
@@ -318,7 +318,7 @@ async function copyAction(key: string, text: string) {
   position: absolute;
   inset: 4px;
   background-color: var(--ocx-color-fg-subtle);
-  transition: background-color 0.15s;
+  transition: background-color var(--ocx-duration-base);
   mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='9' y='9' width='13' height='13' rx='2' ry='2'/%3E%3Cpath d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'/%3E%3C/svg%3E") center / contain no-repeat;
 }
 
@@ -377,7 +377,7 @@ async function copyAction(key: string, text: string) {
 .readme-content :deep(.hljs-selector-class),
 .readme-content :deep(.hljs-selector-id) {
   color: var(--ocx-color-fg);
-  font-weight: 600;
+  font-weight: var(--ocx-font-weight-semibold);
 }
 
 .readme-content :deep(.hljs-variable),
@@ -409,7 +409,7 @@ async function copyAction(key: string, text: string) {
 
 .readme-content :deep(th),
 .readme-content :deep(td) {
-  border: 1px solid var(--ocx-color-border);
+  border: var(--ocx-border-width) solid var(--ocx-color-border);
   padding: 6px 10px;
   font-size: var(--ocx-text-sm);
 }
@@ -426,10 +426,10 @@ async function copyAction(key: string, text: string) {
   min-width: 200px;
   padding: 0.35rem;
   background: var(--ocx-color-surface);
-  border: 1px solid var(--ocx-color-border);
+  border: var(--ocx-border-width) solid var(--ocx-color-border);
   border-radius: var(--ocx-radius-lg);
-  z-index: 100;
-  animation: copy-ctx-fade-in 0.12s ease-out;
+  z-index: var(--ocx-z-popover);
+  animation: copy-ctx-fade-in var(--ocx-duration-enter) ease-out;
 }
 
 .readme-info-title {
@@ -452,7 +452,7 @@ async function copyAction(key: string, text: string) {
   border: none;
   cursor: pointer;
   text-align: left;
-  transition: background 0.1s, color 0.1s;
+  transition: background var(--ocx-duration-fast), color var(--ocx-duration-fast);
 }
 
 .readme-info-action:hover {

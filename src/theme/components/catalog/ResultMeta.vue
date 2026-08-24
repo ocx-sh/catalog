@@ -40,7 +40,7 @@ defineEmits<{ 'clear-filters': [] }>()
 .count {
   font-family: var(--ocx-font-mono);
   font-size: var(--ocx-text-sm);
-  font-weight: 600;
+  font-weight: var(--ocx-font-weight-semibold);
   color: var(--ocx-color-fg);
 }
 
@@ -53,7 +53,7 @@ defineEmits<{ 'clear-filters': [] }>()
 .clear-btn {
   font-family: var(--ocx-font-mono);
   font-size: var(--ocx-text-xs);
-  font-weight: 500;
+  font-weight: var(--ocx-font-weight-medium);
   color: var(--ocx-color-accent);
   background: none;
   border: none;

@@ -69,7 +69,7 @@ onMounted(async () => {
  * right border must run straight into this border-top (owner finding —
  * a gap between the two reads as the divider stopping short). */
 .site-footer {
-  border-top: 1px solid var(--ocx-color-border);
+  border-top: var(--ocx-border-width) solid var(--ocx-color-border);
 }
 
 .footer-inner {

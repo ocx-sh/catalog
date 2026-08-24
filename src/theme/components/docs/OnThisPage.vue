@@ -59,7 +59,7 @@ onBeforeUnmount(() => observer?.disconnect())
 .otp-label {
   font-family: var(--ocx-font-mono);
   font-size: var(--ocx-text-2xs);
-  font-weight: 600;
+  font-weight: var(--ocx-font-weight-semibold);
   letter-spacing: 0.09em;
   color: var(--ocx-color-fg-subtle);
 }
@@ -68,7 +68,7 @@ onBeforeUnmount(() => observer?.disconnect())
   font-family: var(--ocx-font-sans);
   font-size: var(--ocx-text-sm);
   color: var(--ocx-color-fg-muted);
-  border-left: 2px solid var(--ocx-color-border);
+  border-left: var(--ocx-border-width-strong) solid var(--ocx-color-border);
   padding-left: 10px;
   line-height: 1.4;
 }

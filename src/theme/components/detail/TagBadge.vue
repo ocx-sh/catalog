@@ -127,14 +127,14 @@ async function handleClick() {
   align-items: center;
   font-family: var(--ocx-font-mono);
   font-size: var(--ocx-text-xs);
-  font-weight: 500;
+  font-weight: var(--ocx-font-weight-medium);
   padding: 0.2rem 0.6rem;
   background: var(--ocx-color-surface-subtle);
-  border: 1px solid var(--ocx-color-border);
+  border: var(--ocx-border-width) solid var(--ocx-color-border);
   border-radius: var(--ocx-radius-sm);
   color: var(--ocx-color-fg-muted);
   cursor: pointer;
-  transition: border-color 0.3s, color 0.3s, background 0.3s;
+  transition: border-color var(--ocx-duration-slow), color var(--ocx-duration-slow), background var(--ocx-duration-slow);
   user-select: none;
 }
 
@@ -144,7 +144,7 @@ async function handleClick() {
 }
 
 .tag-badge.rolling {
-  font-weight: 600;
+  font-weight: var(--ocx-font-weight-semibold);
 }
 
 .tag-badge.child {
@@ -158,7 +158,7 @@ async function handleClick() {
 }
 
 .tag-text {
-  transition: opacity 0.15s ease-in;
+  transition: opacity var(--ocx-duration-base) ease-in;
 }
 
 .tag-check {
@@ -166,7 +166,7 @@ async function handleClick() {
   inset: 0;
   margin: auto;
   opacity: 0;
-  transition: opacity 0.15s ease-in;
+  transition: opacity var(--ocx-duration-base) ease-in;
 }
 
 .tag-badge.copied {
@@ -176,12 +176,12 @@ async function handleClick() {
 
 .tag-badge.copied .tag-text {
   opacity: 0;
-  transition: opacity 0.1s ease-out;
+  transition: opacity var(--ocx-duration-fast) ease-out;
 }
 
 .tag-badge.copied .tag-check {
   opacity: 1;
-  transition: opacity 0.1s ease-out;
+  transition: opacity var(--ocx-duration-fast) ease-out;
 }
 
 /* Yanked — struck, dashed amber, muted (design mock 1c/1d). */

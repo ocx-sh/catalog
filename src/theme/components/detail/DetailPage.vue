@@ -185,7 +185,7 @@ onMounted(() => {
   gap: 6px;
   font-family: var(--ocx-font-mono);
   font-size: var(--ocx-text-sm);
-  font-weight: 500;
+  font-weight: var(--ocx-font-weight-medium);
   color: var(--ocx-color-accent-fg);
   width: fit-content;
 }
@@ -237,7 +237,7 @@ onMounted(() => {
 .versions-title {
   font-family: var(--ocx-font-mono);
   font-size: var(--ocx-text-xs);
-  font-weight: 600;
+  font-weight: var(--ocx-font-weight-semibold);
   color: var(--ocx-color-fg-subtle);
   letter-spacing: 0.06em;
 }
@@ -250,7 +250,7 @@ onMounted(() => {
 
 .versions-card {
   background: var(--ocx-color-surface);
-  border: 1px solid var(--ocx-color-border);
+  border: var(--ocx-border-width) solid var(--ocx-color-border);
   border-radius: var(--ocx-radius-lg);
   padding: 4px 16px;
 }

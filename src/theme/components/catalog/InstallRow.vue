@@ -60,12 +60,12 @@ function onClick(event: MouseEvent) {
   gap: 8px;
   width: 100%;
   background: var(--ocx-color-surface-subtle);
-  border: 1px solid var(--ocx-color-border);
+  border: var(--ocx-border-width) solid var(--ocx-color-border);
   border-radius: var(--ocx-radius-md);
   padding: 6px 9px;
   font-family: var(--ocx-font-mono);
   cursor: pointer;
-  transition: border-color 0.15s;
+  transition: border-color var(--ocx-duration-base);
   text-align: left;
 }
 
@@ -76,7 +76,7 @@ function onClick(event: MouseEvent) {
 
 .install-prefix {
   color: var(--ocx-color-accent);
-  font-weight: 600;
+  font-weight: var(--ocx-font-weight-semibold);
   font-size: var(--ocx-text-xs);
   flex-shrink: 0;
 }

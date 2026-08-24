@@ -69,15 +69,15 @@ function onDrawerClick(e: MouseEvent) {
   position: fixed;
   right: 16px;
   bottom: 16px;
-  z-index: 40;
+  z-index: var(--ocx-z-drawer-backdrop);
   align-items: center;
   gap: 6px;
   font-family: var(--ocx-font-mono);
   font-size: var(--ocx-text-xs);
-  font-weight: 500;
+  font-weight: var(--ocx-font-weight-medium);
   color: var(--ocx-color-fg);
   background: var(--ocx-color-surface);
-  border: 1px solid var(--ocx-color-border);
+  border: var(--ocx-border-width) solid var(--ocx-color-border);
   border-radius: var(--ocx-radius-full);
   padding: 8px 14px;
 }
@@ -92,16 +92,16 @@ function onDrawerClick(e: MouseEvent) {
   position: fixed;
   inset: 0;
   background: var(--ocx-color-overlay);
-  z-index: 44;
+  z-index: var(--ocx-z-drawer);
 }
 
 .docs-mobile-drawer {
   position: fixed;
   inset: 0 25% 0 0;
   min-width: 260px;
-  z-index: 45;
+  z-index: var(--ocx-z-drawer-close);
   background: var(--ocx-color-surface);
-  border-right: 1px solid var(--ocx-color-border);
+  border-right: var(--ocx-border-width) solid var(--ocx-color-border);
   overflow-y: auto;
   padding: 20px 0 32px;
   display: flex;

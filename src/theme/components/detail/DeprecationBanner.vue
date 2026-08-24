@@ -72,7 +72,7 @@ const safeSupersededBy = computed(() =>
   align-items: flex-start;
   gap: 10px;
   background: color-mix(in srgb, var(--ocx-color-accent) 10%, transparent);
-  border: 1px solid color-mix(in srgb, var(--ocx-color-accent) 45%, transparent);
+  border: var(--ocx-border-width) solid color-mix(in srgb, var(--ocx-color-accent) 45%, transparent);
   border-radius: var(--ocx-radius-lg);
   padding: 11px 14px;
 }

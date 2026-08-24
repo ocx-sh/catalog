@@ -28,5 +28,41 @@
    * anyway so a mirror can flatten or restyle it; it was the theme's only
    * hardcoded colour outside the palette. */
   --ocx-shadow-overlay: 0 4px 16px rgb(0 0 0 / 0.12);
+
+  /* Border width. Borders carry this theme's surface hierarchy (see header),
+   * so this is the knob a mirror reaches for to make the whole site flatter
+   * or heavier. One default plus three stated exceptions — values preserved
+   * exactly, never rounded onto each other. */
+  --ocx-border-width: 1px;
+  --ocx-border-width-emphasis: 1.5px;
+  --ocx-border-width-strong: 2px;
+  --ocx-border-width-marker: 3px;
+
+  /* Stacking order. Named by what occupies each tier, not by number: the
+   * numbers are near-neighbours (44 vs 45, 100 vs 101) whose ORDER is the
+   * whole point, and collapsing two of them would silently invert which of
+   * two simultaneously-open overlays sits on top — invisible in review and
+   * only reproducible with both open at once. */
+  --ocx-z-drawer-backdrop: 40;
+  --ocx-z-drawer: 44;
+  --ocx-z-drawer-close: 45;
+  --ocx-z-popover: 100;
+  --ocx-z-modal: 101;
+  --ocx-z-toast: 200;
+  --ocx-z-skip-link: 300;
+
+  /* Motion. Values preserved 1:1 — several are near-neighbours (100/120/150ms)
+   * that may well be drift, but consolidating them changes real durations, so
+   * that is a separate, deliberate visual change rather than a rename.
+   *
+   * No easing tokens: `ease-out`/`ease-in` are CSS keywords that already say
+   * what they do, and wrapping a keyword in a custom property buys indirection
+   * without buying control. */
+  --ocx-duration-fast: 0.1s;
+  --ocx-duration-enter: 0.12s;
+  --ocx-duration-base: 0.15s;
+  --ocx-duration-moderate: 0.2s;
+  --ocx-duration-slow: 0.3s;
+  --ocx-duration-shimmer: 1.6s;
 }
 }

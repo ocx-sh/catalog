@@ -423,7 +423,7 @@ const safeSourceUrl = computed(() => safeHref(props.root.source ?? props.detail?
 
 .rail-card {
   background: var(--ocx-color-surface);
-  border: 1px solid var(--ocx-color-border);
+  border: var(--ocx-border-width) solid var(--ocx-color-border);
   border-radius: var(--ocx-radius-lg);
   padding: 14px 16px;
   display: flex;
@@ -434,7 +434,7 @@ const safeSourceUrl = computed(() => safeHref(props.root.source ?? props.detail?
 .rail-heading {
   font-family: var(--ocx-font-mono);
   font-size: var(--ocx-text-xs);
-  font-weight: 600;
+  font-weight: var(--ocx-font-weight-semibold);
   color: var(--ocx-color-fg-subtle);
   letter-spacing: 0.06em;
 }
@@ -474,15 +474,15 @@ const safeSourceUrl = computed(() => safeHref(props.root.source ?? props.detail?
   height: 26px;
   font-family: var(--ocx-font-mono);
   font-size: var(--ocx-text-xs);
-  font-weight: 500;
+  font-weight: var(--ocx-font-weight-medium);
   line-height: 1;
   color: var(--ocx-color-fg);
   background: var(--ocx-color-surface-subtle);
-  border: 1px solid var(--ocx-color-border);
+  border: var(--ocx-border-width) solid var(--ocx-color-border);
   border-radius: var(--ocx-radius-md);
   padding: 0 9px;
   cursor: pointer;
-  transition: border-color 0.15s;
+  transition: border-color var(--ocx-duration-base);
   outline: none;
 }
 
@@ -506,7 +506,7 @@ const safeSourceUrl = computed(() => safeHref(props.root.source ?? props.detail?
 
 /* Owner spec: horizontal rule between the selectors and the command grid. */
 .install-grid.with-divider {
-  border-top: 1px solid var(--ocx-color-border);
+  border-top: var(--ocx-border-width) solid var(--ocx-color-border);
   padding-top: 12px;
 }
 
@@ -539,12 +539,12 @@ const safeSourceUrl = computed(() => safeHref(props.root.source ?? props.detail?
   gap: 8px;
   width: 100%;
   background: var(--ocx-color-surface-subtle);
-  border: 1px solid var(--ocx-color-border);
+  border: var(--ocx-border-width) solid var(--ocx-color-border);
   border-radius: var(--ocx-radius-md);
   padding: 7px 10px;
   font-family: var(--ocx-font-mono);
   cursor: pointer;
-  transition: border-color 0.15s;
+  transition: border-color var(--ocx-duration-base);
   text-align: left;
 }
 
@@ -559,7 +559,7 @@ const safeSourceUrl = computed(() => safeHref(props.root.source ?? props.detail?
 
 .install-prefix {
   color: var(--ocx-color-accent);
-  font-weight: 600;
+  font-weight: var(--ocx-font-weight-semibold);
   font-size: var(--ocx-text-xs);
   flex-shrink: 0;
 }
@@ -671,13 +671,13 @@ const safeSourceUrl = computed(() => safeHref(props.root.source ?? props.detail?
 
 .keyword-chip {
   font-size: var(--ocx-text-2xs);
-  font-weight: 500;
+  font-weight: var(--ocx-font-weight-medium);
   color: var(--ocx-color-keyword);
   background: var(--ocx-color-keyword-tint);
   padding: 2px 7px;
   border-radius: var(--ocx-radius-sm);
-  border: 1px solid transparent;
-  transition: border-color 0.15s;
+  border: var(--ocx-border-width) solid transparent;
+  transition: border-color var(--ocx-duration-base);
 }
 
 .keyword-chip:hover {
@@ -695,10 +695,10 @@ const safeSourceUrl = computed(() => safeHref(props.root.source ?? props.detail?
   min-width: 180px;
   padding: 0.35rem;
   background: var(--ocx-color-surface);
-  border: 1px solid var(--ocx-color-border);
+  border: var(--ocx-border-width) solid var(--ocx-color-border);
   border-radius: var(--ocx-radius-lg);
-  z-index: 100;
-  animation: copy-ctx-fade-in 0.12s ease-out;
+  z-index: var(--ocx-z-popover);
+  animation: copy-ctx-fade-in var(--ocx-duration-enter) ease-out;
 }
 
 .pin-item {
@@ -712,7 +712,7 @@ const safeSourceUrl = computed(() => safeHref(props.root.source ?? props.detail?
   color: var(--ocx-color-fg-muted);
   cursor: pointer;
   outline: none;
-  transition: background 0.1s, color 0.1s;
+  transition: background var(--ocx-duration-fast), color var(--ocx-duration-fast);
 }
 
 .pin-item:hover,

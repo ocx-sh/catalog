@@ -27,8 +27,8 @@ body {
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   transition:
-    background-color 0.15s,
-    color 0.15s;
+    background-color var(--ocx-duration-base),
+    color var(--ocx-duration-base);
 }
 
 /* WP6: --ocx-color-accent-fg, not --ocx-color-accent — the site-wide default link color

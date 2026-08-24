@@ -183,10 +183,10 @@ function onSelect(action: CopyAction, copyText: (text: string) => void | Promise
   min-width: 200px;
   padding: 0.35rem;
   background: var(--ocx-color-surface);
-  border: 1px solid var(--ocx-color-border);
+  border: var(--ocx-border-width) solid var(--ocx-color-border);
   border-radius: var(--ocx-radius-lg);
-  z-index: 100;
-  animation: copy-ctx-fade-in 0.12s ease-out;
+  z-index: var(--ocx-z-popover);
+  animation: copy-ctx-fade-in var(--ocx-duration-enter) ease-out;
 }
 
 .copy-ctx-item {
@@ -200,7 +200,7 @@ function onSelect(action: CopyAction, copyText: (text: string) => void | Promise
   color: var(--ocx-color-fg-muted);
   cursor: pointer;
   outline: none;
-  transition: background 0.1s, color 0.1s;
+  transition: background var(--ocx-duration-fast), color var(--ocx-duration-fast);
 }
 
 .copy-ctx-item:hover,

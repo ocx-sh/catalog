@@ -148,17 +148,17 @@ const popoverKeywords = computed(() => {
   gap: 6px;
   font-family: var(--ocx-font-mono);
   font-size: var(--ocx-text-xs);
-  font-weight: 500;
+  font-weight: var(--ocx-font-weight-medium);
   color: var(--ocx-color-fg-muted);
-  border: 1px solid var(--ocx-color-border);
+  border: var(--ocx-border-width) solid var(--ocx-color-border);
   border-radius: var(--ocx-radius-full);
   padding: 4px 11px;
   background: var(--ocx-color-surface);
   cursor: pointer;
   transition:
-    border-color 0.15s,
-    color 0.15s,
-    background-color 0.15s;
+    border-color var(--ocx-duration-base),
+    color var(--ocx-duration-base),
+    background-color var(--ocx-duration-base);
 }
 
 .chip:hover {
@@ -185,7 +185,7 @@ const popoverKeywords = computed(() => {
 .chip-more {
   font-family: var(--ocx-font-mono);
   font-size: var(--ocx-text-xs);
-  font-weight: 500;
+  font-weight: var(--ocx-font-weight-medium);
   color: var(--ocx-color-fg-subtle);
   background: none;
   border: none;
@@ -222,10 +222,10 @@ const popoverKeywords = computed(() => {
   width: 280px;
   padding: 10px;
   background: var(--ocx-color-surface);
-  border: 1px solid var(--ocx-color-border);
+  border: var(--ocx-border-width) solid var(--ocx-color-border);
   border-radius: var(--ocx-radius-lg);
-  z-index: 100;
-  animation: copy-ctx-fade-in 0.12s ease-out;
+  z-index: var(--ocx-z-popover);
+  animation: copy-ctx-fade-in var(--ocx-duration-enter) ease-out;
 }
 
 .kw-popover-input {
@@ -233,7 +233,7 @@ const popoverKeywords = computed(() => {
   font-size: var(--ocx-text-xs);
   color: var(--ocx-color-fg);
   background: var(--ocx-color-surface-subtle);
-  border: 1px solid var(--ocx-color-border);
+  border: var(--ocx-border-width) solid var(--ocx-color-border);
   border-radius: var(--ocx-radius-md);
   padding: 6px 9px;
   outline: none;

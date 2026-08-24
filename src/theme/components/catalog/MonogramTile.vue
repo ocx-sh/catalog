@@ -36,7 +36,7 @@ withDefaults(
   flex-shrink: 0;
   border-radius: var(--ocx-radius-lg);
   font-family: var(--ocx-font-mono);
-  font-weight: 600;
+  font-weight: var(--ocx-font-weight-semibold);
   font-size: var(--ocx-text-md);
 }
 
