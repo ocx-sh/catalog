@@ -31,6 +31,8 @@ not restate it here.
 > **Status: pre-1.0, published.** `0.1.0` and `0.1.1` are both on npm
 > (`latest` is `0.1.1`). The GitHub remote
 > [`ocx-sh/catalog`](https://github.com/ocx-sh/catalog) is public, and the
+> user documentation is a MkDocs Material site under `docs/`, published to
+> GitHub Pages (`README.md` is a pointer at it, not a second copy). The
 > release lane is fully operational: `0.1.0` was a one-time manual bootstrap
 > publish (trusted publishing cannot pre-provision a new package name), and
 > `0.1.1` went out through CI with a real provenance attestation. No release
@@ -61,18 +63,24 @@ task typecheck      # npm run typecheck (tsc --noEmit && tsc -p tsconfig.theme.j
 task test           # npm test (vitest run --coverage — 100% gate)
 task pack-smoke     # node scripts/pack-smoke.mjs (publint + attw + real pack/install)
 task build          # npm run build (tsc -> dist/; postbuild chmods the CLI entry)
+task docs:build     # mkdocs build --strict (the docs site; standalone)
+task docs:serve     # local docs preview on 127.0.0.1:8000
 task changelog:preview   # git-cliff --unreleased
 task release:prepare BUMP=auto|patch|minor|major   # see Release
 ```
 
 `task verify` is the local equivalent of the CI quality gate — run it before
 calling anything done. Repo-hygiene tasks (`lint:actions`, `lint:links`,
-`secrets`, `lint:workflows`) and `quality:web` (Lighthouse CI over a fixture
-site) run standalone, not as part of `verify`.
+`secrets`, `lint:workflows`), `quality:web` (Lighthouse CI over a fixture
+site) and `docs:*` (the MkDocs documentation site) run standalone, not as part
+of `verify` — `verify` must stay runnable with the npm toolchain alone.
 
 CI (`.github/workflows/ci.yml`) runs: `lint`, `typecheck`, `test`,
 `pack-verify`, `workflows-lint` (zizmor), `audit-signatures`, `repo-checks`
 (actionlint/lychee/gitleaks), and `web-quality` (Lighthouse CI).
+`.github/workflows/pages.yml` builds `docs/` on every docs-touching PR
+(`mkdocs build --strict` is the dead-internal-link gate) and publishes it to
+GitHub Pages on `main`.
 
 ## Quality Gate
 
@@ -138,6 +146,7 @@ escalating tier.
 | `src/theme/` | The Vue 3 VitePress theme (components, composables, utils, styles) |
 | `src/viewmodel/` | The `/data/catalog/catalog.json` view-model emitter |
 | `templates/` | Rendered CI workflow templates (`ci/*.yml`) |
+| `docs/` | The user documentation site (MkDocs Material, `mkdocs.yml`) — published at `https://ocx-sh.github.io/catalog/` |
 | `test/` | Vitest suites, mirroring `src/` |
 | `scripts/pack-smoke.mjs` | Publish-shape verification (publint, attw, real pack + install) |
 

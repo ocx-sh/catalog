@@ -9,6 +9,10 @@
 
 version: '3'
 
+vars:
+  # Single source of truth for the docs toolchain pin (see docs:build below).
+  MKDOCS_MATERIAL: 9.7.7
+
 tasks:
   default:
     desc: Fast feedback — the full local quality gate
@@ -47,6 +51,33 @@ tasks:
     desc: Compile TypeScript to dist/
     cmds:
       - npm run build
+
+  # mkdocs-material is a Python library, not a droppable binary, so it has no
+  # OCX package to pin in ocx.lock the way task/git-cliff/actionlint/lychee/
+  # gitleaks are. `uv run --with` resolves it from PyPI into an ephemeral venv,
+  # pinned to an exact version for the same reason `lint:workflows` pins zizmor:
+  # a docs toolchain that silently changes between a local run and CI is not a
+  # gate you can reason about. Needs `uv` on PATH locally (same expectation as
+  # lint:workflows); CI provisions it with astral-sh/setup-uv.
+  #
+  # docs:* are STANDALONE, deliberately not part of `verify` — `verify` is the
+  # npm quality gate and must stay runnable without a Python toolchain. The
+  # pre-merge gate for docs is .github/workflows/pages.yml's build job, plus
+  # lychee in ci.yml's repo-checks for external links.
+  docs:build:
+    desc: Build the docs site into site/ (strict — any dead internal link fails)
+    cmds:
+      - uv run --with mkdocs-material=={{.MKDOCS_MATERIAL}} mkdocs build --strict
+
+  docs:serve:
+    desc: Live-reload docs preview at http://127.0.0.1:8000
+    cmds:
+      - uv run --with mkdocs-material=={{.MKDOCS_MATERIAL}} mkdocs serve -a 127.0.0.1:8000
+
+  docs:clean:
+    desc: Remove the generated site/ directory
+    cmds:
+      - rm -rf site
 
   lint:actions:
     desc: Lint GitHub Actions workflows

@@ -7,12 +7,14 @@ paths:
 
 # CI/CD Security Standards
 
-This repo's whole CI/CD security surface is two workflow files —
-`.github/workflows/ci.yml` and `.github/workflows/release.yml` — that build,
-test, and publish an npm package. No SQL, no user-facing auth, no server. The
-checklist below is scoped to what those two files actually do; verify every
-claim against them (and `.github/zizmor.yml`, `renovate.json`) before asserting
-it — this file is not a generic OWASP checklist.
+This repo's whole CI/CD security surface is three workflow files —
+`.github/workflows/ci.yml` and `.github/workflows/release.yml`, which build,
+test, and publish an npm package, and `.github/workflows/pages.yml`, which
+builds the MkDocs documentation site and deploys it to GitHub Pages. No SQL,
+no user-facing auth, no server. The checklist below is scoped to what those
+three files actually do; verify every claim against them (and
+`.github/zizmor.yml`, `renovate.json`) before asserting it — this file is not
+a generic OWASP checklist.
 
 ---
 
@@ -22,9 +24,14 @@ it — this file is not a generic OWASP checklist.
       comment (`actions/checkout@3d3c...  # v7.0.1`) — matches `renovate.json`'s
       `pinDigests: true` for `github-actions`, which keeps the pin current.
 - [ ] Top-level `permissions: {}` in every workflow; each job grants itself only
-      what it needs (`contents: read` is the default across both files; the
-      `publish` job in `release.yml` additionally needs `id-token: write` for
-      npm trusted publishing — nothing else does).
+      what it needs (`contents: read` is the default; the `publish` job in
+      `release.yml` additionally needs `id-token: write` for npm trusted
+      publishing, and `pages.yml`'s `deploy` job needs `pages: write` +
+      `id-token: write` for the Pages deployment). `pages.yml`'s `build` job
+      also holds those two scopes, for one reason only: `actions/configure-pages`
+      with `enablement: true` turns Pages on during the first `main` run, and
+      needs them on the job that calls it. Drop them from `build` once the
+      Pages site exists and the `configure-pages` step is removed.
 - [ ] No `NODE_AUTH_TOKEN` / npm auth token secret exists anywhere in this repo.
       Publishing is OIDC-based (`id-token: write` exchanged for a short-lived npm
       credential at publish time) — adding a stored token back would be a live
@@ -50,6 +57,9 @@ it — this file is not a generic OWASP checklist.
 - [ ] `workflows-lint` (`ci.yml`) runs `zizmor --min-severity medium --config
       .github/zizmor.yml .github/` via `uvx` (no dependency added to the
       package's own graph for a CI-only tool).
+- [ ] `pages.yml` never publishes anything from a pull request: `upload-pages-artifact`
+      and the whole `deploy` job are gated on `github.ref == 'refs/heads/main'`,
+      so a fork PR can build the docs but can never deploy them.
 
 ---
 
