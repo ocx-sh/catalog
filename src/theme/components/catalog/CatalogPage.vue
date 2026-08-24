@@ -337,17 +337,17 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--ocx-space-4);
   max-width: 1400px;
   width: 100%;
   margin: 0 auto;
-  padding: var(--space-5) var(--space-6) var(--space-8);
+  padding: var(--ocx-space-5) var(--ocx-space-6) var(--ocx-space-8);
 }
 
 .catalog-toolbar {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--ocx-space-4);
 }
 
 /* C-607: the landing page's one required <h1> — visually hidden, not
@@ -375,15 +375,15 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 
 .toolbar-skeleton {
   height: 44px;
-  background: var(--c-surface);
-  border: 1.5px solid var(--c-line);
-  border-radius: var(--radius-lg);
+  background: var(--ocx-color-surface);
+  border: 1.5px solid var(--ocx-color-border);
+  border-radius: var(--ocx-radius-lg);
 }
 
 .meta-row {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--ocx-space-3);
   /* Optical inset — flush-left plain text next to a column of rounded
    * boxes reads as misaligned. */
   padding-left: 4px;
@@ -394,7 +394,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 
 @media (max-width: 639px) {
   .catalog-page {
-    padding: var(--space-4) var(--space-4) var(--space-6);
+    padding: var(--ocx-space-4) var(--ocx-space-4) var(--ocx-space-6);
   }
 }
 
@@ -423,33 +423,33 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   /* Fixed width sized for the WIDEST label ("recent"/"newest") — the box
    * must never resize with the selection. */
   width: 118px;
-  background: var(--c-surface);
-  border: 1px solid var(--c-line);
-  border-radius: var(--radius-md);
+  background: var(--ocx-color-surface);
+  border: 1px solid var(--ocx-color-border);
+  border-radius: var(--ocx-radius-md);
   overflow: hidden;
   transition: border-color 0.15s;
 }
 
 .sort-control:has(.sort-trigger:hover),
 .sort-control:has(.sort-trigger:focus-visible) {
-  border-color: var(--c-accent);
+  border-color: var(--ocx-color-accent);
 }
 
 .sort-dir-btn {
   display: inline-flex;
   align-items: center;
   padding: 0 8px;
-  color: var(--c-text-3);
+  color: var(--ocx-color-fg-subtle);
   background: none;
   border: none;
-  border-right: 1px solid var(--c-line);
+  border-right: 1px solid var(--ocx-color-border);
   cursor: pointer;
   outline: none;
 }
 
 .sort-dir-btn:hover svg,
 .sort-dir-btn:focus-visible svg {
-  color: var(--c-accent);
+  color: var(--ocx-color-accent);
 }
 
 .sort-trigger {
@@ -458,11 +458,11 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   gap: 6px;
   flex: 1;
   min-width: 0;
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
+  font-family: var(--ocx-font-mono);
+  font-size: var(--ocx-text-xs);
   font-weight: 500;
   line-height: 1;
-  color: var(--c-text-2);
+  color: var(--ocx-color-fg-muted);
   background: none;
   border: none;
   padding: 0 9px;
@@ -478,18 +478,18 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 
 .sort-trigger:hover,
 .sort-trigger:focus-visible {
-  color: var(--c-text-1);
+  color: var(--ocx-color-fg);
 }
 
 .sort-trigger svg {
-  color: var(--c-text-3);
+  color: var(--ocx-color-fg-subtle);
 }
 
 /* Joined two-button segment — same pattern as MetaRail's install toggle. */
 .view-toggle {
   display: inline-flex;
-  border: 1px solid var(--c-line);
-  border-radius: var(--radius-md);
+  border: 1px solid var(--ocx-color-border);
+  border-radius: var(--ocx-radius-md);
   overflow: hidden;
   flex-shrink: 0;
 }
@@ -498,7 +498,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   display: flex;
   align-items: center;
   height: 100%;
-  color: var(--c-text-3);
+  color: var(--ocx-color-fg-subtle);
   background: none;
   border: none;
   padding: 0 9px;
@@ -506,18 +506,18 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 }
 
 .view-toggle button + button {
-  border-left: 1px solid var(--c-line);
+  border-left: 1px solid var(--ocx-color-border);
 }
 
 .view-toggle button:hover,
 .view-toggle button:focus-visible {
-  color: var(--c-text-1);
+  color: var(--ocx-color-fg);
   outline: none;
 }
 
 .view-toggle button.active {
-  color: var(--c-accent);
-  background: color-mix(in srgb, var(--c-accent) 8%, transparent);
+  color: var(--ocx-color-accent);
+  background: color-mix(in srgb, var(--ocx-color-accent) 8%, transparent);
 }
 }
 </style>
@@ -530,9 +530,9 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 .sort-dropdown {
   min-width: 160px;
   padding: 0.35rem;
-  background: var(--c-surface);
-  border: 1px solid var(--c-line);
-  border-radius: var(--radius-lg);
+  background: var(--ocx-color-surface);
+  border: 1px solid var(--ocx-color-border);
+  border-radius: var(--ocx-radius-lg);
   z-index: 100;
   animation: copy-ctx-fade-in 0.12s ease-out;
 }
@@ -541,10 +541,10 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   display: flex;
   align-items: center;
   padding: 0.45rem 0.6rem;
-  border-radius: var(--radius-sm);
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
-  color: var(--c-text-2);
+  border-radius: var(--ocx-radius-sm);
+  font-family: var(--ocx-font-mono);
+  font-size: var(--ocx-text-xs);
+  color: var(--ocx-color-fg-muted);
   cursor: pointer;
   outline: none;
   transition: background 0.1s, color 0.1s;
@@ -552,12 +552,12 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 
 .sort-item:hover,
 .sort-item[data-highlighted] {
-  background: var(--c-surface-2);
-  color: var(--c-accent);
+  background: var(--ocx-color-surface-subtle);
+  color: var(--ocx-color-accent);
 }
 
 .sort-item[data-state='checked'] {
-  color: var(--c-accent);
+  color: var(--ocx-color-accent);
 }
 }
 </style>

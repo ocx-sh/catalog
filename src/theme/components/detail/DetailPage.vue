@@ -156,16 +156,16 @@ onMounted(() => {
   max-width: 1240px;
   width: 100%;
   margin: 0 auto;
-  padding: var(--space-5) var(--space-6) var(--space-8);
+  padding: var(--ocx-space-5) var(--ocx-space-6) var(--ocx-space-8);
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--ocx-space-4);
 }
 
 .detail-status {
-  font-family: var(--font-mono);
-  font-size: var(--text-sm);
-  color: var(--c-text-3);
+  font-family: var(--ocx-font-mono);
+  font-size: var(--ocx-text-sm);
+  color: var(--ocx-color-fg-subtle);
 }
 
 .detail-notfound {
@@ -177,21 +177,21 @@ onMounted(() => {
   text-align: center;
 }
 
-/* WP6: --c-accent-text, not --c-accent — 2.79:1 on --c-bg with the plain
+/* WP6: --ocx-color-accent-fg, not --ocx-color-accent — 2.79:1 on --ocx-color-bg with the plain
  * accent -> 5.05:1. */
 .back-link {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-family: var(--font-mono);
-  font-size: var(--text-sm);
+  font-family: var(--ocx-font-mono);
+  font-size: var(--ocx-text-sm);
   font-weight: 500;
-  color: var(--c-accent-text);
+  color: var(--ocx-color-accent-fg);
   width: fit-content;
 }
 
 .back-link:hover {
-  color: var(--c-accent-hover);
+  color: var(--ocx-color-accent-hover);
 }
 
 /* Responsive columns — plan_site_redesign.md WP-D responsive contract:
@@ -208,7 +208,7 @@ onMounted(() => {
      and with auto rows the grid distributes its height INTO row 1, shoving
      the readme ~100px below a short (collapsed) versions box. */
   grid-template-rows: min-content 1fr;
-  gap: 14px var(--space-7);
+  gap: 14px var(--ocx-space-7);
   align-items: start;
 }
 
@@ -235,23 +235,23 @@ onMounted(() => {
 }
 
 .versions-title {
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
+  font-family: var(--ocx-font-mono);
+  font-size: var(--ocx-text-xs);
   font-weight: 600;
-  color: var(--c-text-3);
+  color: var(--ocx-color-fg-subtle);
   letter-spacing: 0.06em;
 }
 
 .versions-hint {
-  font-family: var(--font-mono);
-  font-size: var(--text-2xs);
-  color: var(--c-text-3);
+  font-family: var(--ocx-font-mono);
+  font-size: var(--ocx-text-2xs);
+  color: var(--ocx-color-fg-subtle);
 }
 
 .versions-card {
-  background: var(--c-surface);
-  border: 1px solid var(--c-line);
-  border-radius: var(--radius-lg);
+  background: var(--ocx-color-surface);
+  border: 1px solid var(--ocx-color-border);
+  border-radius: var(--ocx-radius-lg);
   padding: 4px 16px;
 }
 
@@ -277,7 +277,7 @@ onMounted(() => {
    versions, then readme. */
 @media (max-width: 639px) {
   .detail-page {
-    padding: var(--space-4) var(--space-4) var(--space-6);
+    padding: var(--ocx-space-4) var(--ocx-space-4) var(--ocx-space-6);
   }
 
   .detail-columns {

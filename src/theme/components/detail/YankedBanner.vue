@@ -29,23 +29,23 @@
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  background: var(--c-warn-bg);
-  border: 1px solid color-mix(in srgb, var(--c-warn) 45%, transparent);
-  border-radius: var(--radius-lg);
+  background: var(--ocx-color-warning-tint);
+  border: 1px solid color-mix(in srgb, var(--ocx-color-warning) 45%, transparent);
+  border-radius: var(--ocx-radius-lg);
   padding: 11px 14px;
 }
 
 .yanked-icon {
-  color: var(--c-warn);
+  color: var(--ocx-color-warning);
   flex-shrink: 0;
   margin-top: 1px;
 }
 
 .yanked-text {
-  font-family: var(--font-sans);
-  font-size: var(--text-sm);
+  font-family: var(--ocx-font-sans);
+  font-size: var(--ocx-text-sm);
   line-height: 1.55;
-  color: var(--c-text-1);
+  color: var(--ocx-color-fg);
 }
 }
 </style>

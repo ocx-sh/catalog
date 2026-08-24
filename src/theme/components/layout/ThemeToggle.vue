@@ -69,14 +69,14 @@ function toggle() {
   background: none;
   border: none;
   padding: 0;
-  color: var(--c-text-3);
+  color: var(--ocx-color-fg-subtle);
   cursor: pointer;
-  border-radius: var(--radius-sm);
+  border-radius: var(--ocx-radius-sm);
   transition: color 0.15s;
 }
 
 .theme-toggle:hover {
-  color: var(--c-text-1);
+  color: var(--ocx-color-fg);
 }
 }
 </style>

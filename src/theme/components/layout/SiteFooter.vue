@@ -69,29 +69,29 @@ onMounted(async () => {
  * right border must run straight into this border-top (owner finding —
  * a gap between the two reads as the divider stopping short). */
 .site-footer {
-  border-top: 1px solid var(--c-line);
+  border-top: 1px solid var(--ocx-color-border);
 }
 
 .footer-inner {
   max-width: 1400px;
   margin: 0 auto;
-  padding: var(--space-4) var(--space-6);
+  padding: var(--ocx-space-4) var(--ocx-space-6);
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: var(--space-3);
+  gap: var(--ocx-space-3);
   flex-wrap: wrap;
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
-  color: var(--c-text-3);
+  font-family: var(--ocx-font-mono);
+  font-size: var(--ocx-text-xs);
+  color: var(--ocx-color-fg-subtle);
 }
 
 .footer-inner a {
-  color: var(--c-text-2);
+  color: var(--ocx-color-fg-muted);
 }
 
 .footer-inner a:hover {
-  color: var(--c-accent);
+  color: var(--ocx-color-accent);
 }
 }
 </style>

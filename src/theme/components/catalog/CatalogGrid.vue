@@ -12,7 +12,7 @@
 .catalog-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: var(--space-3);
+  gap: var(--ocx-space-3);
   list-style: none;
   margin: 0;
   padding: 0;

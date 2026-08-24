@@ -7,11 +7,11 @@
  *
  * WP6 (theme a11y pass, 2026-08-22): `light.text[1]` darkened from the mock's
  * verbatim `#0e9f6e` to `#0a7652` — text-on-its-own-10%-tint-background was
- * 3.01:1 (PackageCard, tint over --c-surface) / 2.83:1 (IdentityBlock, tint
- * over --c-bg), both below WCAG AA's 4.5:1 for small text. `#0a7652` clears
+ * 3.01:1 (PackageCard, tint over --ocx-color-surface) / 2.83:1 (IdentityBlock, tint
+ * over --ocx-color-bg), both below WCAG AA's 4.5:1 for small text. `#0a7652` clears
  * both (4.89:1 / 4.57:1, relative-luminance formula) and matches
- * `palette.css`'s own `--c-ok` token, which needed the identical fix for the
- * same reason (`--c-ok` and this hue were the same verbatim green). `dark`
+ * `palette.css`'s own `--ocx-color-success` token, which needed the identical fix for the
+ * same reason (`--ocx-color-success` and this hue were the same verbatim green). `dark`
  * is untouched — `#3edea6` already clears 7.9:1+ on its own tint background
  * in both callers. */
 export const MONOGRAM_HUES = {

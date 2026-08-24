@@ -38,20 +38,20 @@ The theme exposes its full design system as CSS custom properties (`src/theme/st
 
 ```css
 :root {
-  --c-accent: #2563eb;
-  --font-sans: "Inter", sans-serif;
+  --ocx-color-accent: #2563eb;
+  --ocx-font-sans: "Inter", sans-serif;
 }
 
 .dark {
-  --c-accent: #60a5fa;
+  --ocx-color-accent: #60a5fa;
 }
 ```
 
 | Family | File | Example tokens |
 |---|---|---|
-| Color | `palette.css` | `--c-bg`, `--c-surface`, `--c-surface-2`, `--c-line`, `--c-text-1`/`-2`/`-3`, `--c-accent`, `--c-accent-hover`, `--c-accent-text`, `--c-ok`, `--c-warn`, `--c-kw`, `--c-code-bg`, `--c-code-text`, `--c-overlay` |
-| Shape | `shape.css` | `--radius-sm`/`-md`/`-lg`/`-full`, `--space-1` through `--space-8` |
-| Type | `type.css` | `--font-sans`, `--font-mono`, `--text-2xl` through `--text-2xs` |
+| Color | `palette.css` | `--ocx-color-bg`, `--ocx-color-surface`, `--ocx-color-surface-subtle`, `--ocx-color-border`, `--ocx-color-fg`/`-2`/`-3`, `--ocx-color-accent`, `--ocx-color-accent-hover`, `--ocx-color-accent-fg`, `--ocx-color-success`, `--ocx-color-warning`, `--ocx-color-keyword`, `--ocx-color-code-bg`, `--ocx-color-code-fg`, `--ocx-color-overlay` |
+| Shape | `shape.css` | `--ocx-radius-sm`/`-md`/`-lg`/`-full`, `--ocx-space-1` through `--ocx-space-8` |
+| Type | `type.css` | `--ocx-font-sans`, `--ocx-font-mono`, `--ocx-text-2xl` through `--ocx-text-2xs` |
 
 Only reassign variables — the example above is the whole pattern. Anything set under `.dark` overrides that variable for dark mode only.
 

@@ -72,13 +72,13 @@ function onDrawerClick(e: MouseEvent) {
   z-index: 40;
   align-items: center;
   gap: 6px;
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
+  font-family: var(--ocx-font-mono);
+  font-size: var(--ocx-text-xs);
   font-weight: 500;
-  color: var(--c-text-1);
-  background: var(--c-surface);
-  border: 1px solid var(--c-line);
-  border-radius: var(--radius-full);
+  color: var(--ocx-color-fg);
+  background: var(--ocx-color-surface);
+  border: 1px solid var(--ocx-color-border);
+  border-radius: var(--ocx-radius-full);
   padding: 8px 14px;
 }
 
@@ -91,7 +91,7 @@ function onDrawerClick(e: MouseEvent) {
 .docs-mobile-backdrop {
   position: fixed;
   inset: 0;
-  background: var(--c-overlay);
+  background: var(--ocx-color-overlay);
   z-index: 44;
 }
 
@@ -100,8 +100,8 @@ function onDrawerClick(e: MouseEvent) {
   inset: 0 25% 0 0;
   min-width: 260px;
   z-index: 45;
-  background: var(--c-surface);
-  border-right: 1px solid var(--c-line);
+  background: var(--ocx-color-surface);
+  border-right: 1px solid var(--ocx-color-border);
   overflow-y: auto;
   padding: 20px 0 32px;
   display: flex;
@@ -117,14 +117,14 @@ function onDrawerClick(e: MouseEvent) {
   justify-content: center;
   width: 32px;
   height: 32px;
-  color: var(--c-text-3);
+  color: var(--ocx-color-fg-subtle);
   background: none;
   border: none;
-  border-radius: var(--radius-sm);
+  border-radius: var(--ocx-radius-sm);
 }
 
 .docs-mobile-close:hover {
-  color: var(--c-text-1);
+  color: var(--ocx-color-fg);
 }
 }
 </style>

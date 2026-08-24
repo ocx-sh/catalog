@@ -83,22 +83,22 @@ defineExpose({
 .search-input {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--ocx-space-3);
   height: 44px;
   padding: 0 14px;
-  background: var(--c-surface);
-  border: 1.5px solid var(--c-line);
-  border-radius: var(--radius-lg);
+  background: var(--ocx-color-surface);
+  border: 1.5px solid var(--ocx-color-border);
+  border-radius: var(--ocx-radius-lg);
   transition: border-color 0.15s;
 }
 
 .search-input:focus-within {
-  border-color: var(--c-accent);
+  border-color: var(--ocx-color-accent);
 }
 
 .search-icon {
   flex-shrink: 0;
-  color: var(--c-text-3);
+  color: var(--ocx-color-fg-subtle);
 }
 
 .search-field {
@@ -107,25 +107,25 @@ defineExpose({
   border: none;
   outline: none;
   background: none;
-  font-family: var(--font-mono);
-  font-size: var(--text-base);
-  color: var(--c-text-1);
+  font-family: var(--ocx-font-mono);
+  font-size: var(--ocx-text-base);
+  color: var(--ocx-color-fg);
 }
 
 .search-field::placeholder {
-  color: var(--c-text-3);
+  color: var(--ocx-color-fg-subtle);
 }
 
 .search-kbd {
   flex-shrink: 0;
-  font-family: var(--font-mono);
-  font-size: var(--text-2xs);
+  font-family: var(--ocx-font-mono);
+  font-size: var(--ocx-text-2xs);
   font-weight: 500;
-  color: var(--c-text-3);
-  border: 1px solid var(--c-line);
-  border-radius: var(--radius-sm);
+  color: var(--ocx-color-fg-subtle);
+  border: 1px solid var(--ocx-color-border);
+  border-radius: var(--ocx-radius-sm);
   padding: 2px 6px;
-  background: var(--c-surface-2);
+  background: var(--ocx-color-surface-subtle);
 }
 
 /* Same badge slot as "/" — swaps to a clear affordance once there's a query. */
@@ -137,8 +137,8 @@ defineExpose({
 
 .search-clear:hover,
 .search-clear:focus-visible {
-  color: var(--c-text-1);
-  border-color: var(--c-accent);
+  color: var(--ocx-color-fg);
+  border-color: var(--ocx-color-accent);
   outline: none;
 }
 }

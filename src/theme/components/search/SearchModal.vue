@@ -239,7 +239,7 @@ function onContentKeydown(e: KeyboardEvent) {
 .palette-overlay {
   position: fixed;
   inset: 0;
-  background: var(--c-overlay);
+  background: var(--ocx-color-overlay);
   z-index: 100;
 }
 
@@ -256,9 +256,9 @@ function onContentKeydown(e: KeyboardEvent) {
   max-height: 70vh;
   display: flex;
   flex-direction: column;
-  background: var(--c-surface);
-  border: 1px solid var(--c-line);
-  border-radius: var(--radius-lg);
+  background: var(--ocx-color-surface);
+  border: 1px solid var(--ocx-color-border);
+  border-radius: var(--ocx-radius-lg);
   overflow: hidden;
   z-index: 101;
 }
@@ -274,12 +274,12 @@ function onContentKeydown(e: KeyboardEvent) {
   padding: 0 16px;
   height: 52px;
   flex-shrink: 0;
-  border-bottom: 1px solid var(--c-line);
+  border-bottom: 1px solid var(--ocx-color-border);
 }
 
 .palette-search-icon {
   display: inline-flex;
-  color: var(--c-text-3);
+  color: var(--ocx-color-fg-subtle);
   flex-shrink: 0;
 }
 
@@ -289,28 +289,28 @@ function onContentKeydown(e: KeyboardEvent) {
   border: none;
   outline: none;
   background: none;
-  font-family: var(--font-mono);
-  font-size: var(--text-md);
-  color: var(--c-text-1);
+  font-family: var(--ocx-font-mono);
+  font-size: var(--ocx-text-md);
+  color: var(--ocx-color-fg);
 }
 
 .palette-input::placeholder {
-  color: var(--c-text-3);
+  color: var(--ocx-color-fg-subtle);
 }
 
 .palette-close {
   flex-shrink: 0;
-  font-family: var(--font-mono);
-  font-size: var(--text-2xs);
-  color: var(--c-text-3);
-  border: 1px solid var(--c-line);
-  border-radius: var(--radius-sm);
+  font-family: var(--ocx-font-mono);
+  font-size: var(--ocx-text-2xs);
+  color: var(--ocx-color-fg-subtle);
+  border: 1px solid var(--ocx-color-border);
+  border-radius: var(--ocx-radius-sm);
   padding: 3px 7px;
   background: none;
 }
 
 .palette-close:hover {
-  color: var(--c-text-1);
+  color: var(--ocx-color-fg);
 }
 
 .palette-results {
@@ -322,12 +322,12 @@ function onContentKeydown(e: KeyboardEvent) {
 }
 
 .palette-group-label {
-  font-family: var(--font-mono);
-  font-size: var(--text-2xs);
+  font-family: var(--ocx-font-mono);
+  font-size: var(--ocx-text-2xs);
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--c-text-3);
+  color: var(--ocx-color-fg-subtle);
   margin: 10px 8px 4px;
 }
 
@@ -340,33 +340,33 @@ function onContentKeydown(e: KeyboardEvent) {
   flex-direction: column;
   gap: 2px;
   padding: 8px 10px;
-  border-radius: var(--radius-md);
+  border-radius: var(--ocx-radius-md);
 }
 
 .palette-result.active {
-  background: color-mix(in srgb, var(--c-accent) 8%, transparent);
+  background: color-mix(in srgb, var(--ocx-color-accent) 8%, transparent);
 }
 
 .palette-result-title {
-  font-family: var(--font-sans);
-  font-size: var(--text-base);
-  color: var(--c-text-1);
+  font-family: var(--ocx-font-sans);
+  font-size: var(--ocx-text-base);
+  color: var(--ocx-color-fg);
 }
 
 .palette-result.active .palette-result-title {
-  color: var(--c-accent);
+  color: var(--ocx-color-accent);
 }
 
 .palette-result-sub {
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
-  color: var(--c-text-3);
+  font-family: var(--ocx-font-mono);
+  font-size: var(--ocx-text-xs);
+  color: var(--ocx-color-fg-subtle);
 }
 
 .palette-empty {
-  font-family: var(--font-mono);
-  font-size: var(--text-sm);
-  color: var(--c-text-3);
+  font-family: var(--ocx-font-mono);
+  font-size: var(--ocx-text-sm);
+  color: var(--ocx-color-fg-subtle);
   padding: 24px 10px;
   text-align: center;
 }

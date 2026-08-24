@@ -25,7 +25,7 @@ import { withTempDir } from "./helpers.js";
  */
 
 const CONSUMER_ACCENT = "#123456";
-const THEME_ACCENT = "#ff6047"; // src/theme/styles/tokens/palette.css, --c-accent
+const THEME_ACCENT = "#ff6047"; // src/theme/styles/tokens/palette.css, --ocx-color-accent
 const SITE_URL = "https://e2e.example.test";
 
 describe("C-005/C-002 buildCatalog — real config.css/siteUrl/docs reach dist/", () => {
@@ -36,7 +36,7 @@ describe("C-005/C-002 buildCatalog — real config.css/siteUrl/docs reach dist/"
         await mkdir(join(configDir, "packages"), { recursive: true });
         await mkdir(join(configDir, "docs"), { recursive: true });
         await writeFile(join(configDir, "docs", "guide.md"), "# Guide\n\nHello from the docs fixture.\n", "utf8");
-        await writeFile(join(configDir, "custom.css"), `:root { --c-accent: ${CONSUMER_ACCENT}; }\n`, "utf8");
+        await writeFile(join(configDir, "custom.css"), `:root { --ocx-color-accent: ${CONSUMER_ACCENT}; }\n`, "utf8");
         const configPath = join(configDir, "catalog.config.json");
         await writeFile(
           configPath,

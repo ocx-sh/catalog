@@ -9,16 +9,16 @@
  */
 
 :root {
-  --font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --ocx-font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --ocx-font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
-  --text-2xl: 26px;
-  --text-xl: 23px;
-  --text-lg: 18px;
-  --text-md: 14.5px;
-  --text-base: 13px;
-  --text-sm: 12.5px;
-  --text-xs: 11.5px;
-  --text-2xs: 10.5px;
+  --ocx-text-2xl: 26px;
+  --ocx-text-xl: 23px;
+  --ocx-text-lg: 18px;
+  --ocx-text-md: 14.5px;
+  --ocx-text-base: 13px;
+  --ocx-text-sm: 12.5px;
+  --ocx-text-xs: 11.5px;
+  --ocx-text-2xs: 10.5px;
 }
 }

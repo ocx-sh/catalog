@@ -60,8 +60,9 @@ reads a primitive; that would discard the meaning the semantic layer carries.
 --{namespace}-{category}-{role}[-{modifier}]
 ```
 
-- **Namespace is mandatory.** A bare `--c-*` is a category prefix, not a
-  namespace: a mirror defining its own `--c-line` collides silently.
+- **Namespace is mandatory.** A bare category prefix is not a namespace — the
+  set this theme shipped before `--ocx-*` used `--c-line`, which a mirror
+  defining its own `--c-line` would have collided with silently.
 - **The category segment is load-bearing**, not decoration — without it
   `--x-text` (a colour) collides with `--x-text-lg` (a size). Colours take
   `color`; sizes, fonts, spacing and radii take their own.
@@ -81,12 +82,9 @@ Legitimate here: the monogram rotation set, whose members genuinely have no
 individual meaning. Not legitimate: foreground and surface steps — those take
 role names (`fg` / `fg-muted` / `fg-subtle`, `surface` / `surface-subtle`).
 
-> The current set predates this formula (`--c-*`, `--font-*`, `--text-*`,
-> `--radius-*`, `--space-*`, colour and size both under `--c-`/`--text-`). The
-> namespace migration is an open decision — see
-> [`research_design_tokens_2026-08-24.md`](../artifacts/research_design_tokens_2026-08-24.md).
-> Until it lands, a new token follows the **existing** prefix family. Never mix
-> two namespaces in one file.
+The whole set lives under `--ocx-*`: `--ocx-color-*`, `--ocx-text-*` (sizes),
+`--ocx-font-*`, `--ocx-radius-*`, `--ocx-space-*`. There is no second namespace,
+and a new token never introduces one.
 
 ## Coverage is part of the contract
 
@@ -120,7 +118,7 @@ declaration is mode-agnostic: it applies in dark mode too, silently pinning
 that token to its light value. This bites consumers hardest — their `custom.css`
 loads last, so a `:root`-only override beats the theme's `.dark` at equal
 specificity and takes dark mode with it. Deliberate exceptions go on an
-allowlist with a stated reason (today: `--c-overlay`, one scrim that reads
+allowlist with a stated reason (today: `--ocx-color-overlay`, one scrim that reads
 correctly over either theme).
 
 Consumer-facing corollary the docs must state: **override both blocks, always.**
@@ -162,9 +160,11 @@ those onto the nearest 4px step is a visual change, not a refactor. Tokenizing
 a family is a design decision until the value census says otherwise.
 
 Watch for the inverse rot: a token whose name stopped describing what it does.
-`--c-kw` currently serves as both "code keyword colour" and "a purple status
-hue for monogram tiles" — one token, two unrelated roles, which is how a
-semantic layer quietly stops being semantic. Split, don't overload.
+The theme's old `--c-kw` served as both "code keyword colour" (hljs syntax
+highlighting) and "the purple used by keyword chips" — one token, two unrelated
+roles, which is how a semantic layer quietly stops being semantic. It is now
+split: `--ocx-color-keyword` for the chips, `--ocx-color-code-keyword` for
+syntax. Split, don't overload.
 
 ## Evidence gate
 

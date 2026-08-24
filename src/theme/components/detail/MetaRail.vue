@@ -422,9 +422,9 @@ const safeSourceUrl = computed(() => safeHref(props.root.source ?? props.detail?
 }
 
 .rail-card {
-  background: var(--c-surface);
-  border: 1px solid var(--c-line);
-  border-radius: var(--radius-lg);
+  background: var(--ocx-color-surface);
+  border: 1px solid var(--ocx-color-border);
+  border-radius: var(--ocx-radius-lg);
   padding: 14px 16px;
   display: flex;
   flex-direction: column;
@@ -432,17 +432,17 @@ const safeSourceUrl = computed(() => safeHref(props.root.source ?? props.detail?
 }
 
 .rail-heading {
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
+  font-family: var(--ocx-font-mono);
+  font-size: var(--ocx-text-xs);
   font-weight: 600;
-  color: var(--c-text-3);
+  color: var(--ocx-color-fg-subtle);
   letter-spacing: 0.06em;
 }
 
 .rail-empty {
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
-  color: var(--c-text-3);
+  font-family: var(--ocx-font-mono);
+  font-size: var(--ocx-text-xs);
+  color: var(--ocx-color-fg-subtle);
   margin: 0;
 }
 
@@ -463,7 +463,7 @@ const safeSourceUrl = computed(() => safeHref(props.root.source ?? props.detail?
 .install-select-icon {
   display: flex;
   align-items: center;
-  color: var(--c-text-3);
+  color: var(--ocx-color-fg-subtle);
 }
 
 .pin-trigger {
@@ -472,14 +472,14 @@ const safeSourceUrl = computed(() => safeHref(props.root.source ?? props.detail?
   gap: 6px;
   width: 100%;
   height: 26px;
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
+  font-family: var(--ocx-font-mono);
+  font-size: var(--ocx-text-xs);
   font-weight: 500;
   line-height: 1;
-  color: var(--c-text-1);
-  background: var(--c-surface-2);
-  border: 1px solid var(--c-line);
-  border-radius: var(--radius-md);
+  color: var(--ocx-color-fg);
+  background: var(--ocx-color-surface-subtle);
+  border: 1px solid var(--ocx-color-border);
+  border-radius: var(--ocx-radius-md);
   padding: 0 9px;
   cursor: pointer;
   transition: border-color 0.15s;
@@ -488,11 +488,11 @@ const safeSourceUrl = computed(() => safeHref(props.root.source ?? props.detail?
 
 .pin-trigger:hover,
 .pin-trigger:focus-visible {
-  border-color: var(--c-accent);
+  border-color: var(--ocx-color-accent);
 }
 
 .pin-trigger svg {
-  color: var(--c-text-3);
+  color: var(--ocx-color-fg-subtle);
   flex-shrink: 0;
 }
 
@@ -506,7 +506,7 @@ const safeSourceUrl = computed(() => safeHref(props.root.source ?? props.detail?
 
 /* Owner spec: horizontal rule between the selectors and the command grid. */
 .install-grid.with-divider {
-  border-top: 1px solid var(--c-line);
+  border-top: 1px solid var(--ocx-color-border);
   padding-top: 12px;
 }
 
@@ -525,7 +525,7 @@ const safeSourceUrl = computed(() => safeHref(props.root.source ?? props.detail?
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  color: var(--c-text-3);
+  color: var(--ocx-color-fg-subtle);
 }
 
 .install-grid .install-command {
@@ -538,11 +538,11 @@ const safeSourceUrl = computed(() => safeHref(props.root.source ?? props.detail?
   align-items: center;
   gap: 8px;
   width: 100%;
-  background: var(--c-surface-2);
-  border: 1px solid var(--c-line);
-  border-radius: var(--radius-md);
+  background: var(--ocx-color-surface-subtle);
+  border: 1px solid var(--ocx-color-border);
+  border-radius: var(--ocx-radius-md);
   padding: 7px 10px;
-  font-family: var(--font-mono);
+  font-family: var(--ocx-font-mono);
   cursor: pointer;
   transition: border-color 0.15s;
   text-align: left;
@@ -550,7 +550,7 @@ const safeSourceUrl = computed(() => safeHref(props.root.source ?? props.detail?
 
 .install-command:hover,
 .install-command:focus-visible {
-  border-color: var(--c-accent);
+  border-color: var(--ocx-color-accent);
 }
 
 .install-command.deemphasized {
@@ -558,9 +558,9 @@ const safeSourceUrl = computed(() => safeHref(props.root.source ?? props.detail?
 }
 
 .install-prefix {
-  color: var(--c-accent);
+  color: var(--ocx-color-accent);
   font-weight: 600;
-  font-size: var(--text-xs);
+  font-size: var(--ocx-text-xs);
   flex-shrink: 0;
 }
 
@@ -570,33 +570,33 @@ const safeSourceUrl = computed(() => safeHref(props.root.source ?? props.detail?
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: var(--text-xs);
-  color: var(--c-text-1);
+  font-size: var(--ocx-text-xs);
+  color: var(--ocx-color-fg);
 }
 
 .install-command svg {
   flex-shrink: 0;
-  color: var(--c-text-3);
+  color: var(--ocx-color-fg-subtle);
 }
 
 .install-command.copied {
-  border-color: var(--c-ok);
+  border-color: var(--ocx-color-success);
 }
 
 .install-command.copied .install-cmd {
-  color: var(--c-ok);
+  color: var(--ocx-color-success);
 }
 
 .install-command.copied svg {
-  color: var(--c-ok);
+  color: var(--ocx-color-success);
 }
 
 .metadata-rows {
   display: flex;
   flex-direction: column;
   gap: 7px;
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
+  font-family: var(--ocx-font-mono);
+  font-size: var(--ocx-text-xs);
 }
 
 .metadata-row {
@@ -605,26 +605,26 @@ const safeSourceUrl = computed(() => safeHref(props.root.source ?? props.detail?
 }
 
 .metadata-key {
-  color: var(--c-text-3);
+  color: var(--ocx-color-fg-subtle);
   width: 74px;
   flex-shrink: 0;
 }
 
-/* WP6: --c-accent-text, not --c-accent — 2.99:1 on --c-surface (the
+/* WP6: --ocx-color-accent-fg, not --ocx-color-accent — 2.99:1 on --ocx-color-surface (the
  * `owners`/`upstream` links; `.truncate.link` below repeats the swap for
  * the `source` link, which a more specific `.truncate` rule would
  * otherwise re-color). */
 .metadata-value {
-  color: var(--c-accent-text);
+  color: var(--ocx-color-accent-fg);
   min-width: 0;
 }
 
 .metadata-value.plain {
-  color: var(--c-text-1);
+  color: var(--ocx-color-fg);
 }
 
 .metadata-value.truncate {
-  color: var(--c-text-1);
+  color: var(--ocx-color-fg);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -633,7 +633,7 @@ const safeSourceUrl = computed(() => safeHref(props.root.source ?? props.detail?
 /* Truncated *and* clickable (the source row) — keep the link color the
    `registry` row's plain treatment would otherwise override. */
 .metadata-value.truncate.link {
-  color: var(--c-accent-text);
+  color: var(--ocx-color-accent-fg);
 }
 
 .metadata-copy {
@@ -647,7 +647,7 @@ const safeSourceUrl = computed(() => safeHref(props.root.source ?? props.detail?
 
 .metadata-copy:hover,
 .metadata-copy:focus-visible {
-  color: var(--c-accent);
+  color: var(--ocx-color-accent);
   outline: none;
 }
 
@@ -670,18 +670,18 @@ const safeSourceUrl = computed(() => safeHref(props.root.source ?? props.detail?
 }
 
 .keyword-chip {
-  font-size: var(--text-2xs);
+  font-size: var(--ocx-text-2xs);
   font-weight: 500;
-  color: var(--c-kw);
-  background: var(--c-kw-bg);
+  color: var(--ocx-color-keyword);
+  background: var(--ocx-color-keyword-tint);
   padding: 2px 7px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--ocx-radius-sm);
   border: 1px solid transparent;
   transition: border-color 0.15s;
 }
 
 .keyword-chip:hover {
-  border-color: var(--c-kw);
+  border-color: var(--ocx-color-keyword);
 }
 }
 </style>
@@ -694,9 +694,9 @@ const safeSourceUrl = computed(() => safeHref(props.root.source ?? props.detail?
 .pin-dropdown {
   min-width: 180px;
   padding: 0.35rem;
-  background: var(--c-surface);
-  border: 1px solid var(--c-line);
-  border-radius: var(--radius-lg);
+  background: var(--ocx-color-surface);
+  border: 1px solid var(--ocx-color-border);
+  border-radius: var(--ocx-radius-lg);
   z-index: 100;
   animation: copy-ctx-fade-in 0.12s ease-out;
 }
@@ -706,10 +706,10 @@ const safeSourceUrl = computed(() => safeHref(props.root.source ?? props.detail?
   align-items: center;
   gap: 8px;
   padding: 0.45rem 0.6rem;
-  border-radius: var(--radius-sm);
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
-  color: var(--c-text-2);
+  border-radius: var(--ocx-radius-sm);
+  font-family: var(--ocx-font-mono);
+  font-size: var(--ocx-text-xs);
+  color: var(--ocx-color-fg-muted);
   cursor: pointer;
   outline: none;
   transition: background 0.1s, color 0.1s;
@@ -717,18 +717,18 @@ const safeSourceUrl = computed(() => safeHref(props.root.source ?? props.detail?
 
 .pin-item:hover,
 .pin-item[data-highlighted] {
-  background: var(--c-surface-2);
-  color: var(--c-accent);
+  background: var(--ocx-color-surface-subtle);
+  color: var(--ocx-color-accent);
 }
 
 .pin-item[data-state='checked'] {
-  color: var(--c-accent);
+  color: var(--ocx-color-accent);
 }
 
 .pin-item-tag {
   margin-left: auto;
-  font-size: var(--text-2xs);
-  color: var(--c-text-3);
+  font-size: var(--ocx-text-2xs);
+  color: var(--ocx-color-fg-subtle);
 }
 }
 </style>

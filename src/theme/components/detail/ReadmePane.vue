@@ -191,18 +191,18 @@ async function copyAction(key: string, text: string) {
 }
 
 .readme-heading {
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
+  font-family: var(--ocx-font-mono);
+  font-size: var(--ocx-text-xs);
   font-weight: 600;
-  color: var(--c-text-3);
+  color: var(--ocx-color-fg-subtle);
   letter-spacing: 0.06em;
 }
 
 .readme-card {
   position: relative;
-  background: var(--c-surface);
-  border: 1px solid var(--c-line);
-  border-radius: var(--radius-lg);
+  background: var(--ocx-color-surface);
+  border: 1px solid var(--ocx-color-border);
+  border-radius: var(--ocx-radius-lg);
   padding: 20px 24px;
   display: flex;
   flex-direction: column;
@@ -218,36 +218,36 @@ async function copyAction(key: string, text: string) {
   justify-content: center;
   width: 26px;
   height: 26px;
-  color: var(--c-text-3);
+  color: var(--ocx-color-fg-subtle);
   background: none;
   border: none;
-  border-radius: var(--radius-md);
+  border-radius: var(--ocx-radius-md);
   cursor: pointer;
   transition: color 0.15s, background-color 0.15s;
 }
 
 .readme-info:hover,
 .readme-info:focus-visible {
-  color: var(--c-text-1);
-  background: var(--c-surface-2);
+  color: var(--ocx-color-fg);
+  background: var(--ocx-color-surface-subtle);
   outline: none;
 }
 
 .readme-status {
-  font-family: var(--font-mono);
-  font-size: var(--text-sm);
-  color: var(--c-text-3);
+  font-family: var(--ocx-font-mono);
+  font-size: var(--ocx-text-sm);
+  color: var(--ocx-color-fg-subtle);
   margin: 0;
 }
 
-/* WP6: no `opacity` — it diluted --c-text-3 to an effective ~2.34:1 against
- * --c-surface (opacity blends toward the background, undoing the token's
- * own WCAG margin). --c-text-3 alone is already the muted tone this state
+/* WP6: no `opacity` — it diluted --ocx-color-fg-subtle to an effective ~2.34:1 against
+ * --ocx-color-surface (opacity blends toward the background, undoing the token's
+ * own WCAG margin). --ocx-color-fg-subtle alone is already the muted tone this state
  * wants, matching `.readme-status` (the loading state) just above. */
 .readme-empty {
-  font-family: var(--font-mono);
-  font-size: var(--text-sm);
-  color: var(--c-text-3);
+  font-family: var(--ocx-font-mono);
+  font-size: var(--ocx-text-sm);
+  color: var(--ocx-color-fg-subtle);
   text-align: center;
   padding: 32px 0;
 }
@@ -263,23 +263,23 @@ async function copyAction(key: string, text: string) {
 .readme-content :deep(h1),
 .readme-content :deep(h2),
 .readme-content :deep(h3) {
-  font-family: var(--font-sans);
-  color: var(--c-text-1);
+  font-family: var(--ocx-font-sans);
+  color: var(--ocx-color-fg);
 }
 
 .readme-content :deep(p) {
-  font-family: var(--font-sans);
-  font-size: var(--text-base);
+  font-family: var(--ocx-font-sans);
+  font-size: var(--ocx-text-base);
   line-height: 1.65;
-  color: var(--c-text-2);
+  color: var(--ocx-color-fg-muted);
 }
 
 .readme-content :deep(code) {
-  font-family: var(--font-mono);
-  font-size: var(--text-sm);
-  background: var(--c-surface-2);
+  font-family: var(--ocx-font-mono);
+  font-size: var(--ocx-text-sm);
+  background: var(--ocx-color-surface-subtle);
   padding: 1px 5px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--ocx-radius-sm);
 }
 
 /* Fences: bg/text tokens follow the site theme (owner decision 2026-08-05,
@@ -287,9 +287,9 @@ async function copyAction(key: string, text: string) {
    same-family surface. */
 .readme-content :deep(pre) {
   position: relative;
-  background: var(--c-code-bg);
-  border: 1px solid var(--c-line);
-  border-radius: var(--radius-lg);
+  background: var(--ocx-color-code-bg);
+  border: 1px solid var(--ocx-color-border);
+  border-radius: var(--ocx-radius-lg);
   padding: 12px 16px;
   overflow-x: auto;
 }
@@ -317,26 +317,26 @@ async function copyAction(key: string, text: string) {
   content: '';
   position: absolute;
   inset: 4px;
-  background-color: var(--c-text-3);
+  background-color: var(--ocx-color-fg-subtle);
   transition: background-color 0.15s;
   mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='9' y='9' width='13' height='13' rx='2' ry='2'/%3E%3Cpath d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'/%3E%3C/svg%3E") center / contain no-repeat;
 }
 
 .readme-content :deep(.readme-copy:hover)::before {
-  background-color: var(--c-accent);
+  background-color: var(--ocx-color-accent);
 }
 
 .readme-content :deep(.readme-copy.copied)::before {
-  background-color: var(--c-ok);
+  background-color: var(--ocx-color-success);
   mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");
 }
 
 .readme-content :deep(pre code) {
   background: none;
   padding: 0;
-  font-size: var(--text-sm);
+  font-size: var(--ocx-text-sm);
   line-height: 1.7;
-  color: var(--c-code-text);
+  color: var(--ocx-color-code-fg);
 }
 
 /* Semantic highlight theme — hljs supplies the token CLASSES (never our
@@ -344,7 +344,7 @@ async function copyAction(key: string, text: string) {
    both site themes, via the theme-aware tokens. */
 .readme-content :deep(.hljs-comment),
 .readme-content :deep(.hljs-quote) {
-  color: var(--c-text-3);
+  color: var(--ocx-color-fg-subtle);
   font-style: italic;
 }
 
@@ -353,14 +353,14 @@ async function copyAction(key: string, text: string) {
 .readme-content :deep(.hljs-built_in),
 .readme-content :deep(.hljs-type),
 .readme-content :deep(.hljs-tag) {
-  color: var(--c-kw);
+  color: var(--ocx-color-keyword);
 }
 
 .readme-content :deep(.hljs-string),
 .readme-content :deep(.hljs-regexp),
 .readme-content :deep(.hljs-addition),
 .readme-content :deep(.hljs-template-string) {
-  color: var(--c-ok);
+  color: var(--ocx-color-success);
 }
 
 .readme-content :deep(.hljs-number),
@@ -368,7 +368,7 @@ async function copyAction(key: string, text: string) {
 .readme-content :deep(.hljs-symbol),
 .readme-content :deep(.hljs-meta),
 .readme-content :deep(.hljs-link) {
-  color: var(--c-warn);
+  color: var(--ocx-color-warning);
 }
 
 .readme-content :deep(.hljs-title),
@@ -376,7 +376,7 @@ async function copyAction(key: string, text: string) {
 .readme-content :deep(.hljs-name),
 .readme-content :deep(.hljs-selector-class),
 .readme-content :deep(.hljs-selector-id) {
-  color: var(--c-text-1);
+  color: var(--ocx-color-fg);
   font-weight: 600;
 }
 
@@ -385,20 +385,20 @@ async function copyAction(key: string, text: string) {
 .readme-content :deep(.hljs-attribute),
 .readme-content :deep(.hljs-attr),
 .readme-content :deep(.hljs-params) {
-  color: var(--c-text-2);
+  color: var(--ocx-color-fg-muted);
 }
 
 .readme-content :deep(.hljs-deletion) {
-  color: var(--c-accent);
+  color: var(--ocx-color-accent);
 }
 
 /* WP6: an inline prose link distinguished from surrounding text by color
  * alone fails axe's link-in-text-block — underline gives it a second, non-
- * color cue. Same --c-accent-text swap as SiteHeader's `.nav-link.active`/
- * DetailPage's `.back-link`: plain --c-accent on --c-surface here is the
+ * color cue. Same --ocx-color-accent-fg swap as SiteHeader's `.nav-link.active`/
+ * DetailPage's `.back-link`: plain --ocx-color-accent on --ocx-color-surface here is the
  * same 2.99:1 failing pair, -> 5.42:1. */
 .readme-content :deep(a) {
-  color: var(--c-accent-text);
+  color: var(--ocx-color-accent-fg);
   text-decoration: underline;
 }
 
@@ -409,9 +409,9 @@ async function copyAction(key: string, text: string) {
 
 .readme-content :deep(th),
 .readme-content :deep(td) {
-  border: 1px solid var(--c-line);
+  border: 1px solid var(--ocx-color-border);
   padding: 6px 10px;
-  font-size: var(--text-sm);
+  font-size: var(--ocx-text-sm);
 }
 }
 </style>
@@ -425,17 +425,17 @@ async function copyAction(key: string, text: string) {
   flex-direction: column;
   min-width: 200px;
   padding: 0.35rem;
-  background: var(--c-surface);
-  border: 1px solid var(--c-line);
-  border-radius: var(--radius-lg);
+  background: var(--ocx-color-surface);
+  border: 1px solid var(--ocx-color-border);
+  border-radius: var(--ocx-radius-lg);
   z-index: 100;
   animation: copy-ctx-fade-in 0.12s ease-out;
 }
 
 .readme-info-title {
-  font-family: var(--font-mono);
-  font-size: var(--text-2xs);
-  color: var(--c-text-3);
+  font-family: var(--ocx-font-mono);
+  font-size: var(--ocx-text-2xs);
+  color: var(--ocx-color-fg-subtle);
   padding: 0.35rem 0.6rem 0.45rem;
 }
 
@@ -444,10 +444,10 @@ async function copyAction(key: string, text: string) {
   align-items: center;
   gap: 0.5rem;
   padding: 0.45rem 0.6rem;
-  border-radius: var(--radius-sm);
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
-  color: var(--c-text-2);
+  border-radius: var(--ocx-radius-sm);
+  font-family: var(--ocx-font-mono);
+  font-size: var(--ocx-text-xs);
+  color: var(--ocx-color-fg-muted);
   background: none;
   border: none;
   cursor: pointer;
@@ -456,8 +456,8 @@ async function copyAction(key: string, text: string) {
 }
 
 .readme-info-action:hover {
-  background: var(--c-surface-2);
-  color: var(--c-accent);
+  background: var(--ocx-color-surface-subtle);
+  color: var(--ocx-color-accent);
 }
 
 .readme-info-action svg {

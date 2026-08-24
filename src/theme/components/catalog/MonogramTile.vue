@@ -42,10 +42,10 @@ const bgColor = computed(() => palette.value.bg[props.hue])
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  border-radius: var(--radius-lg);
-  font-family: var(--font-mono);
+  border-radius: var(--ocx-radius-lg);
+  font-family: var(--ocx-font-mono);
   font-weight: 600;
-  font-size: var(--text-md);
+  font-size: var(--ocx-text-md);
 }
 }
 </style>

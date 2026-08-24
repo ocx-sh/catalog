@@ -104,15 +104,15 @@ function isActive(prefix: string): boolean {
   align-items: center;
   gap: 24px;
   padding: 0 24px;
-  border-bottom: 1px solid var(--c-line);
-  background: var(--c-surface);
+  border-bottom: 1px solid var(--ocx-color-border);
+  background: var(--ocx-color-surface);
 }
 
 .brand {
   display: inline-flex;
   align-items: center;
   gap: 9px;
-  color: var(--c-text-1);
+  color: var(--ocx-color-fg);
 }
 
 .brand-logo {
@@ -122,10 +122,10 @@ function isActive(prefix: string): boolean {
 }
 
 .brand-name {
-  font-family: var(--font-mono);
-  font-size: var(--text-base);
+  font-family: var(--ocx-font-mono);
+  font-size: var(--ocx-text-base);
   font-weight: 600;
-  color: var(--c-text-1);
+  color: var(--ocx-color-fg);
 }
 
 /* brand (flex 1) | centered search | right zone (flex 1) — equal wings
@@ -149,10 +149,10 @@ function isActive(prefix: string): boolean {
 }
 
 .nav-link {
-  font-family: var(--font-mono);
-  font-size: var(--text-sm);
+  font-family: var(--ocx-font-mono);
+  font-size: var(--ocx-text-sm);
   font-weight: 500;
-  color: var(--c-text-2);
+  color: var(--ocx-color-fg-muted);
   padding: 16px 1px 14px;
   border-bottom: 2px solid transparent;
   white-space: nowrap;
@@ -167,30 +167,30 @@ function isActive(prefix: string): boolean {
 }
 
 .nav-link-external svg {
-  color: var(--c-text-3);
+  color: var(--ocx-color-fg-subtle);
   flex-shrink: 0;
 }
 
 .nav-link-external:hover svg {
-  color: var(--c-text-1);
+  color: var(--ocx-color-fg);
 }
 
 .nav-link:hover {
-  color: var(--c-text-1);
+  color: var(--ocx-color-fg);
 }
 
-/* WP6: text color moves to --c-accent-text (2.99:1 on --c-surface with the
- * plain --c-accent -> 5.42:1) — the underline stays --c-accent, a
+/* WP6: text color moves to --ocx-color-accent-fg (2.99:1 on --ocx-color-surface with the
+ * plain --ocx-color-accent -> 5.42:1) — the underline stays --ocx-color-accent, a
  * non-text/decorative use excluded from the WCAG text-contrast check. */
 .nav-link.active {
-  color: var(--c-accent-text);
-  border-bottom-color: var(--c-accent);
+  color: var(--ocx-color-accent-fg);
+  border-bottom-color: var(--ocx-color-accent);
 }
 
 .nav-divider {
   width: 1px;
   height: 20px;
-  background: var(--c-line);
+  background: var(--ocx-color-border);
   flex-shrink: 0;
 }
 
@@ -200,38 +200,38 @@ function isActive(prefix: string): boolean {
   gap: 8px;
   width: clamp(220px, 30vw, 360px);
   height: 32px;
-  color: var(--c-text-3);
-  border: 1px solid var(--c-line);
-  border-radius: var(--radius-md);
+  color: var(--ocx-color-fg-subtle);
+  border: 1px solid var(--ocx-color-border);
+  border-radius: var(--ocx-radius-md);
   padding: 0 10px;
-  background: var(--c-surface-2);
+  background: var(--ocx-color-surface-subtle);
   cursor: pointer;
   transition: border-color 0.15s, color 0.15s;
 }
 
 .search-trigger:hover {
-  color: var(--c-text-1);
-  border-color: var(--c-accent);
+  color: var(--ocx-color-fg);
+  border-color: var(--ocx-color-accent);
 }
 
 .search-trigger-text {
   flex: 1;
   text-align: left;
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
+  font-family: var(--ocx-font-mono);
+  font-size: var(--ocx-text-xs);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .search-trigger-kbd {
-  font-family: var(--font-mono);
-  font-size: var(--text-2xs);
+  font-family: var(--ocx-font-mono);
+  font-size: var(--ocx-text-2xs);
   font-weight: 500;
-  border: 1px solid var(--c-line);
-  border-radius: var(--radius-sm);
+  border: 1px solid var(--ocx-color-border);
+  border-radius: var(--ocx-radius-sm);
   padding: 1px 5px;
-  background: var(--c-surface);
+  background: var(--ocx-color-surface);
 }
 
 @media (max-width: 640px) {

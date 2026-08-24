@@ -72,12 +72,12 @@ onUnmounted(() => document.removeEventListener('click', onDocsCopyClick))
   left: 8px;
   z-index: 300;
   padding: 8px 14px;
-  background: var(--c-surface);
-  color: var(--c-text-1);
-  border: 1px solid var(--c-line);
-  border-radius: var(--radius-md);
-  font-family: var(--font-mono);
-  font-size: var(--text-sm);
+  background: var(--ocx-color-surface);
+  color: var(--ocx-color-fg);
+  border: 1px solid var(--ocx-color-border);
+  border-radius: var(--ocx-radius-md);
+  font-family: var(--ocx-font-mono);
+  font-size: var(--ocx-text-sm);
   transition: top 0.15s;
 }
 

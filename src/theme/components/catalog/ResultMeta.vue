@@ -33,28 +33,28 @@ defineEmits<{ 'clear-filters': [] }>()
 .result-meta {
   display: flex;
   align-items: baseline;
-  gap: var(--space-3);
+  gap: var(--ocx-space-3);
   flex-wrap: wrap;
 }
 
 .count {
-  font-family: var(--font-mono);
-  font-size: var(--text-sm);
+  font-family: var(--ocx-font-mono);
+  font-size: var(--ocx-text-sm);
   font-weight: 600;
-  color: var(--c-text-1);
+  color: var(--ocx-color-fg);
 }
 
 .filters {
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
-  color: var(--c-text-3);
+  font-family: var(--ocx-font-mono);
+  font-size: var(--ocx-text-xs);
+  color: var(--ocx-color-fg-subtle);
 }
 
 .clear-btn {
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
+  font-family: var(--ocx-font-mono);
+  font-size: var(--ocx-text-xs);
   font-weight: 500;
-  color: var(--c-accent);
+  color: var(--ocx-color-accent);
   background: none;
   border: none;
   padding: 0;
@@ -63,7 +63,7 @@ defineEmits<{ 'clear-filters': [] }>()
 
 .clear-btn:hover,
 .clear-btn:focus-visible {
-  color: var(--c-accent-hover);
+  color: var(--ocx-color-accent-hover);
   outline: none;
   text-decoration: underline;
 }

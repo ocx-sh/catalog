@@ -403,7 +403,7 @@ function onMinorHover(minor: MinorGroup) {
 
 /* Variant row */
 .variant-row {
-  border-bottom: 1px solid var(--c-line);
+  border-bottom: 1px solid var(--ocx-color-border);
 }
 
 .variant-row:last-child {
@@ -422,22 +422,22 @@ function onMinorHover(minor: MinorGroup) {
 }
 
 .variant-label {
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
+  font-family: var(--ocx-font-mono);
+  font-size: var(--ocx-text-xs);
   font-weight: 600;
-  color: var(--c-text-1);
+  color: var(--ocx-color-fg);
   min-width: 5rem;
   flex-shrink: 0;
 }
 
 .variant-label.default {
-  color: var(--c-text-3);
+  color: var(--ocx-color-fg-subtle);
   font-style: italic;
   font-weight: 400;
 }
 
 .variant-label.other {
-  color: var(--c-text-3);
+  color: var(--ocx-color-fg-subtle);
   font-style: italic;
   font-weight: 400;
 }
@@ -446,8 +446,8 @@ function onMinorHover(minor: MinorGroup) {
 .alias-chain {
   display: inline-flex;
   align-items: stretch;
-  border: 1px solid var(--c-line);
-  border-radius: var(--radius-md);
+  border: 1px solid var(--ocx-color-border);
+  border-radius: var(--ocx-radius-md);
   overflow: hidden;
   min-width: 0;
   overflow-x: auto;
@@ -458,13 +458,13 @@ function onMinorHover(minor: MinorGroup) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
+  font-family: var(--ocx-font-mono);
+  font-size: var(--ocx-text-xs);
   font-weight: 500;
-  color: var(--c-text-2);
+  color: var(--ocx-color-fg-muted);
   background: none;
   border: none;
-  border-left: 1px solid var(--c-line);
+  border-left: 1px solid var(--ocx-color-border);
   padding: 0.25rem 0.6rem;
   cursor: pointer;
 }
@@ -475,17 +475,17 @@ function onMinorHover(minor: MinorGroup) {
 
 .alias-segment:hover,
 .alias-segment:focus-visible {
-  color: var(--c-accent);
+  color: var(--ocx-color-accent);
   outline: none;
 }
 
-/* WP6: --c-accent-text, not --c-accent — 2.73:1 on this segment's own
- * 8%-accent-tint background. Hover/focus above stay plain --c-accent
+/* WP6: --ocx-color-accent-fg, not --ocx-color-accent — 2.73:1 on this segment's own
+ * 8%-accent-tint background. Hover/focus above stay plain --ocx-color-accent
  * (unaudited transient states, same as every other WP6 site). */
 .alias-segment.latest {
-  color: var(--c-accent-text);
+  color: var(--ocx-color-accent-fg);
   font-weight: 600;
-  background: color-mix(in srgb, var(--c-accent) 8%, transparent);
+  background: color-mix(in srgb, var(--ocx-color-accent) 8%, transparent);
 }
 
 /* Copy feedback — check-icon fade (unified with TagBadge's pattern, not a
@@ -499,7 +499,7 @@ function onMinorHover(minor: MinorGroup) {
   inset: 0;
   margin: auto;
   opacity: 0;
-  color: var(--c-ok);
+  color: var(--ocx-color-success);
   transition: opacity 0.15s ease-in;
 }
 
@@ -523,9 +523,9 @@ function onMinorHover(minor: MinorGroup) {
 }
 
 .alias-hint {
-  font-family: var(--font-mono);
-  font-size: var(--text-2xs);
-  color: var(--c-text-3);
+  font-family: var(--ocx-font-mono);
+  font-size: var(--ocx-text-2xs);
+  color: var(--ocx-color-fg-subtle);
 }
 
 .row-spacer {
@@ -548,30 +548,30 @@ function onMinorHover(minor: MinorGroup) {
   gap: 0.15rem;
   padding: 0.2rem 0.4rem;
   border: none;
-  border-radius: var(--radius-sm);
+  border-radius: var(--ocx-radius-sm);
   background: transparent;
-  color: var(--c-text-3);
+  color: var(--ocx-color-fg-subtle);
   cursor: pointer;
-  font-size: var(--text-2xs);
-  font-family: var(--font-mono);
+  font-size: var(--ocx-text-2xs);
+  font-family: var(--ocx-font-mono);
   flex-shrink: 0;
   transition: all 0.15s;
 }
 
 .expand-toggle:hover {
-  background: var(--c-surface-2);
-  color: var(--c-text-2);
+  background: var(--ocx-color-surface-subtle);
+  color: var(--ocx-color-fg-muted);
 }
 
 /* Collapsed-state yank warning — the row/minor toggle's only passive signal
    that a yanked release is hidden underneath (see `rowHasHiddenYanked` /
    `minorGroupHasYanked` in utils/version.ts). */
 .expand-toggle.warn {
-  color: var(--c-warn);
+  color: var(--ocx-color-warning);
 }
 
 .expand-toggle.warn:hover {
-  background: var(--c-warn-bg);
+  background: var(--ocx-color-warning-tint);
 }
 
 .warn-icon {
@@ -671,9 +671,9 @@ function onMinorHover(minor: MinorGroup) {
   display: flex;
   align-items: center;
   gap: 0.35rem;
-  font-family: var(--font-mono);
-  font-size: var(--text-2xs);
-  color: var(--c-warn);
+  font-family: var(--ocx-font-mono);
+  font-size: var(--ocx-text-2xs);
+  color: var(--ocx-color-warning);
 }
 
 /* Responsive — see plan_site_redesign.md WP-D responsive contract. Every
@@ -687,7 +687,7 @@ function onMinorHover(minor: MinorGroup) {
 @media (max-width: 640px) {
   .variant-label {
     min-width: 3.5rem;
-    font-size: var(--text-2xs);
+    font-size: var(--ocx-text-2xs);
   }
 
   .variant-row-header {
@@ -708,9 +708,9 @@ function onMinorHover(minor: MinorGroup) {
 .minor-popover {
   max-width: 360px;
   padding: 0.6rem;
-  background: var(--c-surface);
-  border: 1px solid var(--c-line);
-  border-radius: var(--radius-lg);
+  background: var(--ocx-color-surface);
+  border: 1px solid var(--ocx-color-border);
+  border-radius: var(--ocx-radius-lg);
   z-index: 100;
   animation: popover-in 150ms ease-out;
 }

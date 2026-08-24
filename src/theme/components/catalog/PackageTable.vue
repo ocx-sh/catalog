@@ -69,9 +69,9 @@ const { copy: copyText } = useClipboard()
    * Hard cap on the name column — max-content let a long title+namespace
    * eat the description's space; past the cap both truncate instead. */
   grid-template-columns: auto minmax(140px, 260px) 1fr auto auto auto;
-  background: var(--c-surface);
-  border: 1px solid var(--c-line);
-  border-radius: var(--radius-lg);
+  background: var(--ocx-color-surface);
+  border: 1px solid var(--ocx-color-border);
+  border-radius: var(--ocx-radius-lg);
   overflow: hidden;
 }
 
@@ -80,19 +80,19 @@ const { copy: copyText } = useClipboard()
   display: grid;
   grid-template-columns: subgrid;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--ocx-space-3);
   padding: 8px 14px;
   color: inherit;
   transition: background-color 0.15s;
 }
 
 .table-row + .table-row {
-  border-top: 1px solid var(--c-line);
+  border-top: 1px solid var(--ocx-color-border);
 }
 
 .table-row:hover,
 .table-row:focus-visible {
-  background: var(--c-surface-2);
+  background: var(--ocx-color-surface-subtle);
 }
 
 /* Default outline hugs the row's outer edge and gets clipped by the
@@ -102,23 +102,23 @@ const { copy: copyText } = useClipboard()
  * rectangle (and hover fill) follows the rounded container instead of
  * cutting straight across its corners. */
 .table-row:focus-visible {
-  outline: 2px solid var(--c-accent);
+  outline: 2px solid var(--ocx-color-accent);
   outline-offset: -2px;
 }
 
 .table-row:first-child {
-  border-top-left-radius: var(--radius-lg);
-  border-top-right-radius: var(--radius-lg);
+  border-top-left-radius: var(--ocx-radius-lg);
+  border-top-right-radius: var(--ocx-radius-lg);
 }
 
 .table-row:last-child {
-  border-bottom-left-radius: var(--radius-lg);
-  border-bottom-right-radius: var(--radius-lg);
+  border-bottom-left-radius: var(--ocx-radius-lg);
+  border-bottom-right-radius: var(--ocx-radius-lg);
 }
 
 .package-table :deep(.monogram-tile) {
-  font-size: var(--text-2xs);
-  border-radius: var(--radius-sm);
+  font-size: var(--ocx-text-2xs);
+  border-radius: var(--ocx-radius-sm);
 }
 
 .t-name {
@@ -129,19 +129,19 @@ const { copy: copyText } = useClipboard()
 }
 
 .t-title {
-  font-family: var(--font-sans);
-  font-size: var(--text-sm);
+  font-family: var(--ocx-font-sans);
+  font-size: var(--ocx-text-sm);
   font-weight: 600;
-  color: var(--c-text-1);
+  color: var(--ocx-color-fg);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .t-bare {
-  font-family: var(--font-mono);
-  font-size: var(--text-2xs);
-  color: var(--c-text-3);
+  font-family: var(--ocx-font-mono);
+  font-size: var(--ocx-text-2xs);
+  color: var(--ocx-color-fg-subtle);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -150,12 +150,12 @@ const { copy: copyText } = useClipboard()
 }
 
 .t-deprecated {
-  font-family: var(--font-mono);
-  font-size: var(--text-2xs);
+  font-family: var(--ocx-font-mono);
+  font-size: var(--ocx-text-2xs);
   font-weight: 600;
-  color: var(--c-text-3);
-  border: 1px solid var(--c-line);
-  border-radius: var(--radius-sm);
+  color: var(--ocx-color-fg-subtle);
+  border: 1px solid var(--ocx-color-border);
+  border-radius: var(--ocx-radius-sm);
   padding: 1px 6px;
   letter-spacing: 0.05em;
   flex-shrink: 0;
@@ -163,14 +163,14 @@ const { copy: copyText } = useClipboard()
 
 /* Whole-package yanked (C-603) — same shape as .t-deprecated, warn tokens. */
 .t-yanked {
-  color: var(--c-warn);
-  border-color: var(--c-warn);
+  color: var(--ocx-color-warning);
+  border-color: var(--ocx-color-warning);
 }
 
 .t-desc {
-  font-family: var(--font-sans);
-  font-size: var(--text-xs);
-  color: var(--c-text-2);
+  font-family: var(--ocx-font-sans);
+  font-size: var(--ocx-text-xs);
+  color: var(--ocx-color-fg-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -179,9 +179,9 @@ const { copy: copyText } = useClipboard()
 
 .t-version,
 .t-tags {
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
-  color: var(--c-text-3);
+  font-family: var(--ocx-font-mono);
+  font-size: var(--ocx-text-xs);
+  color: var(--ocx-color-fg-subtle);
   white-space: nowrap;
 }
 
@@ -189,7 +189,7 @@ const { copy: copyText } = useClipboard()
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  color: var(--c-text-3);
+  color: var(--ocx-color-fg-subtle);
 }
 
 @media (max-width: 899px) {

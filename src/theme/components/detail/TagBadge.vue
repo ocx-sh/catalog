@@ -125,14 +125,14 @@ async function handleClick() {
   position: relative;
   display: inline-flex;
   align-items: center;
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
+  font-family: var(--ocx-font-mono);
+  font-size: var(--ocx-text-xs);
   font-weight: 500;
   padding: 0.2rem 0.6rem;
-  background: var(--c-surface-2);
-  border: 1px solid var(--c-line);
-  border-radius: var(--radius-sm);
-  color: var(--c-text-2);
+  background: var(--ocx-color-surface-subtle);
+  border: 1px solid var(--ocx-color-border);
+  border-radius: var(--ocx-radius-sm);
+  color: var(--ocx-color-fg-muted);
   cursor: pointer;
   transition: border-color 0.3s, color 0.3s, background 0.3s;
   user-select: none;
@@ -140,7 +140,7 @@ async function handleClick() {
 
 .tag-badge:focus-visible {
   outline: none;
-  border-color: var(--c-accent);
+  border-color: var(--ocx-color-accent);
 }
 
 .tag-badge.rolling {
@@ -148,13 +148,13 @@ async function handleClick() {
 }
 
 .tag-badge.child {
-  font-size: var(--text-2xs);
-  color: var(--c-text-3);
+  font-size: var(--ocx-text-2xs);
+  color: var(--ocx-color-fg-subtle);
 }
 
 .tag-badge:hover {
-  border-color: var(--c-accent);
-  color: var(--c-accent);
+  border-color: var(--ocx-color-accent);
+  color: var(--ocx-color-accent);
 }
 
 .tag-text {
@@ -170,8 +170,8 @@ async function handleClick() {
 }
 
 .tag-badge.copied {
-  border-color: var(--c-ok);
-  color: var(--c-ok);
+  border-color: var(--ocx-color-success);
+  color: var(--ocx-color-success);
 }
 
 .tag-badge.copied .tag-text {
@@ -186,9 +186,9 @@ async function handleClick() {
 
 /* Yanked — struck, dashed amber, muted (design mock 1c/1d). */
 .tag-badge.yanked:not(.copied) {
-  color: var(--c-text-3);
+  color: var(--ocx-color-fg-subtle);
   border-style: dashed;
-  border-color: var(--c-warn);
+  border-color: var(--ocx-color-warning);
   text-decoration: line-through;
 }
 }

@@ -59,11 +59,11 @@ function onClick(event: MouseEvent) {
   align-items: center;
   gap: 8px;
   width: 100%;
-  background: var(--c-surface-2);
-  border: 1px solid var(--c-line);
-  border-radius: var(--radius-md);
+  background: var(--ocx-color-surface-subtle);
+  border: 1px solid var(--ocx-color-border);
+  border-radius: var(--ocx-radius-md);
   padding: 6px 9px;
-  font-family: var(--font-mono);
+  font-family: var(--ocx-font-mono);
   cursor: pointer;
   transition: border-color 0.15s;
   text-align: left;
@@ -71,13 +71,13 @@ function onClick(event: MouseEvent) {
 
 .install-row:hover,
 .install-row:focus-visible {
-  border-color: var(--c-accent);
+  border-color: var(--ocx-color-accent);
 }
 
 .install-prefix {
-  color: var(--c-accent);
+  color: var(--ocx-color-accent);
   font-weight: 600;
-  font-size: var(--text-xs);
+  font-size: var(--ocx-text-xs);
   flex-shrink: 0;
 }
 
@@ -87,25 +87,25 @@ function onClick(event: MouseEvent) {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: var(--text-xs);
-  color: var(--c-text-1);
+  font-size: var(--ocx-text-xs);
+  color: var(--ocx-color-fg);
 }
 
 .install-icon {
   flex-shrink: 0;
-  color: var(--c-text-3);
+  color: var(--ocx-color-fg-subtle);
 }
 
 .install-row.copied {
-  border-color: var(--c-ok);
+  border-color: var(--ocx-color-success);
 }
 
 .install-row.copied .install-cmd {
-  color: var(--c-ok);
+  color: var(--ocx-color-success);
 }
 
 .install-icon-check {
-  color: var(--c-ok);
+  color: var(--ocx-color-success);
 }
 }
 </style>

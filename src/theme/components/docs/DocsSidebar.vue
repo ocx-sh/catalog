@@ -51,34 +51,34 @@ function isGroupActive(group: DocsNavGroup): boolean {
 }
 
 .docs-nav-label {
-  font-family: var(--font-mono);
-  font-size: var(--text-2xs);
+  font-family: var(--ocx-font-mono);
+  font-size: var(--ocx-text-2xs);
   font-weight: 600;
   letter-spacing: 0.09em;
-  color: var(--c-text-3);
+  color: var(--ocx-color-fg-subtle);
   padding: 6px 12px;
 }
 
 .docs-nav-label:hover,
 .docs-nav-label.active {
-  color: var(--c-accent);
+  color: var(--ocx-color-accent);
 }
 
 .docs-nav-item {
-  font-family: var(--font-sans);
-  font-size: var(--text-base);
-  color: var(--c-text-2);
+  font-family: var(--ocx-font-sans);
+  font-size: var(--ocx-text-base);
+  color: var(--ocx-color-fg-muted);
   padding: 6px 12px;
-  border-radius: var(--radius-md);
+  border-radius: var(--ocx-radius-md);
 }
 
 .docs-nav-item:hover {
-  color: var(--c-text-1);
+  color: var(--ocx-color-fg);
 }
 
 .docs-nav-item.active {
-  color: var(--c-accent);
-  background: color-mix(in srgb, var(--c-accent) 8%, transparent);
+  color: var(--ocx-color-accent);
+  background: color-mix(in srgb, var(--ocx-color-accent) 8%, transparent);
   font-weight: 500;
 }
 }

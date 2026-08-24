@@ -113,16 +113,16 @@ const groups = computed<PlatformGroup[]>(() => {
 }
 
 .platform-glyph {
-  color: var(--c-text-2);
+  color: var(--ocx-color-fg-muted);
   display: inline-flex;
   justify-content: center;
 }
 
 .platform-label {
-  font-family: var(--font-sans);
-  font-size: var(--text-sm);
+  font-family: var(--ocx-font-sans);
+  font-size: var(--ocx-text-sm);
   font-weight: 500;
-  color: var(--c-text-1);
+  color: var(--ocx-color-fg);
 }
 
 .platform-arch-cell {
@@ -132,20 +132,20 @@ const groups = computed<PlatformGroup[]>(() => {
 .platform-arch {
   flex: 1;
   text-align: center;
-  font-family: var(--font-mono);
-  font-size: var(--text-2xs);
+  font-family: var(--ocx-font-mono);
+  font-size: var(--ocx-text-2xs);
   font-weight: 500;
-  color: var(--c-text-2);
-  background: var(--c-surface-2);
-  border: 1px solid var(--c-line);
-  border-radius: var(--radius-sm);
+  color: var(--ocx-color-fg-muted);
+  background: var(--ocx-color-surface-subtle);
+  border: 1px solid var(--ocx-color-border);
+  border-radius: var(--ocx-radius-sm);
   padding: 2px 7px;
 }
 
 .platform-empty {
-  font-family: var(--font-mono);
-  font-size: var(--text-2xs);
-  color: var(--c-text-3);
+  font-family: var(--ocx-font-mono);
+  font-size: var(--ocx-text-2xs);
+  color: var(--ocx-color-fg-subtle);
   margin: 0;
 }
 }

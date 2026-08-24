@@ -57,34 +57,34 @@ onBeforeUnmount(() => observer?.disconnect())
 }
 
 .otp-label {
-  font-family: var(--font-mono);
-  font-size: var(--text-2xs);
+  font-family: var(--ocx-font-mono);
+  font-size: var(--ocx-text-2xs);
   font-weight: 600;
   letter-spacing: 0.09em;
-  color: var(--c-text-3);
+  color: var(--ocx-color-fg-subtle);
 }
 
 .otp-item {
-  font-family: var(--font-sans);
-  font-size: var(--text-sm);
-  color: var(--c-text-2);
-  border-left: 2px solid var(--c-line);
+  font-family: var(--ocx-font-sans);
+  font-size: var(--ocx-text-sm);
+  color: var(--ocx-color-fg-muted);
+  border-left: 2px solid var(--ocx-color-border);
   padding-left: 10px;
   line-height: 1.4;
 }
 
 .otp-item-sub {
   padding-left: 20px;
-  font-size: var(--text-xs);
+  font-size: var(--ocx-text-xs);
 }
 
 .otp-item:hover {
-  color: var(--c-text-1);
+  color: var(--ocx-color-fg);
 }
 
 .otp-item.active {
-  color: var(--c-accent);
-  border-left-color: var(--c-accent);
+  color: var(--ocx-color-accent);
+  border-left-color: var(--ocx-color-accent);
 }
 }
 </style>

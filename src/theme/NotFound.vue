@@ -23,28 +23,28 @@
 }
 
 .not-found-code {
-  font-family: var(--font-mono);
-  font-size: var(--text-2xl);
+  font-family: var(--ocx-font-mono);
+  font-size: var(--ocx-text-2xl);
   font-weight: 600;
-  color: var(--c-text-2);
+  color: var(--ocx-color-fg-muted);
 }
 
 .not-found-message {
   margin: 0;
-  color: var(--c-text-3);
-  font-size: var(--text-sm);
-  font-family: var(--font-sans);
+  color: var(--ocx-color-fg-subtle);
+  font-size: var(--ocx-text-sm);
+  font-family: var(--ocx-font-sans);
 }
 
 .not-found-link {
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
+  font-family: var(--ocx-font-mono);
+  font-size: var(--ocx-text-xs);
   font-weight: 500;
-  color: var(--c-accent);
+  color: var(--ocx-color-accent);
 }
 
 .not-found-link:hover {
-  color: var(--c-accent-hover);
+  color: var(--ocx-color-accent-hover);
 }
 }
 </style>

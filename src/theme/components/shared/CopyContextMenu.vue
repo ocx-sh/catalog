@@ -182,9 +182,9 @@ function onSelect(action: CopyAction, copyText: (text: string) => void | Promise
 .copy-ctx-menu {
   min-width: 200px;
   padding: 0.35rem;
-  background: var(--c-surface);
-  border: 1px solid var(--c-line);
-  border-radius: var(--radius-lg);
+  background: var(--ocx-color-surface);
+  border: 1px solid var(--ocx-color-border);
+  border-radius: var(--ocx-radius-lg);
   z-index: 100;
   animation: copy-ctx-fade-in 0.12s ease-out;
 }
@@ -194,10 +194,10 @@ function onSelect(action: CopyAction, copyText: (text: string) => void | Promise
   align-items: center;
   gap: 0.5rem;
   padding: 0.45rem 0.6rem;
-  border-radius: var(--radius-sm);
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
-  color: var(--c-text-2);
+  border-radius: var(--ocx-radius-sm);
+  font-family: var(--ocx-font-mono);
+  font-size: var(--ocx-text-xs);
+  color: var(--ocx-color-fg-muted);
   cursor: pointer;
   outline: none;
   transition: background 0.1s, color 0.1s;
@@ -205,8 +205,8 @@ function onSelect(action: CopyAction, copyText: (text: string) => void | Promise
 
 .copy-ctx-item:hover,
 .copy-ctx-item[data-highlighted] {
-  background: var(--c-surface-2);
-  color: var(--c-accent);
+  background: var(--ocx-color-surface-subtle);
+  color: var(--ocx-color-accent);
 }
 
 @keyframes copy-ctx-fade-in {

@@ -109,9 +109,9 @@ const platforms = computed(() =>
   display: flex;
   flex-direction: column;
   gap: 9px;
-  background: var(--c-surface);
-  border: 1px solid var(--c-line);
-  border-radius: var(--radius-lg);
+  background: var(--ocx-color-surface);
+  border: 1px solid var(--ocx-color-border);
+  border-radius: var(--ocx-radius-lg);
   padding: 14px 14px 12px;
   color: inherit;
   transition: border-color 0.15s;
@@ -119,13 +119,13 @@ const platforms = computed(() =>
 
 .package-card:hover,
 .package-card:focus-visible {
-  border-color: var(--c-accent);
+  border-color: var(--ocx-color-accent);
 }
 
 .card-header {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--ocx-space-3);
 }
 
 .card-tile-cube {
@@ -135,9 +135,9 @@ const platforms = computed(() =>
   width: 34px;
   height: 34px;
   flex-shrink: 0;
-  border-radius: var(--radius-lg);
-  background: var(--c-surface-2);
-  color: var(--c-text-3);
+  border-radius: var(--ocx-radius-lg);
+  background: var(--ocx-color-surface-subtle);
+  color: var(--ocx-color-fg-subtle);
 }
 
 .card-title-block {
@@ -155,11 +155,11 @@ const platforms = computed(() =>
 }
 
 .card-title {
-  font-family: var(--font-sans);
-  font-size: var(--text-md);
+  font-family: var(--ocx-font-sans);
+  font-size: var(--ocx-text-md);
   font-weight: 600;
   line-height: 1.3;
-  color: var(--c-text-1);
+  color: var(--ocx-color-fg);
   /* One line always — a wrapped title makes the header taller and the tile
    * drift off the grid's shared logo baseline. Full name via title attr. */
   min-width: 0;
@@ -174,25 +174,25 @@ const platforms = computed(() =>
 }
 
 .card-version {
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
+  font-family: var(--ocx-font-mono);
+  font-size: var(--ocx-text-xs);
   font-weight: 500;
-  color: var(--c-text-3);
+  color: var(--ocx-color-fg-subtle);
 }
 
 /* Same shape/sizing as IdentityBlock's `.identity-deprecated` badge, but
- * muted tokens instead of coral (`--c-accent-hover`) — a grid of cards is
+ * muted tokens instead of coral (`--ocx-color-accent-hover`) — a grid of cards is
  * not the place for the site's one interactive/highlight color (see
  * palette.css's "coral is the only interactive color" note); deprecated on
  * a card is a status fact, not a call to action. */
 .card-deprecated {
   margin-left: auto;
-  font-family: var(--font-mono);
-  font-size: var(--text-2xs);
+  font-family: var(--ocx-font-mono);
+  font-size: var(--ocx-text-2xs);
   font-weight: 600;
-  color: var(--c-text-3);
-  border: 1px solid var(--c-line);
-  border-radius: var(--radius-sm);
+  color: var(--ocx-color-fg-subtle);
+  border: 1px solid var(--ocx-color-border);
+  border-radius: var(--ocx-radius-sm);
   padding: 2px 8px;
   letter-spacing: 0.05em;
 }
@@ -201,14 +201,14 @@ const platforms = computed(() =>
  * tokens instead of muted text/line, so it reads as more severe than a
  * plain deprecation notice at a glance. */
 .card-yanked {
-  color: var(--c-warn);
-  border-color: var(--c-warn);
+  color: var(--ocx-color-warning);
+  border-color: var(--ocx-color-warning);
 }
 
 .card-name {
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
-  color: var(--c-text-3);
+  font-family: var(--ocx-font-mono);
+  font-size: var(--ocx-text-xs);
+  color: var(--ocx-color-fg-subtle);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -216,10 +216,10 @@ const platforms = computed(() =>
 
 .card-desc {
   margin: 0;
-  font-family: var(--font-sans);
-  font-size: var(--text-sm);
+  font-family: var(--ocx-font-sans);
+  font-size: var(--ocx-text-sm);
   line-height: 1.5;
-  color: var(--c-text-2);
+  color: var(--ocx-color-fg-muted);
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -233,7 +233,7 @@ const platforms = computed(() =>
    * sit on the row's last line even if keywords wrap. */
   align-items: flex-end;
   justify-content: space-between;
-  gap: var(--space-2);
+  gap: var(--ocx-space-2);
   margin-top: auto;
 }
 
@@ -244,26 +244,26 @@ const platforms = computed(() =>
 }
 
 .card-keyword {
-  font-family: var(--font-mono);
-  font-size: var(--text-2xs);
+  font-family: var(--ocx-font-mono);
+  font-size: var(--ocx-text-2xs);
   font-weight: 500;
-  color: var(--c-kw);
-  background: var(--c-kw-bg);
+  color: var(--ocx-color-keyword);
+  background: var(--ocx-color-keyword-tint);
   padding: 2px 7px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--ocx-radius-sm);
 }
 
 .card-platforms {
   display: inline-flex;
   align-items: center;
   gap: 9px;
-  color: var(--c-text-3);
+  color: var(--ocx-color-fg-subtle);
   flex-shrink: 0;
 }
 
 .card-tag-count {
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
+  font-family: var(--ocx-font-mono);
+  font-size: var(--ocx-text-xs);
 }
 }
 </style>
@@ -278,7 +278,7 @@ const platforms = computed(() =>
  * whole selector), so hovering the install box cancels the card's own
  * hover border without touching the box's unrelated hover style. */
 .package-card:has(.install-row:hover) {
-  border-color: var(--c-line);
+  border-color: var(--ocx-color-border);
 }
 }
 </style>

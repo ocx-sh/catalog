@@ -138,7 +138,7 @@ const popoverKeywords = computed(() => {
 .filter-chips {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--ocx-space-2);
   flex-wrap: wrap;
 }
 
@@ -146,14 +146,14 @@ const popoverKeywords = computed(() => {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
+  font-family: var(--ocx-font-mono);
+  font-size: var(--ocx-text-xs);
   font-weight: 500;
-  color: var(--c-text-2);
-  border: 1px solid var(--c-line);
-  border-radius: var(--radius-full);
+  color: var(--ocx-color-fg-muted);
+  border: 1px solid var(--ocx-color-border);
+  border-radius: var(--ocx-radius-full);
   padding: 4px 11px;
-  background: var(--c-surface);
+  background: var(--ocx-color-surface);
   cursor: pointer;
   transition:
     border-color 0.15s,
@@ -162,31 +162,31 @@ const popoverKeywords = computed(() => {
 }
 
 .chip:hover {
-  color: var(--c-text-1);
+  color: var(--ocx-color-fg);
 }
 
 .chip:focus-visible,
 .chip-more:focus-visible {
   outline: none;
-  border-color: var(--c-accent);
-  color: var(--c-text-1);
+  border-color: var(--ocx-color-accent);
+  color: var(--ocx-color-fg);
 }
 
 .chip.active {
-  color: var(--c-accent-hover);
-  border-color: var(--c-accent-tint-border);
-  background: var(--c-accent-tint-bg);
+  color: var(--ocx-color-accent-hover);
+  border-color: var(--ocx-color-accent-tint-border);
+  background: var(--ocx-color-accent-tint);
 }
 
 .chip-close {
-  font-size: var(--text-2xs);
+  font-size: var(--ocx-text-2xs);
 }
 
 .chip-more {
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
+  font-family: var(--ocx-font-mono);
+  font-size: var(--ocx-text-xs);
   font-weight: 500;
-  color: var(--c-text-3);
+  color: var(--ocx-color-fg-subtle);
   background: none;
   border: none;
   padding: 4px 6px;
@@ -194,7 +194,7 @@ const popoverKeywords = computed(() => {
 }
 
 .chip-more:hover {
-  color: var(--c-text-1);
+  color: var(--ocx-color-fg);
 }
 
 .chip-deprecated {
@@ -204,7 +204,7 @@ const popoverKeywords = computed(() => {
 .chip-divider {
   width: 1px;
   height: 18px;
-  background: var(--c-line);
+  background: var(--ocx-color-border);
   margin: 0 4px;
   flex-shrink: 0;
 }
@@ -221,26 +221,26 @@ const popoverKeywords = computed(() => {
   gap: 8px;
   width: 280px;
   padding: 10px;
-  background: var(--c-surface);
-  border: 1px solid var(--c-line);
-  border-radius: var(--radius-lg);
+  background: var(--ocx-color-surface);
+  border: 1px solid var(--ocx-color-border);
+  border-radius: var(--ocx-radius-lg);
   z-index: 100;
   animation: copy-ctx-fade-in 0.12s ease-out;
 }
 
 .kw-popover-input {
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
-  color: var(--c-text-1);
-  background: var(--c-surface-2);
-  border: 1px solid var(--c-line);
-  border-radius: var(--radius-md);
+  font-family: var(--ocx-font-mono);
+  font-size: var(--ocx-text-xs);
+  color: var(--ocx-color-fg);
+  background: var(--ocx-color-surface-subtle);
+  border: 1px solid var(--ocx-color-border);
+  border-radius: var(--ocx-radius-md);
   padding: 6px 9px;
   outline: none;
 }
 
 .kw-popover-input:focus {
-  border-color: var(--c-accent);
+  border-color: var(--ocx-color-accent);
 }
 
 .kw-popover-list {
@@ -255,36 +255,36 @@ const popoverKeywords = computed(() => {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
-  color: var(--c-text-2);
+  font-family: var(--ocx-font-mono);
+  font-size: var(--ocx-text-xs);
+  color: var(--ocx-color-fg-muted);
   background: none;
   border: none;
-  border-radius: var(--radius-sm);
+  border-radius: var(--ocx-radius-sm);
   padding: 5px 8px;
   cursor: pointer;
   text-align: left;
 }
 
 .kw-popover-item:hover {
-  background: var(--c-surface-2);
-  color: var(--c-text-1);
+  background: var(--ocx-color-surface-subtle);
+  color: var(--ocx-color-fg);
 }
 
 .kw-popover-item.active {
-  color: var(--c-accent-hover);
-  background: var(--c-accent-tint-bg);
+  color: var(--ocx-color-accent-hover);
+  background: var(--ocx-color-accent-tint);
 }
 
 .kw-popover-count {
-  font-size: var(--text-2xs);
-  color: var(--c-text-3);
+  font-size: var(--ocx-text-2xs);
+  color: var(--ocx-color-fg-subtle);
 }
 
 .kw-popover-empty {
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
-  color: var(--c-text-3);
+  font-family: var(--ocx-font-mono);
+  font-size: var(--ocx-text-xs);
+  color: var(--ocx-color-fg-subtle);
   margin: 0;
   padding: 5px 8px;
 }

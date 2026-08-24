@@ -84,7 +84,7 @@ defineEmits<{ 'clear-search': [], retry: [] }>()
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--ocx-space-3);
   padding: 44px 28px;
   text-align: center;
 }
@@ -96,66 +96,66 @@ defineEmits<{ 'clear-search': [], retry: [] }>()
 }
 
 .empty-title {
-  font-family: var(--font-sans);
-  font-size: var(--text-lg);
+  font-family: var(--ocx-font-sans);
+  font-size: var(--ocx-text-lg);
   font-weight: 600;
-  color: var(--c-text-1);
+  color: var(--ocx-color-fg);
 }
 
 .empty-copy {
   margin: 0;
   max-width: 360px;
-  font-family: var(--font-sans);
-  font-size: var(--text-sm);
+  font-family: var(--ocx-font-sans);
+  font-size: var(--ocx-text-sm);
   line-height: 1.6;
-  color: var(--c-text-2);
+  color: var(--ocx-color-fg-muted);
 }
 
 .empty-ctas {
   display: flex;
-  gap: var(--space-2);
+  gap: var(--ocx-space-2);
   margin-top: 6px;
 }
 
 .cta-secondary,
 .cta-outline,
 .cta-ghost {
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
+  font-family: var(--ocx-font-mono);
+  font-size: var(--ocx-text-xs);
   font-weight: 500;
-  border-radius: var(--radius-md);
+  border-radius: var(--ocx-radius-md);
   padding: 7px 14px;
   cursor: pointer;
 }
 
 .cta-secondary {
-  color: var(--c-text-2);
+  color: var(--ocx-color-fg-muted);
   background: none;
-  border: 1px solid var(--c-line);
+  border: 1px solid var(--ocx-color-border);
 }
 
 .cta-secondary:hover {
-  color: var(--c-text-1);
+  color: var(--ocx-color-fg);
 }
 
 .cta-outline {
-  color: var(--c-accent);
+  color: var(--ocx-color-accent);
   background: none;
-  border: 1px solid var(--c-accent-tint-border);
+  border: 1px solid var(--ocx-color-accent-tint-border);
 }
 
 .cta-outline:hover {
-  color: var(--c-accent-hover);
+  color: var(--ocx-color-accent-hover);
 }
 
 .cta-ghost {
-  color: var(--c-text-2);
+  color: var(--ocx-color-fg-muted);
   background: none;
-  border: 1px solid var(--c-line);
+  border: 1px solid var(--ocx-color-border);
 }
 
 .cta-ghost:hover {
-  color: var(--c-text-1);
+  color: var(--ocx-color-fg);
 }
 }
 </style>

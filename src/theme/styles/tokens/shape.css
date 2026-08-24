@@ -8,18 +8,18 @@
  */
 
 :root {
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 8px;
-  --radius-full: 999px;
+  --ocx-radius-sm: 4px;
+  --ocx-radius-md: 6px;
+  --ocx-radius-lg: 8px;
+  --ocx-radius-full: 999px;
 
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 20px;
-  --space-6: 24px;
-  --space-7: 28px;
-  --space-8: 32px;
+  --ocx-space-1: 4px;
+  --ocx-space-2: 8px;
+  --ocx-space-3: 12px;
+  --ocx-space-4: 16px;
+  --ocx-space-5: 20px;
+  --ocx-space-6: 24px;
+  --ocx-space-7: 28px;
+  --ocx-space-8: 32px;
 }
 }

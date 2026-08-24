@@ -43,12 +43,12 @@ const safeRepositoryUrl = computed(() => safeHref(props.repositoryUrl))
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  border-left: 2px solid var(--c-warn);
+  border-left: 2px solid var(--ocx-color-warning);
   padding: 2px 0 2px 12px;
 }
 
 .disclaimer-icon {
-  color: var(--c-warn);
+  color: var(--ocx-color-warning);
   flex-shrink: 0;
   margin-top: 2px;
   width: 13px;
@@ -56,15 +56,15 @@ const safeRepositoryUrl = computed(() => safeHref(props.repositoryUrl))
 }
 
 .disclaimer-text {
-  font-family: var(--font-sans);
-  font-size: var(--text-xs);
+  font-family: var(--ocx-font-sans);
+  font-size: var(--ocx-text-xs);
   line-height: 1.55;
-  color: var(--c-text-2);
+  color: var(--ocx-color-fg-muted);
 }
 
-/* WP6: --c-accent-text, not --c-accent — 2.79:1 on the ambient --c-bg. */
+/* WP6: --ocx-color-accent-fg, not --ocx-color-accent — 2.79:1 on the ambient --ocx-color-bg. */
 .disclaimer-text a {
-  color: var(--c-accent-text);
+  color: var(--ocx-color-accent-fg);
 }
 
 /* Same external-link glyph as the header's github link (owner spec) —
@@ -81,7 +81,7 @@ const safeRepositoryUrl = computed(() => safeHref(props.repositoryUrl))
 }
 
 .disclaimer-text a:hover {
-  color: var(--c-accent-hover);
+  color: var(--ocx-color-accent-hover);
 }
 }
 </style>

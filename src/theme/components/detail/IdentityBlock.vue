@@ -124,12 +124,12 @@ const monogramStyle = computed(() => ({
 /* Real logos render bare — no box, background, border, or radius (owner
    finding). The monogram keeps its tile look: it IS a colored box. */
 .identity-monogram {
-  border-radius: var(--radius-lg);
+  border-radius: var(--ocx-radius-lg);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: var(--font-mono);
-  font-size: var(--text-lg);
+  font-family: var(--ocx-font-mono);
+  font-size: var(--ocx-text-lg);
   font-weight: 600;
   background: var(--mg-bg-light);
   color: var(--mg-fg-light);
@@ -155,10 +155,10 @@ const monogramStyle = computed(() => ({
 }
 
 .identity-title {
-  font-family: var(--font-sans);
-  font-size: var(--text-xl);
+  font-family: var(--ocx-font-sans);
+  font-size: var(--ocx-text-xl);
   font-weight: 700;
-  color: var(--c-text-1);
+  color: var(--ocx-color-fg);
   line-height: 1.2;
   margin: 0;
 }
@@ -167,46 +167,46 @@ const monogramStyle = computed(() => ({
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  font-family: var(--font-mono);
-  font-size: var(--text-sm);
+  font-family: var(--ocx-font-mono);
+  font-size: var(--ocx-text-sm);
   font-weight: 500;
-  color: var(--c-text-2);
-  background: var(--c-surface-2);
-  border: 1px solid var(--c-line);
-  border-radius: var(--radius-sm);
+  color: var(--ocx-color-fg-muted);
+  background: var(--ocx-color-surface-subtle);
+  border: 1px solid var(--ocx-color-border);
+  border-radius: var(--ocx-radius-sm);
   padding: 3px 9px;
   cursor: pointer;
 }
 
 .identity-name-badge:hover,
 .identity-name-badge:focus-visible {
-  border-color: var(--c-accent);
-  color: var(--c-text-1);
+  border-color: var(--ocx-color-accent);
+  color: var(--ocx-color-fg);
 }
 
 .identity-check {
-  color: var(--c-ok);
+  color: var(--ocx-color-success);
 }
 
 .identity-latest {
-  font-family: var(--font-mono);
-  font-size: var(--text-sm);
+  font-family: var(--ocx-font-mono);
+  font-size: var(--ocx-text-sm);
   font-weight: 500;
-  color: var(--c-ok);
+  color: var(--ocx-color-success);
 }
 
-/* WP6: text color --c-accent-text, not --c-accent-hover — 2.21:1 on the
- * ambient --c-bg (this badge's DEFAULT state was reusing the hover token
+/* WP6: text color --ocx-color-accent-fg, not --ocx-color-accent-hover — 2.21:1 on the
+ * ambient --ocx-color-bg (this badge's DEFAULT state was reusing the hover token
  * for its bright look, not an actual :hover). The border stays
- * --c-accent-hover — a non-text/decorative use the WCAG text-contrast
+ * --ocx-color-accent-hover — a non-text/decorative use the WCAG text-contrast
  * check doesn't cover. */
 .identity-deprecated {
-  font-family: var(--font-mono);
-  font-size: var(--text-2xs);
+  font-family: var(--ocx-font-mono);
+  font-size: var(--ocx-text-2xs);
   font-weight: 600;
-  color: var(--c-accent-text);
-  border: 1px solid var(--c-accent-hover);
-  border-radius: var(--radius-sm);
+  color: var(--ocx-color-accent-fg);
+  border: 1px solid var(--ocx-color-accent-hover);
+  border-radius: var(--ocx-radius-sm);
   padding: 2px 8px;
   letter-spacing: 0.05em;
 }
@@ -215,15 +215,15 @@ const monogramStyle = computed(() => ({
  * tokens instead of the accent-hover coral (more severe than a plain
  * deprecation notice). */
 .identity-yanked {
-  color: var(--c-warn);
-  border-color: var(--c-warn);
+  color: var(--ocx-color-warning);
+  border-color: var(--ocx-color-warning);
 }
 
 .identity-desc {
-  font-family: var(--font-sans);
-  font-size: var(--text-md);
+  font-family: var(--ocx-font-sans);
+  font-size: var(--ocx-text-md);
   line-height: 1.55;
-  color: var(--c-text-2);
+  color: var(--ocx-color-fg-muted);
   margin: 0;
 }
 
@@ -235,20 +235,20 @@ const monogramStyle = computed(() => ({
 }
 
 .identity-keyword {
-  font-family: var(--font-mono);
-  font-size: var(--text-2xs);
+  font-family: var(--ocx-font-mono);
+  font-size: var(--ocx-text-2xs);
   font-weight: 500;
-  color: var(--c-kw);
-  background: var(--c-kw-bg);
+  color: var(--ocx-color-keyword);
+  background: var(--ocx-color-keyword-tint);
   padding: 2px 8px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--ocx-radius-sm);
   /* Transparent border reserved so the hover border doesn't shift layout. */
   border: 1px solid transparent;
   transition: border-color 0.15s;
 }
 
 .identity-keyword:hover {
-  border-color: var(--c-kw);
+  border-color: var(--ocx-color-keyword);
 }
 
 @media (max-width: 640px) {

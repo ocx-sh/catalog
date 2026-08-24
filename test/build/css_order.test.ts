@@ -9,7 +9,7 @@ import { linkNodeModules, withTempDir } from "./helpers.js";
 
 /*
  * C-005 named requirement: a consumer's `css` rules must WIN in the final
- * cascade order — the theme's own `--c-accent` (src/theme/styles/tokens/
+ * cascade order — the theme's own `--ocx-color-accent` (src/theme/styles/tokens/
  * palette.css: `#ff6047`) must be overridden by whatever the consumer's
  * `css` file sets for the same custom property, in the REAL built output.
  * Guards the Vite CSS-chunk-ordering bug class (vite#5185/#6375/#22252)
@@ -21,7 +21,7 @@ import { linkNodeModules, withTempDir } from "./helpers.js";
 
 const SRC_DIR = "src";
 const CONSUMER_ACCENT = "#123456";
-const THEME_ACCENT = "#ff6047"; // src/theme/styles/tokens/palette.css, --c-accent
+const THEME_ACCENT = "#ff6047"; // src/theme/styles/tokens/palette.css, --ocx-color-accent
 
 function route(segments: readonly string[]): PackageRoute {
   return { segments, wireBase: "" };
@@ -43,7 +43,7 @@ function stylesheetHrefs(html: string): string[] {
 
 describe("C-005 css order — consumer css wins in the final cascade", () => {
   it(
-    "the built page's stylesheets, concatenated in link order, resolve --c-accent to the consumer's override",
+    "the built page's stylesheets, concatenated in link order, resolve --ocx-color-accent to the consumer's override",
     async () => {
       const root = await createScratchRoot();
       try {
@@ -52,7 +52,7 @@ describe("C-005 css order — consumer css wins in the final cascade", () => {
 
         await withTempDir("catalog-css-consumer-", async (consumerDir) => {
           const cssPath = join(consumerDir, "custom.css");
-          await writeFile(cssPath, `:root { --c-accent: ${CONSUMER_ACCENT}; }\n`, "utf8");
+          await writeFile(cssPath, `:root { --ocx-color-accent: ${CONSUMER_ACCENT}; }\n`, "utf8");
 
           await generateConfig({
             scratchRoot: root.path,
@@ -78,8 +78,20 @@ describe("C-005 css order — consumer css wins in the final cascade", () => {
             );
             const concatenated = cssChunks.join("\n");
 
-            const themeIdx = concatenated.lastIndexOf(THEME_ACCENT);
-            const consumerIdx = concatenated.lastIndexOf(CONSUMER_ACCENT);
+            // Bind each position to the DECLARATION, not a bare hex substring.
+            // A loose `lastIndexOf("#ff6047")` matches the value wherever it
+            // appears — including in an unrelated property — so it would keep
+            // "passing" after a token rename that detached the override from
+            // anything rendered. Anchoring on `--ocx-color-accent:<value>`
+            // makes the assertion fail if the property stops carrying it.
+            const declIdx = (value: string): number => {
+              const re = new RegExp(`--ocx-color-accent\\s*:\\s*${value}`, "gi");
+              let last = -1;
+              for (const m of concatenated.matchAll(re)) last = m.index;
+              return last;
+            };
+            const themeIdx = declIdx(THEME_ACCENT);
+            const consumerIdx = declIdx(CONSUMER_ACCENT);
             // Proves the theme's OWN accent actually landed in the built
             // output before comparing positions — without this, a build
             // that silently dropped the theme's CSS entirely would leave

@@ -56,9 +56,9 @@ const PLACEHOLDER_COUNT = 9
   display: flex;
   flex-direction: column;
   gap: 10px;
-  background: var(--c-surface);
-  border: 1px solid var(--c-line);
-  border-radius: var(--radius-lg);
+  background: var(--ocx-color-surface);
+  border: 1px solid var(--ocx-color-border);
+  border-radius: var(--ocx-radius-lg);
   padding: 14px;
   animation: catalog-skeleton-pulse 1.6s ease-in-out infinite;
 }
@@ -69,7 +69,7 @@ const PLACEHOLDER_COUNT = 9
 
 .skeleton-row {
   display: flex;
-  gap: var(--space-3);
+  gap: var(--ocx-space-3);
   align-items: center;
 }
 
@@ -77,8 +77,8 @@ const PLACEHOLDER_COUNT = 9
   width: 34px;
   height: 34px;
   flex-shrink: 0;
-  border-radius: var(--radius-lg);
-  background: var(--c-surface-2);
+  border-radius: var(--ocx-radius-lg);
+  background: var(--ocx-color-surface-subtle);
 }
 
 .skeleton-lines {
@@ -90,8 +90,8 @@ const PLACEHOLDER_COUNT = 9
 
 .skeleton-line {
   height: 11px;
-  border-radius: var(--radius-sm);
-  background: var(--c-surface-2);
+  border-radius: var(--ocx-radius-sm);
+  background: var(--ocx-color-surface-subtle);
 }
 
 .skeleton-line-sm {
@@ -100,8 +100,8 @@ const PLACEHOLDER_COUNT = 9
 
 .skeleton-install {
   height: 26px;
-  border-radius: var(--radius-md);
-  background: var(--c-surface-2);
+  border-radius: var(--ocx-radius-md);
+  background: var(--ocx-color-surface-subtle);
 }
 }
 </style>

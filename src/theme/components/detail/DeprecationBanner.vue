@@ -71,39 +71,39 @@ const safeSupersededBy = computed(() =>
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  background: color-mix(in srgb, var(--c-accent) 10%, transparent);
-  border: 1px solid color-mix(in srgb, var(--c-accent) 45%, transparent);
-  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--ocx-color-accent) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ocx-color-accent) 45%, transparent);
+  border-radius: var(--ocx-radius-lg);
   padding: 11px 14px;
 }
 
 .deprecation-icon {
-  color: var(--c-accent-hover);
+  color: var(--ocx-color-accent-hover);
   flex-shrink: 0;
   margin-top: 1px;
 }
 
 .deprecation-text {
-  font-family: var(--font-sans);
-  font-size: var(--text-sm);
+  font-family: var(--ocx-font-sans);
+  font-size: var(--ocx-text-sm);
   line-height: 1.55;
-  color: var(--c-text-1);
+  color: var(--ocx-color-fg);
 }
 
-/* WP6: --c-accent-text, not --c-accent — this banner's own 10%-accent-tint
- * background was the WORST case that sized --c-accent-text (2.51:1 here).
+/* WP6: --ocx-color-accent-fg, not --ocx-color-accent — this banner's own 10%-accent-tint
+ * background was the WORST case that sized --ocx-color-accent-fg (2.51:1 here).
  * Underline: this "superseded by" link sits inline in a prose sentence
- * (`.deprecation-text`) next to --c-text-1 body text — axe's
+ * (`.deprecation-text`) next to --ocx-color-fg body text — axe's
  * link-in-text-block wants EITHER >=3:1 link-vs-surrounding-text contrast
- * OR a non-color cue; --c-accent-text vs --c-text-1 is only 2.99:1, so this
+ * OR a non-color cue; --ocx-color-accent-fg vs --ocx-color-fg is only 2.99:1, so this
  * needs the underline (matches ReadmePane's/docs-prose's own prose links). */
 .deprecation-text a {
-  color: var(--c-accent-text);
+  color: var(--ocx-color-accent-fg);
   text-decoration: underline;
 }
 
 .deprecation-text a:hover {
-  color: var(--c-accent-hover);
+  color: var(--ocx-color-accent-hover);
 }
 }
 </style>

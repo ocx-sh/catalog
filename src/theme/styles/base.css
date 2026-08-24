@@ -11,7 +11,7 @@
 }
 
 html {
-  background: var(--c-bg);
+  background: var(--ocx-color-bg);
   /* C-607: both schemes are genuinely supported (ThemeToggle/.dark class) —
    * this lets native UA chrome (form controls, scrollbars) follow whichever
    * one is active instead of defaulting to light regardless of theme. */
@@ -20,10 +20,10 @@ html {
 
 body {
   margin: 0;
-  background: var(--c-bg);
-  color: var(--c-text-1);
-  font-family: var(--font-sans);
-  font-size: var(--text-base);
+  background: var(--ocx-color-bg);
+  color: var(--ocx-color-fg);
+  font-family: var(--ocx-font-sans);
+  font-size: var(--ocx-text-base);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   transition:
@@ -31,23 +31,23 @@ body {
     color 0.15s;
 }
 
-/* WP6: --c-accent-text, not --c-accent — the site-wide default link color
+/* WP6: --ocx-color-accent-fg, not --ocx-color-accent — the site-wide default link color
  * is small static text on a light background wherever a component doesn't
  * override it (e.g. MetaRail's unclassed owner links), the same 2.99:1
  * failing pair as every other WP6 accent-text site (see palette.css). */
 a {
-  color: var(--c-accent-text);
+  color: var(--ocx-color-accent-fg);
   text-decoration: none;
 }
 
 a:hover {
-  color: var(--c-accent-hover);
+  color: var(--ocx-color-accent-hover);
 }
 
 code,
 kbd,
 pre {
-  font-family: var(--font-mono);
+  font-family: var(--ocx-font-mono);
 }
 
 button {
@@ -55,7 +55,7 @@ button {
 }
 
 :focus-visible {
-  outline: 2px solid var(--c-accent);
+  outline: 2px solid var(--ocx-color-accent);
   outline-offset: 2px;
 }
 
