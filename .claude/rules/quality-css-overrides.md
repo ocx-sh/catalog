@@ -140,16 +140,22 @@ a documentation obligation: **override both `:root` and `.dark`, always.** See
 
 ## Evidence gate
 
-Neither check counts until shown red then green (`quality-core.md`,
-"Unchecked Green"):
+Four checks, each shown red then green (`quality-core.md`, "Unchecked Green"):
 
-- **Overridability**: a fixture consumer stylesheet with a low-specificity rule
-  changes rendered output. Mutate by removing the layer wrapper — the override
-  must stop working.
-- **Layer survives the build**: assert `@layer` appears in the emitted
-  production CSS. Mutate by asserting against a build with layering removed.
+| Check | Where | Reddens when |
+|---|---|---|
+| Every style block wrapped; no unjustified layered `!important` | `test/theme/layer_contract.test.ts` | a block loses its wrapper |
+| Hook grammar and `var()` fallback | `test/theme/component_hook_contract.test.ts` | a bare hook or a literal fallback |
+| `@layer ocx` survives the production build, with the right rules in and out of it | `test/build/css_layer_real_build.test.ts` | the wrapper is stripped |
+| A consumer stylesheet actually wins **in Chrome** | `scripts/quality-css-cascade.mjs`, run by `task quality:web` | any theme rule escapes the layer |
 
-Both need a **real browser or a real build** — happy-dom drops `@layer` at
-parse time and jsdom parses but never applies it, so either will report a
-passing test for a mechanism that does not work. A cascade-layer assertion in a
-jsdom test is a vacuous green.
+The last one cannot be moved into vitest. **happy-dom drops `@layer` blocks at
+parse time and jsdom parses them but never applies layered declarations**, so a
+cascade assertion in either passes whether or not the mechanism works. That is
+the vacuous green this repo's own rule warns about — a real browser or a real
+build is the only honest form.
+
+Its red state is worth knowing: stripping one component's wrapper leaves the
+build valid and every token and hook assertion still passing, and flips only the
+`data-slot` selector assertion. That is the precise failure mode the layer
+exists to prevent, and nothing else in the suite catches it.

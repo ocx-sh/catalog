@@ -38,7 +38,7 @@ So an untokenized appearance value is a defect, not a style choice.
 
 ## Tiers
 
-Two, and only the second is public.
+Three. The primitive tier is private; the other two are public API.
 
 | Tier | Visibility | Contents |
 |---|---|---|
@@ -110,10 +110,10 @@ override that silently does nothing.
 
 | Family | State |
 |---|---|
-| Colour, radius | Fully tokenized — safe to document as themeable |
-| Type scale, font family | Fully tokenized |
-| Spacing | Partial (~9% of declarations) — **must not be documented as complete** |
-| Border width, font-weight, duration/easing, shadow, z-index | No tokens — say so plainly |
+| Colour, radius, type scale, font family | Fully tokenized |
+| Spacing, border width, font-weight, duration, shadow, z-index | Fully tokenized |
+| Easing | Deliberately untokenized — `ease-out` is a keyword that already says what it does |
+| Breakpoints | Cannot be tokens; see below |
 
 When adding a token family, tokenize the family *before* documenting it. A
 partially-tokenized family gets an explicit coverage caveat in the docs until
@@ -145,6 +145,13 @@ is overridden, so a rebrand comes out half-applied. Keep the tint as a named
 token — components read one name — but let its *default value* be the
 `color-mix()`.
 
+The exception is a tint whose base is genuinely a different colour from the
+token it accompanies: the monogram tints are not derivable from their own
+foregrounds, and three of the four predate the a11y darkening of the status
+tokens, so deriving them would silently change three of four. Store those, and
+say in the file why deriving is wrong — an unexplained stored tint is
+indistinguishable from the defect.
+
 **No literal colour outside the token files.** Includes `.ts`/`.mts`
 constants and strings baked into generated config. When a build-time consumer
 seems to force a literal (a syntax-highlighting theme, an inline style), the
@@ -167,12 +174,15 @@ few. Before adding one, in order:
 3. Is the value genuinely fixed and used once? Inline it.
 4. Only then: add it — with its `.dark` value and its documentation row.
 
-Before tokenizing an existing family, **check what the literals actually are**.
-They rarely match the scale you assume. This repo's spacing literals look like
-a 4px scale but a third of them form an unnamed 4n+2 half-step family
-(2/6/10/14/18px) used across 20+ components for compact controls — mapping
-those onto the nearest 4px step is a visual change, not a refactor. Tokenizing
-a family is a design decision until the value census says otherwise.
+Before tokenizing an existing family, **run the census first**. The literals
+rarely match the scale you assume, and a partial census is worse than none: this
+repo's spacing was first read as a 4px scale plus a 4n+2 half-step family, which
+put the sweep at ~63 shifts. The full census found 3, 5, 7, 9, 11 and 22px too,
+and the real figure was 106. The scale had already been chosen against the
+smaller number.
+
+Tokenizing an existing family is a design decision until the census says
+otherwise — and the census must be exhaustive before it can say anything.
 
 Watch for the inverse rot: a token whose name stopped describing what it does.
 The theme's old `--c-kw` served as both "code keyword colour" (hljs syntax

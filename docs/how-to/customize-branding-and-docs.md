@@ -30,16 +30,25 @@ Only `title` is required.
 { "css": "./assets/custom.css" }
 ```
 
-`css` is a path relative to the config file. It's imported **after** the theme's own stylesheet in the generated build, so any custom property or selector your file redeclares wins the cascade.
+`css` is a path relative to the config file, imported after the theme's own
+stylesheet.
 
-### CSS custom properties
+Source order is not what makes your rules win, though. The theme's CSS is
+wrapped in a `@layer ocx` cascade layer, and **any unlayered rule beats a
+layered one at any specificity** — so a plain `.package-card { … }` in your
+file overrides the theme's internal rule without `!important` and without
+having to out-specify it.
 
-The theme exposes its full design system as CSS custom properties (`src/theme/styles/tokens/*.css`), scoped to `:root` (light) and `.dark` (dark mode). Override any of them from your `css` file:
+### Changing colours, spacing, type and shape
+
+Every value the theme renders comes from a CSS custom property. Reassign the
+ones you want:
 
 ```css
 :root {
   --ocx-color-accent: #2563eb;
   --ocx-font-sans: "Inter", sans-serif;
+  --ocx-radius-lg: 0; /* square corners everywhere */
 }
 
 .dark {
@@ -47,13 +56,33 @@ The theme exposes its full design system as CSS custom properties (`src/theme/st
 }
 ```
 
-| Family | File | Example tokens |
-|---|---|---|
-| Color | `palette.css` | `--ocx-color-bg`, `--ocx-color-surface`, `--ocx-color-surface-subtle`, `--ocx-color-border`, `--ocx-color-fg`/`-2`/`-3`, `--ocx-color-accent`, `--ocx-color-accent-hover`, `--ocx-color-accent-fg`, `--ocx-color-success`, `--ocx-color-warning`, `--ocx-color-keyword`, `--ocx-color-code-bg`, `--ocx-color-code-fg`, `--ocx-color-overlay` |
-| Shape | `shape.css` | `--ocx-radius-sm`/`-md`/`-lg`/`-full`, `--ocx-space-1` through `--ocx-space-8` |
-| Type | `type.css` | `--ocx-font-sans`, `--ocx-font-mono`, `--ocx-text-2xl` through `--ocx-text-2xs` |
+**Set both `:root` and `.dark`.** They have the same specificity and both match
+`<html>`, so a `:root`-only override applies in dark mode too and pins that
+token to its light value. This is the most common way to accidentally break
+dark mode.
 
-Only reassign variables — the example above is the whole pattern. Anything set under `.dark` overrides that variable for dark mode only.
+The complete list, generated from the token sources, is in
+[Theme tokens](../reference/theme-tokens.md).
+
+### Restyling a specific component
+
+Tokens change the whole site at once. To restyle one component, target its
+`data-slot` attribute — a stable identity that does not change when the theme's
+internal class names do:
+
+```css
+[data-slot="package-card"] {
+  --ocx-package-card-radius: 0;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.08);
+}
+```
+
+Full list of slots and their hooks:
+[Customizing components](customize-components.md).
+
+**Never target the theme's own class names.** They are internal, unversioned,
+and carry a build-specific `[data-v-…]` attribute — they will change without
+notice.
 
 ## Nav links
 

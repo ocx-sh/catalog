@@ -102,12 +102,14 @@ nav:
       - Deploy on GitLab Pages: how-to/deploy-on-gitlab-pages.md
       - Preview locally: how-to/preview-locally-with-dev.md
       - Branding and docs mount: how-to/customize-branding-and-docs.md
+      - Customizing components: how-to/customize-components.md
   - Reference:
       - reference/index.md
       - CLI: reference/cli.md
       - Config schema: reference/config-schema.md
       - CI rendering: reference/ci-rendering.md
       - Output layout: reference/output-layout.md
+      - Theme tokens: reference/theme-tokens.md
   - Explanation:
       - explanation/index.md
       - Index vs. catalog: explanation/index-vs-catalog.md

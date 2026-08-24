@@ -133,6 +133,13 @@ tasks:
         CHROME_PATH="${CHROME_PATH:-$(ls -d "$HOME"/.cache/puppeteer/chrome/*/chrome-linux64/chrome 2>/dev/null | tail -1)}"
         NODE_OPTIONS="--require ./scripts/lhci-posix-tmpdir.cjs"
         npx lhci autorun
+      # Same Chrome, second question: Lighthouse audits the page, this audits
+      # the CONTRACT — that a consumer stylesheet can still override the theme.
+      # Needs a real browser; happy-dom drops @layer and jsdom never applies it,
+      # so a shim would pass whether or not the mechanism works.
+      - >-
+        node scripts/quality-css-cascade.mjs
+        "${CHROME_PATH:-$(ls -d "$HOME"/.cache/puppeteer/chrome/*/chrome-linux64/chrome 2>/dev/null | tail -1)}"
 
   # Regenerate CHANGELOG.md from the full git history.
   changelog:
