@@ -5,6 +5,24 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.3.0] - 2026-08-24
+
+### Added
+
+- Make every colour reachable from a consumer stylesheet *(theme)*
+- Tokenize border-width, weight, z-index and motion *(theme)*
+- Move spacing onto the Carbon-shaped scale *(theme)*
+- Data-slot identity contract and component hooks *(theme)*
+
+### Changed
+
+- Wrap theme CSS in @layer ocx *(theme)*
+- Rename tokens to the --ocx-* namespace *(theme)* **BREAKING**
+
+### Documentation
+
+- Correct the CSS contract, generate the token reference, gate both
+
 ## [0.2.1] - 2026-08-24
 
 ### Documentation
@@ -36,6 +54,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Added
 
 - Initial commit of @ocx-sh/catalog
+[0.3.0]: https://github.com/ocx-sh/catalog/compare/v0.2.1..v0.3.0
 [0.2.1]: https://github.com/ocx-sh/catalog/compare/v0.2.0..v0.2.1
 [0.2.0]: https://github.com/ocx-sh/catalog/compare/v0.1.1..v0.2.0
 [0.1.1]: https://github.com/ocx-sh/catalog/compare/v0.1.0..v0.1.1
