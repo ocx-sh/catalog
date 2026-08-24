@@ -17,6 +17,9 @@ export default tseslint.config(
       "node_modules/**",
       ".lhci-site/**",
       ".lighthouseci/**",
+      // mkdocs build output (task docs:build) — ships minified JS bundles that
+      // js.configs.recommended would otherwise try to parse.
+      "site/**",
       "src/theme/**/*.vue",
     ],
   },

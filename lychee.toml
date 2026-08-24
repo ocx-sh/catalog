@@ -16,7 +16,10 @@
 # and fails on links that are correct for their actual consumer — the fixture's
 # own wire validity is asserted by `test/quality/fixture-index.test.ts`, and the
 # rendered site's links are exercised by the Lighthouse gate.
-exclude_path = ["test/fixtures"]
+# `site/` is the mkdocs build output (gitignored, but present after a local
+# `task docs:build`): its links are the rendered form of links lychee already
+# checked in their `docs/**` markdown source.
+exclude_path = ["test/fixtures", "site"]
 
 exclude = [
     "^https?://localhost",

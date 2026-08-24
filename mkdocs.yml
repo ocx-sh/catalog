@@ -1,0 +1,120 @@
+# yaml-language-server: $schema=https://squidfunk.github.io/mkdocs-material/schema.json
+#
+# Documentation site for @ocx-sh/catalog, published to GitHub Pages by
+# .github/workflows/pages.yml. Build it with `task docs:build` (strict — a
+# dead internal link fails the build); preview with `task docs:serve`.
+#
+# Deliberately plugin-light: only the built-in `search`. Every markdown
+# extension below ships inside `pymdown-extensions`, a direct dependency of
+# mkdocs-material, so the single pinned `mkdocs-material==<version>` in
+# taskfile.yml is the whole toolchain.
+
+site_name: OCX Catalog
+site_description: Render one or more OCX package indices into a browsable static catalog site.
+site_url: https://ocx-sh.github.io/catalog/
+site_author: The OCX Authors
+repo_name: ocx-sh/catalog
+repo_url: https://github.com/ocx-sh/catalog
+edit_uri: edit/main/docs/
+copyright: Copyright &copy; 2026 The OCX Authors
+
+theme:
+  name: material
+  language: en
+  features:
+    - content.action.edit
+    - content.code.annotate
+    - content.code.copy
+    - content.tabs.link
+    - navigation.footer
+    - navigation.indexes
+    - navigation.sections
+    - navigation.tabs
+    - navigation.top
+    - navigation.tracking
+    - search.highlight
+    - search.suggest
+    - toc.follow
+  palette:
+    - media: '(prefers-color-scheme: light)'
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: '(prefers-color-scheme: dark)'
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  icon:
+    repo: fontawesome/brands/github
+    edit: material/pencil
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/ocx-sh/catalog
+    - icon: fontawesome/solid/globe
+      link: https://ocx.sh
+
+plugins:
+  - search
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+      title: On this page
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.highlight:
+      anchor_linenums: true
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.magiclink:
+      hide_protocol: true
+      repo_url_shorthand: true
+      user: ocx-sh
+      repo: catalog
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+
+nav:
+  - Home: index.md
+  - How-To:
+      - how-to/index.md
+      - Quickstart: how-to/quickstart.md
+      - Configure sources: how-to/configure-sources.md
+      - Deploy on GitHub Pages: how-to/deploy-on-github-pages.md
+      - Deploy on GitLab Pages: how-to/deploy-on-gitlab-pages.md
+      - Preview locally: how-to/preview-locally-with-dev.md
+      - Branding and docs mount: how-to/customize-branding-and-docs.md
+  - Reference:
+      - reference/index.md
+      - CLI: reference/cli.md
+      - Config schema: reference/config-schema.md
+      - CI rendering: reference/ci-rendering.md
+      - Output layout: reference/output-layout.md
+  - Explanation:
+      - explanation/index.md
+      - Index vs. catalog: explanation/index-vs-catalog.md
+      - Multi-source model: explanation/multi-source-model.md
+      - Security and trust model: explanation/security-and-trust-model.md
+  - Ops:
+      - ops/index.md
+      - Known limitations: ops/known-limitations.md
+      - Hosting and headers: ops/hosting-and-headers.md
+      - Troubleshooting: ops/troubleshooting.md

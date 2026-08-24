@@ -6,6 +6,9 @@ coverage/
 .lhci-site/
 .lighthouseci/
 
+# mkdocs build output (task docs:build)
+site/
+
 # lychee link-check cache (task lint:links)
 .lycheecache
 

@@ -1,0 +1,237 @@
+# Config schema
+
+`catalog.config.json` configures one `@ocx-sh/catalog` deployment: data
+sources, branding, nav, and CI rendering. Validation is hand-rolled in
+`src/config/load.ts`, not `ajv`-driven; `src/config/schema/catalog.config.schema.json`
+is a published sibling artifact for editor tooling, kept in sync with the
+loader but not read by it at runtime. This page transcribes both, and notes
+every place they diverge.
+
+## Top-level fields
+
+| Field | Type | Required | Default | Meaning |
+|---|---|---|---|---|
+| `$schema` | string | no | none | Editor/tooling pointer at the published JSON Schema. Never read at runtime. |
+| `configVersion` | number, `const 1` | no | `1` | Forward-compat discriminator. |
+| `sources` | array of source entry, `minItems: 1` | yes | — | One or more index sources this catalog renders. |
+| `brand` | object | yes | — | Site branding: title, wordmark, logo. |
+| `nav` | array of nav entry | no | none (no extra links) | Extra top-nav links, rendered after the built-in Docs entry when `docs` is set. |
+| `docs` | string | no | none (no docs mount) | Single docs directory, resolved relative to the config file's directory; must stay inside it. |
+| `css` | string | no | none | Custom stylesheet, resolved relative to the config file's directory; must stay inside it. |
+| `publicDir` | string | no | none (no public assets copied) | Static assets directory, resolved relative to the config file's directory; must stay inside it. Copied verbatim into VitePress's `publicDir`, served at the site root. |
+| `ci` | object | no | none | CI workflow rendering configuration for `ocx-catalog ci`. |
+| `siteUrl` | string | no | none (no sitemap, no `og:url`) | Deployment origin (e.g. `https://index.ocx.sh`); must be an absolute `http(s)` URL. |
+| `description` | string | no | none | Site-wide tagline/meta description, distinct from `brand.title`. |
+| `favicon` | string | no | none (no icon link) | Site-root-relative href for the browser-tab icon (e.g. `/favicon.svg`). Not a filesystem path — this package never reads it, only bakes it into rendered HTML. |
+
+Every string field above (and every string field in every sub-object below)
+carries `minLength: 1` in the schema; the loader mirrors this by rejecting an
+empty string as `INVALID_TYPE` — use an absent/optional key for "unset",
+never `""`.
+
+**Unknown keys are hard errors.** Any key at the top level not in the table
+above throws `UNKNOWN_KEY`, naming the offending key. The same closed-shape
+check applies to each `sources[]` entry (against its own discriminant
+variant's key set), to `brand`, and to each `nav[]` entry. **`ci` is the one
+documented exception**: unknown keys *inside* `ci` are accepted and passed
+through unmodified, because rendered-workflow configuration is expected to
+grow tunables this loader doesn't know about yet, and a config author using
+a newer field shouldn't be blocked from loading at all — only the CI
+renderer itself would need to understand a new key.
+
+**`configVersion`**: absent is treated as `1`. Any other value fails loudly
+at load with `UNSUPPORTED_VERSION` — checked *before* the unknown-key scan,
+so a config written for a version this loader doesn't support reports the
+version mismatch, not a confusing `UNKNOWN_KEY` about a field it doesn't
+recognize yet.
+
+## `brand`
+
+| Field | Type | Required | Default | Meaning |
+|---|---|---|---|---|
+| `title` | string | yes | — | Site `<title>` / `og:site_name`. |
+| `wordmark` | string | no | falls back to `title` in the header | Header wordmark — the text beside the logo/mark. Exists because the two are legitimately different strings (a `<title>` reads as prose, a wordmark is usually the deployment's own host). |
+| `logo` | string, local path only | no | the theme's built-in mark | Logo asset, resolved relative to the config file's directory; must stay inside it (`PATH_ESCAPE` otherwise). Copied into the site's public root and rendered in the header in place of the built-in mark. |
+
+`brand` is closed: any key other than `title`/`wordmark`/`logo` is
+`UNKNOWN_KEY`.
+
+## `nav[]`
+
+| Field | Type | Required | Meaning |
+|---|---|---|---|
+| `text` | string | yes | Visible label for this nav entry. |
+| `link` | string | yes | Target href. |
+
+`nav[].link` must be either an absolute `http(s)` URL, or a path starting
+with `/` (never `//`, protocol-relative) that genuinely resolves back onto
+this site's own origin. The check parses with the real WHATWG `URL`
+constructor rather than pattern-matching the string — a naive
+`startsWith("/")` check would accept an open-redirect shape like
+`/\evil.example` or a value containing a stripped control character, both of
+which a spec-conformant parser resolves to a different origin. A
+`javascript:`/`data:` value, or any link that escapes the site's own origin,
+is rejected at config load, not just sanitized at render time — this config
+can be fork-PR-authored for a corporate mirror, and there is no render-time
+second line of defense (the theme's header/footer components bind this
+value straight to `:href`).
+
+`nav` entries are closed: any key other than `text`/`link` is `UNKNOWN_KEY`.
+
+## `ci`
+
+| Field | Type | Required | Default | Meaning |
+|---|---|---|---|---|
+| `forge` | `"github"` \| `"gitlab"` | yes | — | Target CI forge for the rendered workflow. |
+| `packageManager` | `"npm"` \| `"bun"` | no | see note below | Package manager the rendered workflow's install/exec steps use. `pnpm`/`yarn` are unsupported — a value outside the two is a loud config-load error rather than a silently broken rendered workflow. |
+| `verifyCi` | boolean | no | none | When `false`, skips CI verification of rendered output against source data. |
+
+!!! note "Schema vs. loader: `packageManager`'s default is not applied at load time"
+    The JSON Schema declares `"default": "npm"` for `ci.packageManager`, but
+    `loadConfig` does **not** fill that default in. When `packageManager` is
+    omitted, the parsed `CatalogConfig.ci.packageManager` stays `undefined` —
+    the loader only validates the field's shape (string, one of `"npm"`/`"bun"`)
+    when it is *present*. The `"npm"` default is applied downstream instead,
+    in the CI renderer itself: `src/ci/render.ts` reads
+    `const packageManager = ci.packageManager ?? "npm";`. A schema-only
+    validator that applies JSON Schema defaults (e.g. `ajv` with
+    `useDefaults`) would materialize `"npm"` onto the parsed object; this
+    hand-rolled loader does not, and code reading `LoadedConfig.config.ci`
+    directly (rather than going through the renderer) must apply the same
+    `?? "npm"` fallback itself.
+
+`ci` is the **one open object** in the whole config shape: unlike every
+other object here, unknown keys inside it are ignored rather than rejected
+(see the top-level section above for why).
+
+## `sources[]`
+
+Every entry is discriminated by exactly one of `path` | `url` | `git`; the
+schema expresses this as a closed `oneOf` over three shapes, and the loader
+enforces the same rule at runtime (`SOURCE_DISCRIMINANT` on zero or more
+than one discriminant key present). Two fields are common to every variant:
+
+| Field | Type | Required | Meaning |
+|---|---|---|---|
+| `label` | string | no | Explicit display label. Must be unique across `sources[]` if given — `LABEL_CONFLICT` otherwise. When absent, the source-reading layer derives one from the source's own data; `loadConfig` never invents a label itself. |
+| `root` | boolean | no | Marks this source as the catalog's self-mirror, served at the site root in addition to `index/<label>/`. At most one entry across `sources[]` may set this — `MULTIPLE_ROOT` otherwise. |
+
+=== "path"
+
+    | Field | Type | Required | Meaning |
+    |---|---|---|---|
+    | `path` | string | yes | Local directory read as the index root, resolved relative to the config file's directory. Must stay inside it (`PATH_ESCAPE` otherwise). |
+
+=== "url"
+
+    | Field | Type | Required | Meaning |
+    |---|---|---|---|
+    | `url` | string, pattern `^https://` | yes | Base URL of a deployed catalog/index instance. `https` only — `/config.json` and `/c/index.json` are the only fetched files never digest-verified, so over plain `http` a network attacker could rewrite the enumeration and every downstream digest check would then pass against the attacker's own digests. |
+
+    The schema's `pattern` is a shape heuristic, anchored only at the start
+    of the string. The loader's own check (`assertPlausibleUrl`) is
+    authoritative: it parses the value with `new URL()` and rejects anything
+    whose `protocol` isn't literally `https:`.
+
+=== "git"
+
+    | Field | Type | Required | Meaning |
+    |---|---|---|---|
+    | `git` | string | yes | Git remote to clone (shallow, depth 1). |
+    | `ref` | string | no | Branch, tag, or commit to check out. Defaults to the remote's HEAD. |
+    | `dir` | string | no | Subdirectory within the checkout that holds the index root. |
+
+### Cross-entry rules
+
+| Rule | Error code | Expressed in the JSON Schema? |
+|---|---|---|
+| `sources` must be non-empty | `EMPTY_SOURCES` | yes (`minItems: 1`) |
+| Each entry sets exactly one of `path`/`url`/`git` | `SOURCE_DISCRIMINANT` | yes (`oneOf` over three closed shapes) |
+| At most one entry may set `root: true` | `MULTIPLE_ROOT` | yes (`contains`/`minContains: 0`/`maxContains: 1`) |
+| Two entries must not declare the same explicit `label` | `LABEL_CONFLICT` | **no** — array-element uniqueness keyed on an optional field isn't expressed in the schema at all; loader-only |
+
+## Path containment
+
+Five fields are resolved relative to the config file's own directory and
+must resolve to that directory or a descendant of it: `docs`, `css`,
+`publicDir`, `brand.logo`, and every `sources[].path` value. Escaping it
+(any `..` that survives resolution) is `PATH_ESCAPE`, naming the offending
+key and both the raw and resolved path.
+
+This check is **lexical only** — `resolve()`/`relative()` string math, never
+`realpath` — so it does not follow symlinks. A symlink living inside the
+config directory whose target resolves outside it passes this check despite
+the eventual read landing outside the directory. `loadConfig` never reads
+`docs`/`css`/`publicDir`/`brand.logo`/`path` off disk itself, so this is out
+of scope for the loader; the source-reading layer that does read them
+independently re-verifies containment per file (see
+[Output layout](./output-layout.md)).
+
+`siteUrl` and `nav[].link` follow a related but distinct pattern worth
+calling out explicitly: the JSON Schema declares only `minLength: 1` for
+`siteUrl` (its own `description` field says so — "src/config/load.ts
+validates the shape beyond what this schema (minLength only) expresses") and
+only `minLength: 1` for `nav[].link` (no schema-level shape check at all).
+Both get real validation from the loader — `siteUrl` must parse as an
+absolute `http:`/`https:` URL, `nav[].link` must satisfy the same-origin/
+`http(s)`-only rule described above. A schema-only validator would accept
+configs the loader rejects for both fields; this is deliberate, not a gap —
+JSON Schema has no clean way to express "resolves to this same origin."
+
+## Example
+
+```json title="catalog.config.json"
+{
+  "$schema": "https://cdn.jsdelivr.net/npm/@ocx-sh/catalog/src/config/schema/catalog.config.schema.json",
+  "configVersion": 1,
+  "sources": [
+    { "path": "../index", "root": true },
+    { "url": "https://mirror.example.com", "label": "mirror" },
+    { "git": "https://github.com/example/index.git", "ref": "main", "dir": "p", "label": "example" }
+  ],
+  "brand": {
+    "title": "OCX Index",
+    "wordmark": "index.ocx.sh",
+    "logo": "./assets/logo.svg"
+  },
+  "nav": [
+    { "text": "GitHub", "link": "https://github.com/ocx-sh/index" },
+    { "text": "Docs", "link": "/docs/" }
+  ],
+  "docs": "./docs",
+  "css": "./theme/custom.css",
+  "publicDir": "./public",
+  "ci": {
+    "forge": "github",
+    "packageManager": "npm",
+    "verifyCi": true
+  },
+  "siteUrl": "https://index.ocx.sh",
+  "description": "The public OCX package index.",
+  "favicon": "/favicon.svg"
+}
+```
+
+The `$schema` line above is for editor/IDE validation-as-you-type only —
+`loadConfig` accepts it as an ordinary optional string field and never opens
+or reads it at build or CI time.
+
+## Error codes at load time
+
+Every row below is a `ConfigError` (`src/config/errors.ts`); every command
+that loads a config (`build`, `dev`, `ci`) maps every one of them to exit
+`65` (`DATA`) — see [CLI](./cli.md).
+
+| Code | Meaning |
+|---|---|
+| `MISSING_FILE` | Config file does not exist at the given path (`ENOENT`). |
+| `READ_ERROR` | Config path exists but couldn't be read — e.g. it names a directory, or a permission error. Distinct from `MISSING_FILE`, which is `ENOENT` only. |
+| `INVALID_JSON` | Config file exists but is not valid JSON. |
+| `INVALID_TYPE` | A field's JSON type doesn't match its expected type — includes an empty string on a field that requires non-empty, and an unparsable or wrong-protocol URL (`siteUrl`, `sources[].url`, `nav[].link`). |
+| `UNKNOWN_KEY` | An unrecognized key at the top level, or inside a `sources[]` entry, `brand`, or a `nav[]` entry. `ci`'s own keys are exempt. |
+| `UNSUPPORTED_VERSION` | `configVersion` names a version this loader doesn't support. |
+| `SOURCE_DISCRIMINANT` | A `sources[]` entry has zero, or more than one, of `path`/`url`/`git`. |
+| `EMPTY_SOURCES` | `sources` is present but empty. |
+| `MULTIPLE_ROOT` | More than one `sources[]` entry sets `root: true`. |
+| `LABEL_CONFLICT` | Two `sources[]` entries declare the same explicit `label`. |
+| `PATH_ESCAPE` | A `css`/`docs`/`publicDir`/`brand.logo`/`path` value resolves outside the config file's directory. |
