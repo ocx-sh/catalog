@@ -97,6 +97,20 @@ notice.
 
 Each entry needs `text` and `link`. `link` must be either an absolute `http(s)` URL, or a path starting with `/` that genuinely resolves back onto the site's own origin (never `//`, which is protocol-relative and would silently leave the site). This is validated at config load, not just sanitized when the page renders — a value like `javascript:...` fails the build outright rather than surviving into a rendered `<a href>`.
 
+`nav[]` is the header's own link list. The footer has a separate one — see [Footer links](#footer-links) below — so configuring `nav[]` alone adds nothing to the footer.
+
+## Footer links
+
+```json
+{
+  "footer": {
+    "links": [{ "text": "Status", "link": "https://status.example.com" }]
+  }
+}
+```
+
+`footer.links[]` entries have the exact same shape and validation as `nav[]`. Omit `footer` entirely and the footer shows only its built-in `catalog json` link (a pointer at `/data/catalog/catalog.json`, the view model the site itself renders from — this package's own surface, free to change between versions, not the index's frozen `/p/**` wire format) — it does not fall back to `nav[]`.
+
 ## Other site metadata
 
 | Field | Effect |
@@ -112,7 +126,21 @@ Each entry needs `text` and `link`. `link` must be either an absolute `http(s)` 
 { "docs": "./docs" }
 ```
 
-`docs` mounts a Markdown tree at `/docs/**` and automatically adds a "docs" link to the top nav — you don't list it in `nav[]` yourself.
+`docs` mounts a Markdown tree at `/docs/**`. By default this also adds a "docs" link to the top nav — you don't list it in `nav[]` yourself.
+
+That auto entry is the *default*, not the only behaviour: `docsNav` replaces it with your own labelled entries, useful when the mounted tree isn't generically "docs" (a setup guide, for instance) or when you want more than one entry pointing into different subtrees.
+
+```json
+{
+  "docs": "./docs",
+  "docsNav": [
+    { "text": "setup", "link": "/docs/setup/" },
+    { "text": "reference", "link": "/docs/reference/" }
+  ]
+}
+```
+
+Every `docsNav[].link` must be `/docs/` or start with it — it labels/splits the docs mount, not a second general-purpose `nav[]`. `docsNav` requires `docs` to be set; configuring it without a docs mount fails the build outright. Omit `docsNav` and you get today's single auto "docs" entry, unchanged.
 
 !!! warning
     The docs sidebar is a **fixed** list, not generated from your `docs` tree. It's hardcoded in `src/theme/components/docs/data/docsNav.ts` to exactly these groups and slugs — `ocx-sh/index`'s own documentation pages:

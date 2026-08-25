@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useData, useRoute } from 'vitepress'
 import Logo from './Logo.vue'
 import ThemeToggle from './ThemeToggle.vue'
@@ -9,25 +9,50 @@ import ThemeToggle from './ThemeToggle.vue'
 import { useCommandPalette } from '../../composables/useCommandPalette'
 import ExternalIcon from '../shared/ExternalIcon.vue'
 import { isExternalLink } from '../../utils/dom'
+import { CTRL, paletteModifier } from '../../utils/modifierKey'
 
 // WP-10: the fixed skeleton (brand, search, theme toggle) always renders;
 // its CONTENT is consumer-config-driven — the wordmark and logo from C-002
-// `brand`, the docs link from `docsPresent` (auto), the rest from `nav[]`.
+// `brand`, the docs link(s) from `docsPresent` (auto) plus optional
+// `docsNav` (labels/splits them), the rest from `nav[]`.
 // No dedicated
 // `githubUrl` config field — a repo link is just an external `nav[]` entry
-// (config_gen.ts bakes `theme.nav`/`theme.docsPresent` verbatim from the
-// consumer's `catalog.config.json`).
+// (config_gen.ts bakes `theme.nav`/`theme.docsPresent`/`theme.docsNav`
+// verbatim from the consumer's `catalog.config.json`).
 interface HeaderNavItem {
   text: string
   link: string
 }
 
+/** `docsNav`'s default when `docsPresent` is true but no `docsNav` was
+ * configured — today's original behaviour, unchanged: one entry labelled
+ * `docs` pointing at the mount's root. */
+const DEFAULT_DOCS_NAV: HeaderNavItem[] = [{ text: 'docs', link: '/docs/' }]
+
 const { theme } = useData()
 const route = useRoute()
 const { open: openPalette } = useCommandPalette()
 
+// The palette answers to Meta OR Ctrl (`useCommandPalette.ts`), so the badge
+// has to say which one THIS keyboard uses — it advertised `⌘K` to everyone,
+// which is wrong on Linux and Windows.
+//
+// Resolved in `onMounted`, not at setup: SSG prerenders under Node with no
+// `navigator`, so setup-time detection would bake `Ctrl` into the HTML and
+// then disagree with the client's first render. Starting from `CTRL` and
+// swapping after hydration keeps SSR and hydration byte-identical.
+const modifier = ref(CTRL)
+onMounted(() => { modifier.value = paletteModifier() })
+
 const docsPresent = computed(() => Boolean(theme.value.docsPresent))
 const navItems = computed(() => (theme.value.nav ?? []) as HeaderNavItem[])
+// No docs mount at all -> no docs entries, configured or not (docsNav
+// without docs is itself a config-load error, but a hand-written
+// themeConfig could still set docsPresent: false alongside it).
+const docsEntries = computed(() => {
+  if (!docsPresent.value) return []
+  return (theme.value.docsNav as HeaderNavItem[] | undefined) ?? DEFAULT_DOCS_NAV
+})
 
 // Header wordmark: C-002's `brand.wordmark`, falling back to `brand.title`.
 // The two are deliberately separate config keys — a deployment's
@@ -48,9 +73,17 @@ const wordmark = computed(() => (theme.value.brand?.wordmark ?? theme.value.bran
 // shown) is a verbatim substring of it.
 const brandLabel = computed(() => (wordmark.value ? `${wordmark.value} — home` : 'Home'))
 
-function isActive(prefix: string): boolean {
-  if (prefix === '/docs/') return route.path.startsWith('/docs/')
-  return !route.path.startsWith('/docs/')
+// Longest-matching-prefix wins: with a single docs entry ('/docs/') this
+// reduces to the original "startsWith('/docs/')" special case, but several
+// docsNav entries can nest (e.g. '/docs/' alongside '/docs/reference/') —
+// without picking the longest match, a broad entry would light up
+// alongside every one of its own subtree entries at once.
+function isActive(href: string): boolean {
+  const candidates = ['/', ...docsEntries.value.map((entry) => entry.link)]
+  const longestMatch = candidates
+    .filter((candidate) => route.path.startsWith(candidate))
+    .reduce((longest, candidate) => (candidate.length > longest.length ? candidate : longest))
+  return longestMatch === href
 }
 </script>
 
@@ -64,18 +97,31 @@ function isActive(prefix: string): boolean {
          placeholder + kbd hint) — a bare icon+⌘K in the corner was too
          easy to miss (owner finding). Still a button: it only opens the
          ⌘K palette. -->
-    <button type="button" class="search-trigger" aria-label="Search (Ctrl+K)" @click="openPalette">
+    <button type="button" class="search-trigger" :aria-label="`Search (${modifier.spoken}+K)`" @click="openPalette">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
         <circle cx="11" cy="11" r="7" />
         <line x1="21" y1="21" x2="16.65" y2="16.65" />
       </svg>
       <span class="search-trigger-text">search packages, docs…</span>
-      <span class="search-trigger-kbd">⌘K</span>
+      <!-- Two key caps, not one run-together `⌘K` string: a shortcut hint
+           reads as keys, and `<kbd>` is the element that says so. Hidden
+           from the accessibility tree because the button's own label
+           already spells the shortcut out pronounceably. -->
+      <span class="search-trigger-keys" aria-hidden="true">
+        <kbd class="search-trigger-kbd search-trigger-kbd-mod" :class="{ glyph: modifier.glyph }">{{ modifier.label }}</kbd>
+        <kbd class="search-trigger-kbd">K</kbd>
+      </span>
     </button>
     <span class="header-right">
       <nav class="site-nav">
         <a href="/" class="nav-link" :class="{ active: isActive('/') }">catalog</a>
-        <a v-if="docsPresent" href="/docs/" class="nav-link" :class="{ active: isActive('/docs/') }">docs</a>
+        <a
+          v-for="entry in docsEntries"
+          :key="entry.link"
+          :href="entry.link"
+          class="nav-link"
+          :class="{ active: isActive(entry.link) }"
+        >{{ entry.text }}</a>
         <a
           v-for="item in navItems"
           :key="item.link"
@@ -224,14 +270,52 @@ function isActive(prefix: string): boolean {
   white-space: nowrap;
 }
 
+.search-trigger-keys {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ocx-space-1);
+  flex-shrink: 0;
+}
+
+/* A key cap, one per key. The old single badge held the whole `⌘K` string,
+   which read as a word rather than as two keys and left the glyph crammed
+   against the letter. Square-ish: equal optical padding plus a min-width, so
+   `⌘`, `K` and the wider `Ctrl` all sit on the same baseline and the same
+   height instead of each cap taking its content's width. */
 .search-trigger-kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 var(--ocx-space-2);
   font-family: var(--ocx-font-mono);
   font-size: var(--ocx-text-2xs);
   font-weight: var(--ocx-font-weight-medium);
+  line-height: 1;
   border: var(--ocx-border-width) solid var(--ocx-color-border);
+  /* The depth cue that makes it read as a key rather than a chip. */
+  border-bottom-width: var(--ocx-border-width-strong);
   border-radius: var(--ocx-radius-sm);
-  padding: var(--ocx-space-1) var(--ocx-space-2);
   background: var(--ocx-color-surface);
+}
+
+/* `⌘` is not in the mono face's design space — at `--ocx-text-2xs` it comes
+   out spindly, badly centred, and a different weight from the letters beside
+   it. The sans stack has a real glyph for it. */
+.search-trigger-kbd.glyph {
+  font-family: var(--ocx-font-sans);
+  font-size: var(--ocx-text-xs);
+  font-weight: var(--ocx-font-weight-regular);
+}
+
+/* Fixed, sized for the wider spelling ("Ctrl", 4 characters) — content-sized
+   above the `min-width` above, this cap otherwise shrinks from roughly 33px
+   to 19px the moment `onMounted` swaps `Ctrl` for `⌘` on an Apple visitor's
+   first paint, and the trigger's contents visibly shift. `ch` rather than a
+   literal px value, so only the GLYPH changes, never the box. */
+.search-trigger-kbd-mod {
+  width: 4ch;
 }
 
 @media (max-width: 640px) {
@@ -256,7 +340,7 @@ function isActive(prefix: string): boolean {
   }
 
   .search-trigger-text,
-  .search-trigger-kbd {
+  .search-trigger-keys {
     display: none;
   }
 }

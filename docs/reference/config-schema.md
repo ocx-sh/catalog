@@ -16,7 +16,9 @@ every place they diverge.
 | `sources` | array of source entry, `minItems: 1` | yes | — | One or more index sources this catalog renders. |
 | `brand` | object | yes | — | Site branding: title, wordmark, logo. |
 | `nav` | array of nav entry | no | none (no extra links) | Extra top-nav links, rendered after the built-in Docs entry when `docs` is set. |
+| `footer` | object | no | none (footer shows only `catalog json`) | Footer links — a dedicated key, not a reuse of `nav[]`; the footer's own link set isn't the header's. |
 | `docs` | string | no | none (no docs mount) | Single docs directory, resolved relative to the config file's directory; must stay inside it. |
+| `docsNav` | array of nav entry | no | one auto entry labelled `docs` at `/docs/` | Labelled entries for the docs-mount link(s) in the top nav, replacing that single auto entry. Requires `docs` to be set. Every `link` must be `/docs/` or start with it. |
 | `css` | string | no | none | Custom stylesheet, resolved relative to the config file's directory; must stay inside it. |
 | `publicDir` | string | no | none (no public assets copied) | Static assets directory, resolved relative to the config file's directory; must stay inside it. Copied verbatim into VitePress's `publicDir`, served at the site root. |
 | `ci` | object | no | none | CI workflow rendering configuration for `ocx-catalog ci`. |
@@ -32,7 +34,8 @@ never `""`.
 **Unknown keys are hard errors.** Any key at the top level not in the table
 above throws `UNKNOWN_KEY`, naming the offending key. The same closed-shape
 check applies to each `sources[]` entry (against its own discriminant
-variant's key set), to `brand`, and to each `nav[]` entry. **`ci` is the one
+variant's key set), to `brand`, to `footer`, and to each `nav[]`/
+`footer.links[]`/`docsNav[]` entry. **`ci` is the one
 documented exception**: unknown keys *inside* `ci` are accepted and passed
 through unmodified, because rendered-workflow configuration is expected to
 grow tunables this loader doesn't know about yet, and a config author using
@@ -78,6 +81,52 @@ value straight to `:href`).
 
 `nav` entries are closed: any key other than `text`/`link` is `UNKNOWN_KEY`.
 
+## `footer`
+
+```json
+{ "footer": { "links": [{ "text": "Status", "link": "/status" }] } }
+```
+
+| Field | Type | Required | Meaning |
+|---|---|---|---|
+| `links` | array of nav entry | yes | Footer links, same shape and `assertSafeNavLink` validation as `nav[]`. |
+
+`footer` is closed: any key other than `links` is `UNKNOWN_KEY`. This key
+replaced `SiteFooter.vue`'s old behaviour of reading `theme.nav` directly —
+a mirror that configures `nav[]` for its header no longer gets those same
+links repeated in its footer; it needs its own `footer.links[]`. Omitting
+`footer` entirely leaves the footer showing only its `catalog json` link.
+
+## `docsNav[]`
+
+```json
+{
+  "docs": "./docs",
+  "docsNav": [
+    { "text": "setup", "link": "/docs/setup/" },
+    { "text": "reference", "link": "/docs/reference/" }
+  ]
+}
+```
+
+| Field | Type | Required | Meaning |
+|---|---|---|---|
+| `text` | string | yes | Visible label for this docs-nav entry. |
+| `link` | string | yes | Target href — must be `/docs/` or start with it. |
+
+Two rules on top of `nav[]`'s own `text`/`link` shape and
+`assertSafeNavLink` validation (both reuse the same `buildNavEntry` builder,
+not a second implementation):
+
+- Every `docsNav[].link` must be `/docs/` or start with `/docs/` — anything
+  else is a `nav[]` entry with extra steps, not a label for the docs mount.
+  `INVALID_TYPE` otherwise.
+- `docsNav` present without `docs` configured is `INVALID_TYPE` — it would
+  point at a mount that doesn't exist.
+
+Omitting `docsNav` (with `docs` set) keeps today's behaviour exactly: one
+auto entry labelled `docs` pointing at `/docs/`.
+
 ## `ci`
 
 | Field | Type | Required | Default | Meaning |
@@ -113,7 +162,7 @@ than one discriminant key present). Two fields are common to every variant:
 
 | Field | Type | Required | Meaning |
 |---|---|---|---|
-| `label` | string | no | Explicit display label. Must be unique across `sources[]` if given — `LABEL_CONFLICT` otherwise. When absent, the source-reading layer derives one from the source's own data; `loadConfig` never invents a label itself. |
+| `label` | string | no | The index's public name — shown by the catalog's index-scope tabs, and the first `/`-segment of every package name this source publishes. Must be unique across `sources[]` (`LABEL_CONFLICT`) and must match that segment (`LABEL_PREFIX_MISMATCH`): a label may restate the name an index gives itself, never rename it. When absent it is derived from the source's own data; `loadConfig` never invents a label itself. |
 | `root` | boolean | no | Marks this source as the catalog's self-mirror, served at the site root in addition to `index/<label>/`. At most one entry across `sources[]` may set this — `MULTIPLE_ROOT` otherwise. |
 
 === "path"
@@ -177,6 +226,17 @@ absolute `http:`/`https:` URL, `nav[].link` must satisfy the same-origin/
 `http(s)`-only rule described above. A schema-only validator would accept
 configs the loader rejects for both fields; this is deliberate, not a gap —
 JSON Schema has no clean way to express "resolves to this same origin."
+`footer.links[]` reuses `nav[]`'s own `navEntry` schema definition, so it
+carries the identical divergence.
+
+`docsNav[].link` does **not** share that gap: its own schema entry
+(`docsNavEntry`) carries `"pattern": "^/docs/"`, which the loader's own
+`/docs/`-prefix check mirrors exactly, and which structurally forecloses
+every open-redirect shape `assertSafeNavLink` otherwise guards against (a
+protocol-relative `//` authority marker can never reach position 0 once
+`/docs/` occupies it). `docsNav` requiring `docs` to be set is likewise
+expressed in the schema, via `dependentRequired`. Both rules agree between
+schema and loader.
 
 ## Example
 
@@ -198,7 +258,11 @@ JSON Schema has no clean way to express "resolves to this same origin."
     { "text": "GitHub", "link": "https://github.com/ocx-sh/index" },
     { "text": "Docs", "link": "/docs/" }
   ],
+  "footer": {
+    "links": [{ "text": "Status", "link": "/status" }]
+  },
   "docs": "./docs",
+  "docsNav": [{ "text": "docs", "link": "/docs/" }],
   "css": "./theme/custom.css",
   "publicDir": "./public",
   "ci": {
@@ -228,7 +292,7 @@ that loads a config (`build`, `dev`, `ci`) maps every one of them to exit
 | `READ_ERROR` | Config path exists but couldn't be read — e.g. it names a directory, or a permission error. Distinct from `MISSING_FILE`, which is `ENOENT` only. |
 | `INVALID_JSON` | Config file exists but is not valid JSON. |
 | `INVALID_TYPE` | A field's JSON type doesn't match its expected type — includes an empty string on a field that requires non-empty, and an unparsable or wrong-protocol URL (`siteUrl`, `sources[].url`, `nav[].link`). |
-| `UNKNOWN_KEY` | An unrecognized key at the top level, or inside a `sources[]` entry, `brand`, or a `nav[]` entry. `ci`'s own keys are exempt. |
+| `UNKNOWN_KEY` | An unrecognized key at the top level, or inside a `sources[]` entry, `brand`, `footer`, or a `nav[]`/`footer.links[]`/`docsNav[]` entry. `ci`'s own keys are exempt. |
 | `UNSUPPORTED_VERSION` | `configVersion` names a version this loader doesn't support. |
 | `SOURCE_DISCRIMINANT` | A `sources[]` entry has zero, or more than one, of `path`/`url`/`git`. |
 | `EMPTY_SOURCES` | `sources` is present but empty. |

@@ -14,8 +14,14 @@ const THEME_SHIM_PATH_SEGMENTS = [".vitepress", "theme", "index.ts"];
 
 const BASE_BRAND: Brand = { title: "My Catalog" };
 
+/** A root:true source's route: namespace/package read straight back off segments. */
 function route(segments: readonly string[]): PackageRoute {
-  return { segments, wireBase: "" };
+  return {
+    segments,
+    namespace: segments[0]!,
+    package: segments.slice(1).join("/"),
+    wireBase: "",
+  };
 }
 
 /** Runs `fn` against a real scratch root, disposing it afterward. */
@@ -329,6 +335,42 @@ describe("C-005/C-008 generateConfig — themeConfig static-JSON injection", () 
       const { config } = await readGenerated(scratchRoot);
       expect(config).toContain('"text": "Docs"');
       expect(config).toContain('"link": "/docs/"');
+    });
+  });
+
+  it("footer absent -> themeConfig.footer bakes to the literal undefined, no key survives dropped", async () => {
+    await withScratch(async (scratchRoot) => {
+      await generateConfig(baseOptions(scratchRoot));
+      const { config } = await readGenerated(scratchRoot);
+      expect(config).toMatch(/footer:\s*undefined,/);
+    });
+  });
+
+  it("bakes a configured footer.links[] into themeConfig.footer", async () => {
+    await withScratch(async (scratchRoot) => {
+      await generateConfig(baseOptions(scratchRoot, { footer: { links: [{ text: "Status", link: "/status" }] } }));
+      const { config } = await readGenerated(scratchRoot);
+      expect(config).toMatch(/footer:\s*\{/);
+      expect(config).toContain('"text": "Status"');
+      expect(config).toContain('"link": "/status"');
+    });
+  });
+
+  it("docsNav absent -> themeConfig.docsNav bakes to the literal undefined", async () => {
+    await withScratch(async (scratchRoot) => {
+      await generateConfig(baseOptions(scratchRoot));
+      const { config } = await readGenerated(scratchRoot);
+      expect(config).toMatch(/docsNav:\s*undefined,/);
+    });
+  });
+
+  it("bakes a configured docsNav[] into themeConfig.docsNav", async () => {
+    await withScratch(async (scratchRoot) => {
+      await generateConfig(baseOptions(scratchRoot, { docsNav: [{ text: "Setup", link: "/docs/setup/" }] }));
+      const { config } = await readGenerated(scratchRoot);
+      expect(config).toMatch(/docsNav:\s*\[/);
+      expect(config).toContain('"text": "Setup"');
+      expect(config).toContain('"link": "/docs/setup/"');
     });
   });
 

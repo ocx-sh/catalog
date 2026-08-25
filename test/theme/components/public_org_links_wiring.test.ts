@@ -1,10 +1,13 @@
 // @vitest-environment happy-dom
 //
-// C-602: `SiteFooter.vue`'s github link and `EmptyState.vue`'s issue CTA
-// used to hardcode `github.com/ocx-sh/*` URLs — this deployment's OWN
-// identity, not this renderer's to assume. Both now source from the SAME
-// `nav[]` config surface `SiteHeader.vue` already renders, omitted
-// entirely when a deployment configures none (S-01: "no ocx.sh leakage").
+// C-602: `SiteFooter.vue`'s github link, its hardcoded `/docs/privacy`
+// anchor, and `EmptyState.vue`'s issue CTA all used to hardcode this
+// deployment's OWN identity, not this renderer's to assume. `EmptyState`
+// still sources from the `nav[]` config surface `SiteHeader.vue` renders;
+// `SiteFooter` (WP-1) now has its own dedicated `footer.links[]` key
+// instead, so a mirror's header nav and footer links no longer have to be
+// the same list. Both are omitted entirely when unconfigured (S-01: "no
+// ocx.sh leakage").
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { mount } from "@vue/test-utils";
@@ -19,18 +22,43 @@ const EmptyState = (await import("../../../src/theme/components/catalog/EmptySta
 
 const ACME_NAV = [{ text: "GitHub", link: "https://github.com/acme/tools" }];
 
-describe("C-602 SiteFooter — nav-sourced external link, omitted when unset", () => {
-  test("no nav[] configured -> no github/ocx-sh link at all", () => {
+describe("WP-1 SiteFooter — footer.links[]-sourced links, no hardcoded privacy anchor", () => {
+  test("nothing configured -> catalog json only, no privacy anchor, no github/ocx-sh link", () => {
     themeState.value = {};
     const html = mount(SiteFooter).html();
+    expect(html).toContain("catalog json");
+    // Inverted from the pre-WP-1 assertion: the hardcoded /docs/privacy
+    // anchor is gone entirely, not just omittable.
+    expect(html).not.toContain("privacy");
     expect(html).not.toContain("ocx-sh");
     expect(html).not.toContain("github.com");
-    expect(html).toContain("raw data");
-    expect(html).toContain("privacy");
   });
 
-  test("a configured nav[] entry renders as its own link, target=_blank for an external URL", () => {
+  // The footer no longer reads theme.nav at all (WP-1: nav[] and
+  // footer.links[] are separate keys) — a mirror that configures nav[] for
+  // its header, but no footer, gets no footer links either.
+  // Owner finding: this link pointed at `/c/index.json`, the ROOT source's
+  // own wire enumeration. A deployment whose sources are all non-root mirrors
+  // no tree at the site root at all, so that anchor 404s — and `c/index.json`
+  // is optional per source anyway. The view model this renderer emits itself
+  // is the one file guaranteed to exist at a fixed path for every
+  // configuration, root or not, single-source or aggregated.
+  test("the catalog json link points at the emitted view model, never the root source's wire index", () => {
+    themeState.value = {};
+    const html = mount(SiteFooter).html();
+    expect(html).toContain('href="/data/catalog/catalog.json"');
+    expect(html).not.toContain("/c/index.json");
+  });
+
+  test("nav[] configured but no footer -> footer still shows only the catalog json link", () => {
     themeState.value = { nav: ACME_NAV };
+    const html = mount(SiteFooter).html();
+    expect(html).not.toContain("github.com/acme/tools");
+    expect(html).toContain("catalog json");
+  });
+
+  test("a configured footer.links[] entry renders as its own link, target=_blank for an external URL", () => {
+    themeState.value = { footer: { links: ACME_NAV } };
     const html = mount(SiteFooter).html();
     expect(html).toContain('href="https://github.com/acme/tools"');
     expect(html).toContain("GitHub");
@@ -38,8 +66,8 @@ describe("C-602 SiteFooter — nav-sourced external link, omitted when unset", (
     expect(html).not.toContain("ocx-sh");
   });
 
-  test("a same-site nav[] link does not carry target=_blank", () => {
-    themeState.value = { nav: [{ text: "Status", link: "/status" }] };
+  test("a same-site footer.links[] entry does not carry target=_blank", () => {
+    themeState.value = { footer: { links: [{ text: "Status", link: "/status" }] } };
     const html = mount(SiteFooter).html();
     expect(html).toContain('href="/status"');
     expect(html).not.toContain('href="/status" target="_blank"');

@@ -21,8 +21,14 @@ import { linkNodeModules, withTempDir, writeDocsFixture, writeNestedDocsFixture 
 
 const SRC_DIR = "src";
 
+/** A root:true source's route: namespace/package read straight back off segments. */
 function route(segments: readonly string[]): PackageRoute {
-  return { segments, wireBase: "" };
+  return {
+    segments,
+    namespace: segments[0]!,
+    package: segments.slice(1).join("/"),
+    wireBase: "",
+  };
 }
 
 /** Extracts the `<nav class="site-nav">...</nav>` block from a rendered
@@ -36,6 +42,29 @@ function siteNavBlock(html: string): string {
   const match = html.match(/<nav class="site-nav"[^>]*>[\s\S]*?<\/nav>/);
   if (!match) throw new Error("no <nav class=\"site-nav\"> block found in rendered HTML");
   return match[0];
+}
+
+/** Finds the full opening `<a ...>` tag carrying `href="<href>"` inside a
+ * `siteNavBlock()` result. Matches the WHOLE tag (same `<a\b[^>]*>` shape
+ * S-007's identity test already uses below) rather than slicing from the
+ * `href` attribute forward, so a `class`/`:class` attribute landing BEFORE
+ * `href` in Vue's SSR-merged output (attribute order is an implementation
+ * detail, not this test's contract) is never missed. */
+function anchorTag(navBlock: string, href: string): string {
+  const tag = [...navBlock.matchAll(/<a\b[^>]*>/g)].map((m) => m[0]).find((t) => t.includes(`href="${href}"`));
+  if (!tag) throw new Error(`no anchor with href="${href}" in nav block: ${navBlock}`);
+  return tag;
+}
+
+/** The FULL `<a ...>...</a>` element (opening tag through its own closing
+ * tag) for the anchor carrying `href="<href>"` — `anchorTag()` alone only
+ * covers the opening tag, which has no visible text to assert a label
+ * against. */
+function fullAnchor(navBlock: string, href: string): string {
+  const openTag = anchorTag(navBlock, href);
+  const start = navBlock.indexOf(openTag);
+  const end = navBlock.indexOf("</a>", start) + "</a>".length;
+  return navBlock.slice(start, end);
 }
 
 describe("S-006 SiteHeader real build — docs presence + nav[] wiring", () => {
@@ -189,6 +218,98 @@ describe("S-006 SiteHeader real build — docs presence + nav[] wiring", () => {
           expect(githubAnchor).toContain('target="_blank"');
           expect(githubAnchor).toContain('rel="noopener noreferrer"');
           expect(githubAnchor).toContain("<svg");
+        });
+      } finally {
+        await root.dispose();
+      }
+    },
+    30_000,
+  );
+});
+
+describe("WP-2 SiteHeader real build — docsNav[] labels/splits the docs entry", () => {
+  it(
+    "docsNav renames the auto docs entry's label -> the header shows the configured label, not 'docs'",
+    async () => {
+      const root = await createScratchRoot();
+      try {
+        await linkNodeModules(root.path);
+        const docsSourceDir = await writeDocsFixture(root.path);
+
+        await synthesizePages({
+          scratchRoot: root.path,
+          srcDir: SRC_DIR,
+          packages: [route(["kitware", "cmake"])],
+          docsSourceDir,
+        });
+        await generateConfig({
+          scratchRoot: root.path,
+          srcDir: SRC_DIR,
+          brand: { title: "Renamed Docs Label Test" },
+          nav: [],
+          docsNav: [{ text: "setup", link: "/docs/" }],
+        });
+
+        await withTempDir("catalog-docsnav-label-out-", async (outDir) => {
+          await build(root.path, { outDir });
+
+          const html = await readFile(join(outDir, "docs", "guide.html"), "utf8");
+          const nav = siteNavBlock(html);
+
+          expect(nav).not.toContain(">docs<");
+          const anchor = fullAnchor(nav, "/docs/");
+          expect(anchor).toContain(">setup</a>");
+          // Visiting /docs/guide under the sole docsNav entry '/docs/' —
+          // that entry's anchor still carries the active class.
+          expect(anchor).toContain("active");
+        });
+      } finally {
+        await root.dispose();
+      }
+    },
+    30_000,
+  );
+
+  it(
+    "multiple docsNav entries all render, and the longest matching prefix — not every matching one — gets the active class",
+    async () => {
+      const root = await createScratchRoot();
+      try {
+        await linkNodeModules(root.path);
+        const docsSourceDir = await writeNestedDocsFixture(root.path);
+
+        await synthesizePages({
+          scratchRoot: root.path,
+          srcDir: SRC_DIR,
+          packages: [route(["kitware", "cmake"])],
+          docsSourceDir,
+        });
+        await generateConfig({
+          scratchRoot: root.path,
+          srcDir: SRC_DIR,
+          brand: { title: "Multiple docsNav Test" },
+          nav: [],
+          docsNav: [
+            { text: "guide", link: "/docs/guide" },
+            { text: "guides", link: "/docs/guides/" },
+          ],
+        });
+
+        await withTempDir("catalog-docsnav-multi-out-", async (outDir) => {
+          await build(root.path, { outDir });
+
+          // /docs/guides/sub starts with BOTH '/docs/guide' and
+          // '/docs/guides/' — only the longer, more specific one ('guides')
+          // may carry the active class.
+          const html = await readFile(join(outDir, "docs", "guides", "sub.html"), "utf8");
+          const nav = siteNavBlock(html);
+
+          const guideAnchor = fullAnchor(nav, "/docs/guide");
+          const guidesAnchor = fullAnchor(nav, "/docs/guides/");
+          expect(guideAnchor).toContain(">guide<");
+          expect(guidesAnchor).toContain(">guides<");
+          expect(guideAnchor).not.toContain("active");
+          expect(guidesAnchor).toContain("active");
         });
       } finally {
         await root.dispose();

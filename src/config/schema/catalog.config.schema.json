@@ -6,6 +6,9 @@
   "type": "object",
   "additionalProperties": false,
   "required": ["sources", "brand"],
+  "dependentRequired": {
+    "docsNav": ["docs"]
+  },
   "properties": {
     "$schema": {
       "type": "string",
@@ -33,10 +36,19 @@
       "items": { "$ref": "#/$defs/navEntry" },
       "description": "Extra top-nav links, rendered after the built-in Docs entry when docs is set."
     },
+    "footer": {
+      "$ref": "#/$defs/footer",
+      "description": "Footer links, rendered in place of nav[] (a dedicated key, not a reuse of nav[]). Omit for a footer with only the raw-data link."
+    },
     "docs": {
       "type": "string",
       "minLength": 1,
       "description": "Single docs directory, resolved relative to this file's directory."
+    },
+    "docsNav": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/docsNavEntry" },
+      "description": "Labelled entries for the docs-mount link(s) in the top nav, replacing the single auto \"docs\" entry. Requires docs to be set. Omit for one auto entry labelled \"docs\" pointing at /docs/."
     },
     "css": {
       "type": "string",
@@ -147,6 +159,32 @@
           "type": "string",
           "minLength": 1,
           "description": "Target href — an http(s) URL or a site-relative path. Validated at config-load time against the same allowlist the theme's safeHref uses before render."
+        }
+      }
+    },
+    "docsNavEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text", "link"],
+      "properties": {
+        "text": { "type": "string", "minLength": 1, "description": "Visible label for this docs-nav entry." },
+        "link": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^/docs/",
+          "description": "Target href — must be \"/docs/\" or start with \"/docs/\"; anything else is a nav[] entry with extra steps."
+        }
+      }
+    },
+    "footer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["links"],
+      "properties": {
+        "links": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/navEntry" },
+          "description": "Footer links, same shape and validation as nav[]."
         }
       }
     },

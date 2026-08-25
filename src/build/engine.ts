@@ -27,8 +27,8 @@ import { emitCatalogTree, resolveCatalog } from "./sources_pipeline.js";
  *    docs mount when `config.docs` is set and the public-assets mount when
  *    `config.publicDir` is set.
  * 5. `generateConfig()` (`config_gen.ts`) — scratch root's
- *    `.vitepress/config` + theme shim. Forwards `brand`/`nav`
- *    verbatim, `brand.logo` additionally resolved against `configDir` as
+ *    `.vitepress/config` + theme shim. Forwards `brand`/`nav`/`footer`/
+ *    `docsNav` verbatim, `brand.logo` additionally resolved against `configDir` as
  *    `brandLogoSource` (the file that function copies into the site's public
  *    root — the raw config value is a path, and the theme needs an href),
  *    `css` resolved against `configDir` (C-002's containment
@@ -106,6 +106,8 @@ export async function buildCatalog(options: BuildCatalogOptions): Promise<BuildC
       brandLogoSource:
         loaded.config.brand.logo !== undefined ? join(loaded.configDir, loaded.config.brand.logo) : undefined,
       nav: loaded.config.nav ?? [],
+      footer: loaded.config.footer,
+      docsNav: loaded.config.docsNav,
       css: loaded.config.css !== undefined ? join(loaded.configDir, loaded.config.css) : undefined,
       siteUrl: loaded.config.siteUrl,
       description: loaded.config.description,

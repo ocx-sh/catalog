@@ -18,12 +18,23 @@
  *     (`"format": "uri"` needs `ajv-formats`, not a dependency here, and the
  *     schema is documentation-only, never ajv-loaded at runtime); `load.ts`
  *     itself does the real `new URL()` + http(s)-only check.
+ *   - nav[]/footer.links[].link SAFETY allowlist: the schema's `navEntry`
+ *     `link` also only expresses "non-empty string" — the real
+ *     `assertSafeNavLink` check (http(s)-only or a genuinely site-relative
+ *     path, WHATWG-`URL`-parsed to catch backslash/tab/newline-authority
+ *     tricks) is loader-only, same reasoning as siteUrl above. `docsNav[]`
+ *     is NOT on this list: its own `docsNavEntry.link` carries
+ *     `"pattern": "^/docs/"`, which structurally forecloses every escape
+ *     `assertSafeNavLink` guards against (an authority marker can never
+ *     reach position 0 once `/docs/` occupies it) — schema and loader agree
+ *     there.
  * `sources[].url`'s https-only rule is NOT on that list: `pattern` expresses
  * it, so schema and loader agree on both the accept and the reject case.
  * MULTIPLE_ROOT used to be a third deliberate disagreement, but draft 2020-12
  * CAN express "at most one item matches" via `contains`/`maxContains`
  * (`minContains: 0` keeps zero root entries legal) — the schema now uses it,
- * so schema and loader agree on this case too.
+ * so schema and loader agree on this case too. `docsNav` requiring `docs`
+ * is likewise expressible (`dependentRequired`), so it agrees too.
  * Each remaining disagreement is asserted explicitly (schema valid, loader
  * rejects) rather than skipped, so schema/loader drift in the *dangerous*
  * direction (schema rejecting something the loader accepts) still fails
@@ -196,6 +207,49 @@ const FIXTURES: readonly Fixture[] = [
     // The schema only expresses "non-empty string" for siteUrl — URL shape
     // (and http(s)-only) is a runtime-only check, load.ts's own doc says so.
     schemaValid: true,
+  },
+  {
+    name: "footer.links[] valid, accepted by both",
+    config: { ...MINIMAL_VALID, footer: { links: [{ text: "Status", link: "/status" }] } },
+    loader: "valid",
+    schemaValid: true,
+  },
+  {
+    name: "footer: unknown key rejected by both",
+    config: { ...MINIMAL_VALID, footer: { links: [], bogus: true } },
+    loader: "UNKNOWN_KEY",
+    schemaValid: false,
+  },
+  {
+    // footer.links[] reuses navEntry, whose `link` the schema does not
+    // shape-check beyond non-empty (schema is weaker — see file header).
+    name: "footer.links[] with an unsafe link (schema is weaker — see file header)",
+    config: { ...MINIMAL_VALID, footer: { links: [{ text: "x", link: "javascript:alert(1)" }] } },
+    loader: "INVALID_TYPE",
+    schemaValid: true,
+  },
+  {
+    name: "docsNav valid alongside docs, accepted by both",
+    config: { ...MINIMAL_VALID, docs: "docs", docsNav: [{ text: "Setup", link: "/docs/setup/" }] },
+    loader: "valid",
+    schemaValid: true,
+  },
+  {
+    // Expressible in the schema via `dependentRequired: { docsNav: ["docs"] }`
+    // (draft 2020-12) — not a divergence like LABEL_CONFLICT/PATH_ESCAPE above.
+    name: "docsNav without docs rejected by both",
+    config: { ...MINIMAL_VALID, docsNav: [{ text: "Setup", link: "/docs/setup/" }] },
+    loader: "INVALID_TYPE",
+    schemaValid: false,
+  },
+  {
+    // Expressible via `pattern: "^/docs/"` on docsNavEntry.link — also not a
+    // divergence, despite being the kind of rule the LABEL_CONFLICT/
+    // PATH_ESCAPE header comment calls out as typically unexpressable.
+    name: "docsNav[].link outside /docs/ rejected by both",
+    config: { ...MINIMAL_VALID, docs: "docs", docsNav: [{ text: "Setup", link: "/other/" }] },
+    loader: "INVALID_TYPE",
+    schemaValid: false,
   },
 ];
 

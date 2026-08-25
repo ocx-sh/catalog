@@ -35,7 +35,9 @@ describe("C-002 loadConfig happy paths", () => {
         logo: "assets/logo.svg",
       });
       expect(loaded.config.nav).toEqual([{ text: "Docs", link: "/docs/" }]);
+      expect(loaded.config.footer).toEqual({ links: [{ text: "Status", link: "/status" }] });
       expect(loaded.config.docs).toBe("docs");
+      expect(loaded.config.docsNav).toEqual([{ text: "Guide", link: "/docs/guide" }]);
       expect(loaded.config.css).toBe("styles/custom.css");
       expect(loaded.config.publicDir).toBe("static");
       expect(loaded.config.ci?.forge).toBe("github");

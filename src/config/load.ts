@@ -5,6 +5,7 @@ import type {
   Brand,
   CatalogConfig,
   CiConfig,
+  FooterConfig,
   LoadedConfig,
   NavEntry,
   ResolvedSource,
@@ -17,7 +18,9 @@ const TOP_LEVEL_KEYS = [
   "sources",
   "brand",
   "nav",
+  "footer",
   "docs",
+  "docsNav",
   "css",
   "publicDir",
   "ci",
@@ -253,15 +256,50 @@ function assertSafeNavLink(value: string, key: string): void {
   assertPlausibleUrl(value, key, SITE_URL_PROTOCOLS, 'an http(s) URL or a site-relative path starting with "/"');
 }
 
-function buildNavEntry(item: unknown, index: number): NavEntry {
-  const raw = expectObject(item, `nav[${index}]`);
-  expectExactKeys(raw, ["text", "link"], `nav[${index}]`);
-  const link = expectString(raw.link, `nav[${index}].link`);
-  assertSafeNavLink(link, `nav[${index}].link`);
+/**
+ * Builds one `{ text, link }` entry, shared by `nav[]`, `footer.links[]`,
+ * and `docsNav[]` — one shape, one `assertSafeNavLink` validation, never
+ * duplicated per config surface. `keyPath` names the caller's own array in
+ * diagnostics (`"nav"` by default) so an error still points at the entry
+ * that actually failed rather than always saying `nav[i]`.
+ */
+function buildNavEntry(item: unknown, index: number, keyPath = "nav"): NavEntry {
+  const raw = expectObject(item, `${keyPath}[${index}]`);
+  expectExactKeys(raw, ["text", "link"], `${keyPath}[${index}]`);
+  const link = expectString(raw.link, `${keyPath}[${index}].link`);
+  assertSafeNavLink(link, `${keyPath}[${index}].link`);
   return {
-    text: expectString(raw.text, `nav[${index}].text`),
+    text: expectString(raw.text, `${keyPath}[${index}].text`),
     link,
   };
+}
+
+function buildFooter(value: unknown): FooterConfig {
+  const raw = expectObject(value, "footer");
+  expectExactKeys(raw, ["links"], "footer");
+  const links = expectArray(raw.links, "footer.links").map((item, i) => buildNavEntry(item, i, "footer.links"));
+  return { links };
+}
+
+/** `docsNav[].link` must resolve under the docs mount — `/docs/` itself, or
+ * anything starting with it. Anything else is a `nav[]` entry with extra
+ * steps: this key exists to LABEL/SPLIT the docs mount's own link(s), not
+ * to be a second general-purpose nav array. Runs `buildNavEntry` first, so
+ * `assertSafeNavLink` still rejects a `javascript:`/off-site value before
+ * this narrower check ever runs. */
+function buildDocsNavEntry(item: unknown, index: number): NavEntry {
+  const entry = buildNavEntry(item, index, "docsNav");
+  // One condition, not two: `"/docs/".startsWith("/docs/")` is true, so the
+  // `!== "/docs/"` clause this used to lead with could never change the
+  // result. Branch coverage still read 100% with it there — both operands
+  // were exercised, just never to any effect.
+  if (!entry.link.startsWith("/docs/")) {
+    throw new ConfigError(
+      "INVALID_TYPE",
+      `"docsNav[${index}].link" must be "/docs/" or start with "/docs/" (got "${entry.link}")`,
+    );
+  }
+  return entry;
 }
 
 function buildCi(value: unknown): CiConfig {
@@ -316,7 +354,8 @@ function buildCi(value: unknown): CiConfig {
  * - Unknown TOP-LEVEL keys are rejected (`UNKNOWN_KEY`) — fail-loud, no
  *   silent typo-tolerance. The same closed-shape check applies to each
  *   `sources[]` entry (against its discriminant variant's own key set),
- *   `brand`, and each `nav[]` entry. `ci` is the
+ *   `brand`, `footer`, and each `nav[]`/`footer.links[]`/`docsNav[]` entry.
+ *   `ci` is the
  *   ONE exception: unknown keys INSIDE `ci` are ignored (forward-compat;
  *   see `CiConfig`'s doc comment) — never conflate the two with one
  *   field-list constant.
@@ -363,7 +402,14 @@ function buildCi(value: unknown): CiConfig {
  *   path starting with `/` (never `//`, protocol-relative) -> `INVALID_TYPE`
  *   otherwise (C-605) — see `assertSafeNavLink`'s own doc comment; a
  *   `javascript:`/`data:` value is rejected here rather than surviving to a
- *   rendered `<a href>` in a generated CI/site consumer.
+ *   rendered `<a href>` in a generated CI/site consumer. `footer.links[]`
+ *   entries go through the SAME `assertSafeNavLink` check (`buildNavEntry`
+ *   is shared, not duplicated).
+ * - Every `docsNav[].link` must additionally be `/docs/` or start with it ->
+ *   `INVALID_TYPE` otherwise — anything else is a `nav[]` entry with extra
+ *   steps, not a label for the docs mount. `docsNav` present without `docs`
+ *   configured is also `INVALID_TYPE`: it would point at a mount that
+ *   doesn't exist.
  *
  * Label resolution seam: a source's display label can come from two places
  * — an explicit `label` in config, or (when absent) derivation from the
@@ -471,7 +517,15 @@ export async function loadConfig(configPath: string): Promise<LoadedConfig> {
     data.nav === undefined
       ? undefined
       : expectArray(data.nav, "nav").map((item, i) => buildNavEntry(item, i));
+  const footer = data.footer === undefined ? undefined : buildFooter(data.footer);
   const docs = optionalString(data.docs, "docs");
+  const docsNav =
+    data.docsNav === undefined
+      ? undefined
+      : expectArray(data.docsNav, "docsNav").map((item, i) => buildDocsNavEntry(item, i));
+  if (docsNav !== undefined && docs === undefined) {
+    throw new ConfigError("INVALID_TYPE", `"docsNav" requires "docs" to be configured`);
+  }
   const css = optionalString(data.css, "css");
   const publicDir = optionalString(data.publicDir, "publicDir");
   const ci = data.ci === undefined ? undefined : buildCi(data.ci);
@@ -501,7 +555,9 @@ export async function loadConfig(configPath: string): Promise<LoadedConfig> {
     sources: entries,
     brand,
     nav,
+    footer,
     docs,
+    docsNav,
     css,
     publicDir,
     ci,

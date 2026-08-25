@@ -76,6 +76,18 @@ export interface NavEntry {
 }
 
 /**
+ * Footer links (`footer.links[]`), a dedicated key rather than a reuse of
+ * `nav[]`: the footer's own identity isn't the header's, and borrowing
+ * `nav[]` (as `SiteFooter.vue` used to) meant a mirror with no `nav[]`
+ * configured got no footer links either, coupling two unrelated surfaces.
+ * Reuses `NavEntry` — same `text`/`link` shape, same `assertSafeNavLink`
+ * validation, no second link type.
+ */
+export interface FooterConfig {
+  links: NavEntry[];
+}
+
+/**
  * The one "open" object in this config shape — `loadConfig` accepts (and
  * forward-compat preserves) any key beyond `forge`/`verifyCi`, unlike every
  * other object here, which is closed (`expectExactKeys` in `load.ts`). A
@@ -120,8 +132,21 @@ export interface CatalogConfig {
   sources: SourceEntry[];
   brand: Brand;
   nav?: NavEntry[];
+  /** Footer links, rendered in place of `nav[]` (see `FooterConfig`).
+   * Absent -> the footer shows only the `raw data` link. */
+  footer?: FooterConfig;
   /** Single docs directory, resolved relative to the config file. */
   docs?: string;
+  /**
+   * Labelled entries for the docs-mount link(s) in the top nav, replacing
+   * the single auto entry `docsPresent` alone produces. Every `link` must
+   * be `/docs/` or start with `/docs/` — `loadConfig` rejects anything else
+   * as a `nav[]` entry with extra steps. Requires `docs` to be set: it
+   * points nowhere without a mounted docs tree, so `loadConfig` rejects it
+   * standalone. Absent (with `docs` set) -> one auto entry labelled `docs`
+   * pointing at `/docs/`, unchanged from before this field existed.
+   */
+  docsNav?: NavEntry[];
   /** Custom stylesheet, resolved relative to the config file. */
   css?: string;
   /** Static assets directory, resolved relative to the config file — copied
