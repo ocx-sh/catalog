@@ -19,6 +19,8 @@ export type ConfigErrorCode =
   | "EMPTY_SOURCES"
   /** More than one `sources[]` entry sets `root: true`. */
   | "MULTIPLE_ROOT"
+  /** More than one `sources[]` entry sets `default: true`. */
+  | "MULTIPLE_DEFAULT"
   /** Two `sources[]` entries declare the same explicit `label`. */
   | "LABEL_CONFLICT"
   /** A `css`/`docs`/`path` value resolves outside the config file's directory. */

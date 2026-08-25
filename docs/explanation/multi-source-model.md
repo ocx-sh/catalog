@@ -51,19 +51,37 @@ own name. Long names elide in the middle
 the package survive.
 
 The catalog JSON also carries an `indexes` envelope — each index's name,
-whether it is the default (`root: true`), and how many packages it
-contributes after the merge:
+whether it is the root index, whether it is the default one, and how many
+packages it contributes after the merge:
 
 ```json
 {
   "generated": "…",
   "indexes": [
-    { "name": "ocx.sh", "root": true, "count": 46 },
-    { "name": "corp.example", "root": false, "count": 13 }
+    { "name": "ocx.sh", "root": true, "default": true, "count": 46 },
+    { "name": "corp.example", "root": false, "default": false, "count": 13 }
   ],
   "packages": [ … ]
 }
 ```
+
+`root` and `default` answer different questions, and a config sets them
+independently:
+
+| field | question | consequence |
+|---|---|---|
+| `root` | is this source mirrored **at the site root**? | its packages keep bare `/<ns>/<pkg>` routes; every other index qualifies |
+| `default` | which index does the catalog **open on**? | that tab is preselected on arrival and badged `default`; no route changes |
+
+`default` is already resolved in the envelope: it is the source that set
+`default: true`, or — when no source did — the `root: true` one, which is
+what every config written before the key existed means. At most one entry
+carries it; a catalog whose config named neither opens on `all`.
+
+The pairing matters for a deployment with **no root source at all**: nothing
+is served at the site root, every route is qualified — and one of the indexes
+is still the one an arriving visitor should land on. `root: true` cannot say
+that without also moving every URL.
 
 It is written for **every** catalog, one source included — the theme needs it
 to resolve a package's route, and a single non-root source has qualified
@@ -79,6 +97,9 @@ The `root: true` source's packages keep the bare path they have always had:
 |---|---|---|
 | `root: true` | `ocx.sh/hashicorp/terraform` | `/hashicorp/terraform` |
 | any other | `corp.example/platform/deploy-kit` | `/corp.example/platform/deploy-kit` |
+
+Note that this table reads `root`, never `default`: marking an index default
+changes which tab opens, never where a page lives.
 
 For a non-root index the route **is** the qualified identifier, so a copied
 package link and a copied identifier are the same string, and two indexes

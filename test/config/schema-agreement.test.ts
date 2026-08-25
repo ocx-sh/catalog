@@ -33,7 +33,9 @@
  * MULTIPLE_ROOT used to be a third deliberate disagreement, but draft 2020-12
  * CAN express "at most one item matches" via `contains`/`maxContains`
  * (`minContains: 0` keeps zero root entries legal) — the schema now uses it,
- * so schema and loader agree on this case too. `docsNav` requiring `docs`
+ * so schema and loader agree on this case too. MULTIPLE_DEFAULT is the same
+ * rule on the sibling `default` flag, and needs its own `contains`: a schema
+ * object may hold only one, so `sources` carries both inside `allOf`. `docsNav` requiring `docs`
  * is likewise expressible (`dependentRequired`), so it agrees too.
  * Each remaining disagreement is asserted explicitly (schema valid, loader
  * rejects) rather than skipped, so schema/loader drift in the *dangerous*
@@ -166,6 +168,30 @@ const FIXTURES: readonly Fixture[] = [
     },
     loader: "MULTIPLE_ROOT",
     schemaValid: false,
+  },
+  {
+    name: "MULTIPLE_DEFAULT",
+    config: {
+      sources: [
+        { path: "a", default: true },
+        { path: "b", default: true },
+      ],
+      brand: { title: "x" },
+    },
+    loader: "MULTIPLE_DEFAULT",
+    schemaValid: false,
+  },
+  {
+    // The combination `root` alone could not express: no source is mirrored
+    // at the site root, and one of them is still the index to open on. Both
+    // halves must accept it, or the schema would flag a legal config.
+    name: "default on a non-root source is valid to both",
+    config: {
+      sources: [{ path: "a" }, { path: "b", default: true }],
+      brand: { title: "x" },
+    },
+    loader: "valid",
+    schemaValid: true,
   },
   {
     name: "LABEL_CONFLICT (schema is weaker — see file header)",

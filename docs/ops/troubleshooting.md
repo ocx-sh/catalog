@@ -27,6 +27,7 @@ invented.
 | `SOURCE_DISCRIMINANT` | A `sources[]` entry has zero, or more than one, of `path`/`url`/`git` | Set exactly one of those three keys per entry |
 | `EMPTY_SOURCES` | `sources` is present but has no entries | Add at least one source |
 | `MULTIPLE_ROOT` | More than one `sources[]` entry sets `root: true` | Keep `root: true` on at most one entry |
+| `MULTIPLE_DEFAULT` | More than one `sources[]` entry sets `default: true` | Keep `default: true` on at most one entry |
 | `LABEL_CONFLICT` | Two `sources[]` entries declare the same explicit `label` | Give each source a distinct label |
 | `PATH_ESCAPE` | A `css`/`docs`/`publicDir`/`brand.logo`/`path` value resolves outside the config file's own directory | Point the value back inside the config directory |
 

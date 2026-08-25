@@ -103,7 +103,7 @@ describe("C-003/C-005/C-006 buildCatalog — a configured source reaches dist/ e
           const files = await readPathSource({ path: "index" }, configDir);
           const expectedCatalog = serializeCatalog(
             catalogIndex([...extractPackages(files)].sort(compareQualifiedIds), [
-              { name: "ocx.sh", root: true, count: 2 },
+              { name: "ocx.sh", root: true, default: true, count: 2 },
             ]),
           );
           const writtenCatalog = await readFile(join(outDir, "data", "catalog", "catalog.json"), "utf8");

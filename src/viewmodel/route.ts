@@ -4,9 +4,14 @@ import type { CatalogIndexInfo } from "./types.js";
  * The route rule, and the ONLY copy of it.
  *
  * A package's detail page lives at the bare `<namespace>/<package…>` path
- * when it comes from the DEFAULT index, and at `<index>/<namespace>/<package…>`
+ * when it comes from the ROOT index, and at `<index>/<namespace>/<package…>`
  * otherwise, so two indexes publishing the same id get two pages instead of
  * one silently winning.
+ *
+ * ROOT, not DEFAULT — `indexes[].root` is where a source's tree is mirrored,
+ * `indexes[].default` is which index the catalog view opens on. They are the
+ * same entry in the common config and different entries in a catalog that has
+ * no root source at all; a route asks the first question only.
  *
  * ## Why this lives in `viewmodel/` and not on either side that uses it
  *
@@ -36,15 +41,18 @@ import type { CatalogIndexInfo } from "./types.js";
  */
 
 /**
- * Does `indexName` name the index whose packages keep bare routes?
+ * Does `indexName` name the index whose packages keep bare routes — i.e. the
+ * one mirrored at the site root?
  *
  * `undefined` indexes means a `catalog.json` this renderer did not write —
  * the Python bot emits no such key — and there is then exactly one index and
  * no qualification, so every package is bare. An envelope with no `root`
  * entry (a config that sets `root: true` on nothing) qualifies everything,
- * which is the case that used to 404.
+ * which is the case that used to 404. That catalog may still have a
+ * `default` index — it opens on one — and this function is deliberately
+ * blind to it: a preselected tab must never move a page's URL.
  */
-export function isDefaultIndex(indexName: string, indexes: readonly CatalogIndexInfo[] | undefined): boolean {
+export function isRootIndex(indexName: string, indexes: readonly CatalogIndexInfo[] | undefined): boolean {
   if (indexes === undefined) return true;
   return indexes.find((entry) => entry.root)?.name === indexName;
 }
@@ -63,7 +71,7 @@ export function packageRouteSegments(
   indexes: readonly CatalogIndexInfo[] | undefined,
 ): string[] {
   const bare = [namespace, ...pkg.split("/")];
-  return isDefaultIndex(indexName, indexes) ? bare : [indexName, ...bare];
+  return isRootIndex(indexName, indexes) ? bare : [indexName, ...bare];
 }
 
 /**
@@ -77,5 +85,5 @@ export function packageRouteSegments(
  */
 export function packageRoutePath(name: string, indexes: readonly CatalogIndexInfo[] | undefined): string {
   const [indexName, ...bare] = name.split("/");
-  return isDefaultIndex(indexName!, indexes) ? `/${bare.join("/")}` : `/${name}`;
+  return isRootIndex(indexName!, indexes) ? `/${bare.join("/")}` : `/${name}`;
 }

@@ -147,10 +147,17 @@ function ASSET_TREE(name: string): Readonly<Record<string, Uint8Array>> {
   };
 }
 
-function pathSource(entryPath: string, extra: { root?: boolean; label?: string } = {}): ResolvedSource {
+function pathSource(
+  entryPath: string,
+  extra: { root?: boolean; label?: string; default?: boolean } = {},
+): ResolvedSource {
   const { root, label } = extra;
   return {
-    entry: { path: entryPath, ...(root !== undefined ? { root } : {}) },
+    entry: {
+      path: entryPath,
+      ...(root !== undefined ? { root } : {}),
+      ...(extra.default !== undefined ? { default: extra.default } : {}),
+    },
     label: label ?? null,
   };
 }
@@ -199,7 +206,7 @@ describe("sources_pipeline resolveCatalog — path source", () => {
     const files = await readPathSource({ path: "index" }, dir);
     const expectedJson = serializeCatalog(
       catalogIndex([...extractPackages(files)].sort(compareQualifiedIds), [
-        { name: "ocx.sh", root: true, count: 2 },
+        { name: "ocx.sh", root: true, default: true, count: 2 },
       ]),
     );
     expect(catalog.catalogJson).toBe(expectedJson);
@@ -237,7 +244,7 @@ describe("sources_pipeline resolveCatalog — path source", () => {
     expect(catalog.routes.map((route) => route.segments[0])).toEqual(["ocx.sh", "ocx.sh"]);
 
     const parsed = JSON.parse(catalog.catalogJson) as { indexes?: { name: string; root: boolean }[] };
-    expect(parsed.indexes).toEqual([{ name: "ocx.sh", root: false, count: 2 }]);
+    expect(parsed.indexes).toEqual([{ name: "ocx.sh", root: false, default: false, count: 2 }]);
 
     // The two halves agree by construction: no entry is `root`, so no bare
     // route exists, and every route is qualified.
@@ -292,7 +299,7 @@ describe("sources_pipeline resolveCatalog — path source", () => {
 
     expect(catalog.routes.map((route) => route.segments[0])).toEqual(["acme", "acme"]);
     const parsed = JSON.parse(catalog.catalogJson) as { indexes?: { name: string; root: boolean }[] };
-    expect(parsed.indexes).toEqual([{ name: "ocx.sh", root: true, count: 2 }]);
+    expect(parsed.indexes).toEqual([{ name: "ocx.sh", root: true, default: true, count: 2 }]);
   });
 
   // The bug this pins: `wireBase` reached `routes` from the very first
@@ -363,9 +370,79 @@ describe("sources_pipeline resolveCatalog — path source", () => {
     };
     expect(parsed.packages).toHaveLength(3);
     expect(parsed.indexes).toEqual([
-      { name: "ocx.sh", root: true, count: 2 },
-      { name: "corp.example", root: false, count: 1 },
+      { name: "ocx.sh", root: true, default: true, count: 2 },
+      { name: "corp.example", root: false, default: false, count: 1 },
     ]);
+  });
+  // The `indexes` envelope answers two questions that used to be one boolean:
+  // where a source's tree is MIRRORED (`root`, which decides route shape) and
+  // which index the catalog OPENS on (`default`). A deployment with no root
+  // source at all — every route qualified, nothing at the site root — still
+  // needs somewhere to land, which is the whole reason the second flag exists.
+  it("default: true names the opening index without touching a single route", async () => {
+    const dir = await tempDir("catalog-pipeline-default-noroot-");
+    await writeTree(join(dir, "first"), WIRE_TREE);
+    await writeTree(join(dir, "second"), { "p/beta/thing.json": CORP_BETA_ROOT });
+
+    const catalog = await resolveCatalog(
+      [pathSource("first"), pathSource("second", { default: true })],
+      dir,
+    );
+
+    const parsed = JSON.parse(catalog.catalogJson) as {
+      indexes: { name: string; root: boolean; default: boolean; count: number }[];
+    };
+    expect(parsed.indexes).toEqual([
+      { name: "ocx.sh", root: false, default: false, count: 2 },
+      { name: "corp.example", root: false, default: true, count: 1 },
+    ]);
+    // No source is root, so EVERY route stays qualified — the default index's
+    // included. A preselected tab must never move a page's URL.
+    expect(catalog.routes.map((route) => route.segments[0])).toEqual([
+      "ocx.sh",
+      "ocx.sh",
+      "corp.example",
+    ]);
+  });
+
+  // An explicit `default` overrides the root fallback rather than fighting
+  // it: `root` still decides placement, `default` still decides preselection,
+  // and they are simply different entries here.
+  it("an explicit default wins over the root source's fallback claim", async () => {
+    const dir = await tempDir("catalog-pipeline-default-vs-root-");
+    await writeTree(join(dir, "first"), WIRE_TREE);
+    await writeTree(join(dir, "second"), { "p/beta/thing.json": CORP_BETA_ROOT });
+
+    const catalog = await resolveCatalog(
+      [pathSource("first", { root: true }), pathSource("second", { default: true })],
+      dir,
+    );
+
+    const parsed = JSON.parse(catalog.catalogJson) as {
+      indexes: { name: string; root: boolean; default: boolean }[];
+    };
+    expect(parsed.indexes).toMatchObject([
+      { name: "ocx.sh", root: true, default: false },
+      { name: "corp.example", root: false, default: true },
+    ]);
+    // Placement is untouched: the root source keeps its bare routes.
+    expect(catalog.routes.map((route) => route.segments[0])).toEqual([
+      "acme",
+      "acme",
+      "corp.example",
+    ]);
+  });
+
+  // Neither flag anywhere: no entry is default, and the theme opens on "all".
+  it("with neither root nor default configured, no index is the default", async () => {
+    const dir = await tempDir("catalog-pipeline-no-default-");
+    await writeTree(join(dir, "first"), WIRE_TREE);
+    await writeTree(join(dir, "second"), { "p/beta/thing.json": CORP_BETA_ROOT });
+
+    const catalog = await resolveCatalog([pathSource("first"), pathSource("second")], dir);
+
+    const parsed = JSON.parse(catalog.catalogJson) as { indexes: { default: boolean }[] };
+    expect(parsed.indexes.some((entry) => entry.default)).toBe(false);
   });
 });
 

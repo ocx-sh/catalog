@@ -60,8 +60,8 @@ const ACME_KIT = pkg("acme/platform/deploy-kit");
 const MULTI = {
   generated: "2026-01-01T00:00:00Z",
   indexes: [
-    { name: "ocx.sh", root: true, count: 1 },
-    { name: "acme", root: false, count: 2 },
+    { name: "ocx.sh", root: true, default: true, count: 1 },
+    { name: "acme", root: false, default: false, count: 2 },
   ],
   packages: [OCX_TOOL, ACME_KIT, ACME_TOOL],
 };
@@ -71,7 +71,7 @@ const MULTI = {
  * there is no scope to pick. */
 const SINGLE = {
   generated: "2026-01-01T00:00:00Z",
-  indexes: [{ name: "ocx.sh", root: true, count: 1 }],
+  indexes: [{ name: "ocx.sh", root: true, default: true, count: 1 }],
   packages: [OCX_TOOL],
 };
 
@@ -82,8 +82,22 @@ const SINGLE = {
  * A one-entry envelope with no `root` is not the same thing as no envelope. */
 const SINGLE_NONROOT = {
   generated: "2026-01-01T00:00:00Z",
-  indexes: [{ name: "acme", root: false, count: 2 }],
+  indexes: [{ name: "acme", root: false, default: false, count: 2 }],
   packages: [ACME_KIT, ACME_TOOL],
+};
+
+/** Two NON-ROOT sources, one of them marked `default: true` in config. No
+ * source is mirrored at the site root, so every route stays qualified — and
+ * the catalog still opens on a named index rather than on "all". This is the
+ * case the `root` flag alone could not express: `root` decides placement,
+ * `default` decides where an arriving visitor lands. */
+const MULTI_NOROOT_DEFAULT = {
+  generated: "2026-01-01T00:00:00Z",
+  indexes: [
+    { name: "ocx.sh", root: false, default: false, count: 1 },
+    { name: "acme", root: false, default: true, count: 2 },
+  ],
+  packages: [OCX_TOOL, ACME_KIT, ACME_TOOL],
 };
 
 /** What a catalog.json written by something OTHER than this renderer looks
@@ -155,7 +169,7 @@ describe("index scope — the tab row only exists for an aggregating catalog", (
 describe("index scope — what is selected, and what the grid shows", () => {
   // Arriving at an aggregating catalog puts you IN its default index rather
   // than in an undifferentiated merge of everything.
-  test("the root index is preselected and the grid is scoped to it", async () => {
+  test("the default index is preselected and the grid is scoped to it", async () => {
     const wrapper = await mountCatalog(MULTI);
 
     expect(wrapper.find('[data-slot="index-tabs"] .index-tab.active').text()).toContain("ocx.sh");
@@ -178,19 +192,41 @@ describe("index scope — what is selected, and what the grid shows", () => {
     expect(cardNames(wrapper)).toHaveLength(3);
   });
 
-  // No `root: true` source anywhere: nothing is more default than anything
-  // else, so the catalog opens on the widest scope instead of picking one.
-  test("with no root index configured, all is what is selected", async () => {
+  // Neither a root NOR a default source anywhere: nothing is more default
+  // than anything else, so the catalog opens on the widest scope instead of
+  // picking one.
+  test("with no default index configured, all is what is selected", async () => {
     const wrapper = await mountCatalog({
       ...MULTI,
       indexes: [
-        { name: "ocx.sh", root: false, count: 1 },
-        { name: "acme", root: false, count: 2 },
+        { name: "ocx.sh", root: false, default: false, count: 1 },
+        { name: "acme", root: false, default: false, count: 2 },
       ],
     });
 
     expect(wrapper.find('[data-slot="index-tabs"] .index-tab.active').text()).toContain("all");
     expect(cardNames(wrapper)).toHaveLength(3);
+  });
+
+  // The case the `root` flag alone could not express, and the reason
+  // `default` exists: no source is mirrored at the site root — so every route
+  // stays qualified, `ocx.sh` included — and the catalog still opens on the
+  // index config named. Preselection and placement are answered separately.
+  test("a catalog with no root index still opens on the one marked default", async () => {
+    const wrapper = await mountCatalog(MULTI_NOROOT_DEFAULT);
+
+    expect(wrapper.find('[data-slot="index-tabs"] .index-tab.active').text()).toContain("acme");
+    expect(cardNames(wrapper)).toEqual(["/acme/platform/deploy-kit", "/acme/widgets/tool"]);
+
+    // The badge marks the same entry the preselection did — one field, read
+    // twice, never two rules that can drift apart.
+    const tabs = wrapper.find('[data-slot="index-tabs"]').findAll(".index-tab");
+    expect(tabs.map(tab => tab.find(".index-default").exists())).toEqual([false, false, true]);
+
+    // …and nothing about the default moved a URL: `ocx.sh` is not root, so
+    // its own package is still linked at its qualified route.
+    await wrapper.findAll('[data-slot="index-tabs"] .index-tab')[0]!.trigger("click");
+    expect(cardNames(wrapper)).toContain("/ocx.sh/widgets/tool");
   });
 });
 
@@ -330,7 +366,7 @@ describe("index scope — the address bar is the link", () => {
 });
 
 describe("index scope — a package link names the index it came from", () => {
-  test("the default index keeps bare routes, every other index qualifies", async () => {
+  test("the root index keeps bare routes, every other index qualifies", async () => {
     const wrapper = await mountCatalog(MULTI);
     await wrapper.findAll('[data-slot="index-tabs"] .index-tab')[0]!.trigger("click");
 

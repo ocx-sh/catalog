@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isDefaultIndex, packageRoutePath, packageRouteSegments } from "../../src/viewmodel/route.js";
+import { isRootIndex, packageRoutePath, packageRouteSegments } from "../../src/viewmodel/route.js";
 import type { CatalogIndexInfo } from "../../src/viewmodel/types.js";
 
 /*
@@ -25,26 +25,26 @@ const NO_DEFAULT: CatalogIndexInfo[] = [{ name: "corp.example", root: false, cou
 
 const LONE_ROOT: CatalogIndexInfo[] = [{ name: "ocx.sh", root: true, count: 2 }];
 
-describe("isDefaultIndex", () => {
+describe("isRootIndex", () => {
   it("is the index the envelope marks root", () => {
-    expect(isDefaultIndex("ocx.sh", AGGREGATED)).toBe(true);
-    expect(isDefaultIndex("corp.example", AGGREGATED)).toBe(false);
+    expect(isRootIndex("ocx.sh", AGGREGATED)).toBe(true);
+    expect(isRootIndex("corp.example", AGGREGATED)).toBe(false);
   });
 
   // The case that used to 404: one index, not the default, so its packages
   // are qualified even though there is nothing to disambiguate them from.
   it("is false for every index when the envelope marks no root", () => {
-    expect(isDefaultIndex("corp.example", NO_DEFAULT)).toBe(false);
+    expect(isRootIndex("corp.example", NO_DEFAULT)).toBe(false);
   });
 
   // A catalog.json this renderer did not write (the Python bot emits no
   // `indexes` key) has one index and no qualification.
   it("is true when there is no envelope at all", () => {
-    expect(isDefaultIndex("ocx.sh", undefined)).toBe(true);
+    expect(isRootIndex("ocx.sh", undefined)).toBe(true);
   });
 
   it("is false for an index the envelope does not list", () => {
-    expect(isDefaultIndex("stranger", AGGREGATED)).toBe(false);
+    expect(isRootIndex("stranger", AGGREGATED)).toBe(false);
   });
 });
 

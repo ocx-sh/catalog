@@ -52,9 +52,11 @@ const query = ref('')
 
 // Index scope. `null` is "all". Read off `?index=` at mount, before the
 // catalog resolves, so the first paint is already scoped; once the catalog
-// arrives, an absent param settles on the DEFAULT index — the `root: true`
-// source — and only falls back to "all" when a config declares no root
-// source at all, in which case no index is more default than another.
+// arrives, an absent param settles on the index the envelope marks `default`
+// — and only falls back to "all" when a config named neither a `default: true`
+// source nor a `root: true` one, in which case no index is more default than
+// another. `default` is NOT `root`: a catalog with no root source (every
+// route qualified, nothing at the site root) can still name where to land.
 //
 // A scope is a place, not a filter: it stays out of `activeFilterLabels` and
 // `clearFilters` below, and an unknown `?index=` value is ignored rather than
@@ -108,7 +110,7 @@ function resolveScope() {
     activeIndex.value = urlIndex
     return
   }
-  activeIndex.value = list.find(entry => entry.root)?.name ?? null
+  activeIndex.value = list.find(entry => entry.default)?.name ?? null
 }
 
 watch(indexes, resolveScope)

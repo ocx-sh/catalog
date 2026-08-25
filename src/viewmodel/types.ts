@@ -151,11 +151,21 @@ export interface CatalogIndexInfo {
    * (`LABEL_PREFIX_MISMATCH`). One name for one index, so the scope tab and
    * the qualified name printed on every card cannot disagree. */
   readonly name: string;
-  /** This is the `root: true` source — the deployment's default index,
-   * preselected on arrival, and the only one whose packages keep bare
-   * `/<ns>/<pkg>` routes. At most one entry has it; a config with no root
-   * source has none, and then the catalog opens on "all". */
+  /** This is the `root: true` source — mirrored at the site root, and the
+   * only one whose packages keep bare `/<ns>/<pkg>` routes. At most one entry
+   * has it; a config with no root source has none, and then every route is
+   * qualified. PLACEMENT only: which index the catalog opens on is
+   * `default`. */
   readonly root: boolean;
+  /** This is the index the catalog view opens on, badged "default" in the
+   * scope tab row. Already RESOLVED here: `default: true` on a source when a
+   * config names one, otherwise the `root: true` source. At most one entry
+   * has it — a config with neither has none, and the catalog opens on "all".
+   *
+   * Separate from `root` because a catalog with no root source at all still
+   * needs somewhere to land: nothing is served at the site root, every route
+   * is qualified, and one of the indexes is still the one to open on. */
+  readonly default: boolean;
   /** Packages this index contributes to the MERGED catalog. */
   readonly count: number;
 }

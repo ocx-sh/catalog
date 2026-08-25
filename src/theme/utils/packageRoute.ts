@@ -13,4 +13,4 @@
  * imports from `utils/`, and because a component reaching into `viewmodel/`
  * for a route would blur which module owns the rule.
  */
-export { isDefaultIndex, packageRoutePath } from '../../viewmodel/route.js'
+export { isRootIndex, packageRoutePath } from '../../viewmodel/route.js'

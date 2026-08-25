@@ -43,9 +43,16 @@ export interface CatalogIndexInfo {
   /** The index's own name — the first `/`-segment of every package name it
    * publishes, and what the scope tab shows. */
   name: string
-  /** The default index: preselected on arrival, and the only one whose
-   * packages keep bare routes. No entry has it when no source is `root`. */
+  /** The root index: mirrored at the site root, and the only one whose
+   * packages keep bare routes. No entry has it when no source is `root`.
+   * Placement only — see `default` for which index the view opens on. */
   root: boolean
+  /** The default index: preselected on arrival and badged "default" in the
+   * tab row. Already resolved by the build (`default: true` on a source, else
+   * the `root` one), so at most one entry has it and no fallback rule lives
+   * here. No entry has it when a config names neither, and the catalog then
+   * opens on "all". */
+  default: boolean
   /** Packages this index contributes to the merged catalog. */
   count: number
 }

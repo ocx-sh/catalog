@@ -422,6 +422,53 @@ describe("C-002 loadConfig error codes", () => {
     });
   });
 
+  it("MULTIPLE_DEFAULT: two entries set default:true, naming both indices", async () => {
+    await withTempDir(async (dir) => {
+      const configPath = await writeConfig(dir, {
+        sources: [
+          { path: "a", default: true },
+          { path: "b" },
+          { path: "c", default: true },
+        ],
+        brand: { title: "x" },
+      });
+      const error = await loadConfigError(configPath);
+      expect(error.code).toBe("MULTIPLE_DEFAULT");
+      expect(error.message).toMatch(/\b0\b/);
+      expect(error.message).toMatch(/\b2\b/);
+    });
+  });
+
+  // `root` and `default` are separate questions — placement vs. which index
+  // the catalog opens on — so one entry may answer both, and two entries may
+  // answer one each. Neither combination is a conflict.
+  it("accepts default on a non-root entry, and root and default on different ones", async () => {
+    await withTempDir(async (dir) => {
+      const configPath = await writeConfig(dir, {
+        sources: [
+          { path: "a", root: true },
+          { path: "b", default: true },
+        ],
+        brand: { title: "x" },
+      });
+      const loaded = await loadConfig(configPath);
+      expect(loaded.sources.map((source) => source.entry.default)).toEqual([undefined, true]);
+      expect(loaded.sources.map((source) => source.entry.root)).toEqual([true, undefined]);
+    });
+  });
+
+  it("INVALID_TYPE: default is not a boolean", async () => {
+    await withTempDir(async (dir) => {
+      const configPath = await writeConfig(dir, {
+        sources: [{ path: "a", default: "yes" }],
+        brand: { title: "x" },
+      });
+      const error = await loadConfigError(configPath);
+      expect(error.code).toBe("INVALID_TYPE");
+      expect(error.message).toContain("sources[0].default");
+    });
+  });
+
   describe("LABEL_CONFLICT", () => {
     it("rejects two entries sharing the same explicit label", async () => {
       await withTempDir(async (dir) => {

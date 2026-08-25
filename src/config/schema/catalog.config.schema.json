@@ -22,10 +22,11 @@
       "type": "array",
       "minItems": 1,
       "items": { "$ref": "#/$defs/sourceEntry" },
-      "contains": { "$ref": "#/$defs/rootSourceEntry" },
-      "minContains": 0,
-      "maxContains": 1,
-      "description": "One or more index sources this catalog renders (path/url/git, discriminated per entry — see sourceEntry). At most one entry may set root: true, serving that source's wire tree at the site root as well as under index/<label>/."
+      "allOf": [
+        { "contains": { "$ref": "#/$defs/rootSourceEntry" }, "minContains": 0, "maxContains": 1 },
+        { "contains": { "$ref": "#/$defs/defaultSourceEntry" }, "minContains": 0, "maxContains": 1 }
+      ],
+      "description": "One or more index sources this catalog renders (path/url/git, discriminated per entry — see sourceEntry). At most one entry may set root: true, serving that source's wire tree at the site root as well as under index/<label>/. At most one entry may set default: true, the index the catalog view opens on — a separate question from root, and the only way to name a default when no source is root at all. Both checks live in allOf because one schema object can hold only one contains."
     },
     "brand": {
       "$ref": "#/$defs/brand",
@@ -92,7 +93,8 @@
           "properties": {
             "path": { "type": "string", "minLength": 1 },
             "label": { "$ref": "#/$defs/label" },
-            "root": { "type": "boolean" }
+            "root": { "type": "boolean" },
+            "default": { "type": "boolean" }
           }
         },
         {
@@ -107,7 +109,8 @@
               "description": "Base URL of a deployed catalog/index instance. https only — /config.json and /c/index.json are the only fetched files that are never digest-verified, so over plain http a network attacker rewrites the enumeration and every downstream digest check then verifies against their digests. src/config/load.ts enforces the same rule with new URL() + a protocol check."
             },
             "label": { "$ref": "#/$defs/label" },
-            "root": { "type": "boolean" }
+            "root": { "type": "boolean" },
+            "default": { "type": "boolean" }
           }
         },
         {
@@ -119,12 +122,19 @@
             "ref": { "type": "string", "minLength": 1 },
             "dir": { "type": "string", "minLength": 1 },
             "label": { "$ref": "#/$defs/label" },
-            "root": { "type": "boolean" }
+            "root": { "type": "boolean" },
+            "default": { "type": "boolean" }
           }
         }
       ]
     },
     "label": { "type": "string", "minLength": 1 },
+    "defaultSourceEntry": {
+      "description": "Matches a sources[] entry declaring default: true, for the array-level contains/maxContains check that caps the count at one. minContains: 0 keeps a config with zero default entries legal — the root: true source, if any, is then the default.",
+      "type": "object",
+      "properties": { "default": { "const": true } },
+      "required": ["default"]
+    },
     "rootSourceEntry": {
       "description": "Matches a sources[] entry declaring root: true, for the array-level contains/maxContains check that caps the count at one. minContains: 0 keeps a config with zero root entries legal.",
       "type": "object",

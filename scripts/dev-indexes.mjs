@@ -45,6 +45,10 @@
  *    the theme's image fallback rather than a build error.
  * 6. **An empty index.** Legal (an explicit label needs no roots to derive
  *    from), and its tab reads 0.
+ * 7. **A default index that is not the root one.** `multi-noroot-default` has
+ *    no root source at all, so every route is qualified and the catalog still
+ *    opens on a named index — the split between placement and preselection
+ *    only shows on a page, never in a unit assertion about one of them.
  */
 import { cp, mkdir, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
 import { dirname, join, relative, resolve } from "node:path";
@@ -241,6 +245,14 @@ async function main() {
     "Aggregated Catalog",
   );
   await writeConfig("multi-noroot", [source(ROOT), source(CORP), source(PARTNER)], "Aggregated, No Default");
+  // No root source, and a default anyway: every route stays qualified (nothing
+  // is served at the site root) while the catalog still OPENS on `corp.example`
+  // and badges its tab. The pair `root: true` alone cannot express.
+  await writeConfig(
+    "multi-noroot-default",
+    [source(ROOT), source(CORP, { default: true }), source(PARTNER)],
+    "Aggregated, Default Without Root",
+  );
   await writeConfig(
     "many",
     [source(ROOT, { root: true }), source(CORP), source(PARTNER), ...extras.map(brand => source(brand))],

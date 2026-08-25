@@ -67,7 +67,7 @@ and the package leaf survive; plain `text-overflow` eats the leaf.
 `utils/packageRoute.ts` re-exports it; `build/sources_pipeline.ts` imports it
 too, so the path a page is WRITTEN at and the path it is LINKED at cannot
 drift. Every link goes through it — cards, table rows and the ⌘K palette. The
-default index keeps bare `/<ns>/<pkg>` routes; every other index qualifies its
+ROOT index keeps bare `/<ns>/<pkg>` routes; every other index qualifies its
 pages with its own name, and a call site that rebuilds the bare path by hand
 404s on all of them.
 
@@ -87,6 +87,18 @@ pick"; a one-entry envelope means one place to be. `CatalogPage.vue`'s
 `hasScope` is that question, asked once and read by both the tab row and the
 `?index=` mirror. `packageRoutePath` still accepts `undefined` — a catalog.json
 this renderer did not write has no such key.
+
+**`root` and `default` are two questions, not one flag.** `indexes[].root` is
+PLACEMENT — mirrored at the site root, therefore bare routes — and is the only
+one `route.ts` reads (`isRootIndex`). `indexes[].default` is which index the
+catalog OPENS on: `CatalogPage.vue`'s preselect and `IndexTabs.vue`'s badge,
+and nothing else. They were one boolean until a deployment with no root source
+at all needed a landing index anyway; the config keys are independent
+(`root: true` / `default: true`, at most one entry each). The fallback —
+`default: true` if a source says so, else the `root: true` source — is
+resolved ONCE, in `sources_pipeline.ts`, so `indexes[].default` reaches the
+theme as a settled fact rather than as a rule two components each re-derive.
+Never make a route ask `default`: a preselected tab must not move a URL.
 
 Scope selection lives in `IndexTabs.vue` above the toolbar, never as a fifth
 filter chip: platforms and keywords are attributes a package HAS, an index is

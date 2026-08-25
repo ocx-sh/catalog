@@ -61,7 +61,7 @@ const overflow = computed(() => props.indexes.slice(MAX_INLINE))
       <span class="index-count">{{ entry.count }}</span>
       <!-- The default index is where an arriving visitor already is, so the
            marker explains the preselection rather than offering an action. -->
-      <span v-if="entry.root" class="index-default">default</span>
+      <span v-if="entry.default" class="index-default">default</span>
     </button>
 
     <PopoverRoot v-if="overflow.length">

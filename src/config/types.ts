@@ -15,8 +15,25 @@ interface SourceEntryCommon {
    * Marks this source as the catalog's self-mirror / primary index (the
    * `index.ocx.sh`-style deployment). At most one entry across `sources[]`
    * may set this — `loadConfig` rejects a second one (`MULTIPLE_ROOT`).
+   *
+   * This is a PLACEMENT flag: the source's wire tree is mirrored at the site
+   * root as well as under `index/<label>/`, and its packages keep bare
+   * `/<ns>/<pkg>` routes. It is not the same question as which index the
+   * catalog OPENS on — see `default`.
    */
   root?: boolean;
+  /**
+   * Marks this source as the index the catalog view opens on (and the one
+   * the scope tab row badges "default"). At most one entry across `sources[]`
+   * may set this — `loadConfig` rejects a second one (`MULTIPLE_DEFAULT`).
+   *
+   * Absent everywhere, the `root: true` source — if there is one — is the
+   * default, which is what every config written before this key existed
+   * means. A catalog with NO root source is exactly why this key exists:
+   * nothing is served at the site root, every route is qualified, and there
+   * is still one index an arriving visitor should land on.
+   */
+  default?: boolean;
 }
 
 /** A source read from a local directory, relative to the config file. */

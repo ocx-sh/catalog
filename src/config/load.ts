@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { dirname, relative, resolve, sep } from "node:path";
 import { ConfigError } from "./errors.js";
+import type { ConfigErrorCode } from "./errors.js";
 import type {
   Brand,
   CatalogConfig,
@@ -89,9 +90,9 @@ const ALLOWED_FORGES = new Set(["github", "gitlab"]);
 const ALLOWED_PACKAGE_MANAGERS = new Set(["npm", "bun"]);
 
 const SOURCE_ENTRY_KEYS: Record<"path" | "url" | "git", readonly string[]> = {
-  path: ["path", "label", "root"],
-  url: ["url", "label", "root"],
-  git: ["git", "ref", "dir", "label", "root"],
+  path: ["path", "label", "root", "default"],
+  url: ["url", "label", "root", "default"],
+  git: ["git", "ref", "dir", "label", "root", "default"],
 };
 
 /** Shared by every optional string field (label, docs, css, publicDir, brand.logo,
@@ -184,18 +185,38 @@ function buildSourceEntry(rawEntry: unknown, index: number): SourceEntry {
 
   const label = optionalString(raw.label, `sources[${index}].label`);
   const root = raw.root === undefined ? undefined : expectBoolean(raw.root, `sources[${index}].root`);
+  // Spelled `isDefault` here only because `default` is a reserved word as a
+  // BINDING name; the config key and the field it lands in are both `default`.
+  const isDefault = raw.default === undefined ? undefined : expectBoolean(raw.default, `sources[${index}].default`);
 
   if (kind === "path") {
-    return { path: expectString(raw.path, `sources[${index}].path`), label, root };
+    return { path: expectString(raw.path, `sources[${index}].path`), label, root, default: isDefault };
   }
   if (kind === "url") {
     const url = expectString(raw.url, `sources[${index}].url`);
     assertPlausibleUrl(url, `sources[${index}].url`, SOURCE_URL_PROTOCOLS, "an https URL");
-    return { url, label, root };
+    return { url, label, root, default: isDefault };
   }
   const ref = optionalString(raw.ref, `sources[${index}].ref`);
   const dir = optionalString(raw.dir, `sources[${index}].dir`);
-  return { git: expectString(raw.git, `sources[${index}].git`), ref, dir, label, root };
+  return { git: expectString(raw.git, `sources[${index}].git`), ref, dir, label, root, default: isDefault };
+}
+
+/**
+ * "At most one `sources[]` entry sets this boolean" — one check, two flags.
+ * `root` and `default` are separate questions (placement vs. which index the
+ * catalog opens on) that happen to share this cardinality rule, so they share
+ * the check rather than two copies of the same reduce.
+ */
+function assertAtMostOne(
+  entries: readonly SourceEntry[],
+  flag: "root" | "default",
+  code: ConfigErrorCode,
+): void {
+  const indices = entries.reduce<number[]>((acc, entry, i) => (entry[flag] ? [...acc, i] : acc), []);
+  if (indices.length > 1) {
+    throw new ConfigError(code, `multiple sources set ${flag}: true (indices ${indices.join(", ")})`);
+  }
 }
 
 /**
@@ -364,6 +385,11 @@ function buildCi(value: unknown): CiConfig {
  * - `sources` must be non-empty -> `EMPTY_SOURCES`.
  * - At most one `sources[]` entry may set `root: true` -> `MULTIPLE_ROOT`
  *   otherwise, naming both conflicting indices.
+ * - At most one `sources[]` entry may set `default: true` ->
+ *   `MULTIPLE_DEFAULT` otherwise, same shape. Separate flag, separate error:
+ *   `root` is where a source's tree is MIRRORED (and therefore which routes
+ *   are bare), `default` is which index the catalog view OPENS on. A config
+ *   may set both on one entry, either on different entries, or neither.
  * - At most one `sources[]` entry may declare a given explicit `label` ->
  *   `LABEL_CONFLICT` otherwise. This is the ONLY label check `loadConfig`
  *   performs — see "Label resolution seam" below.
@@ -478,16 +504,8 @@ export async function loadConfig(configPath: string): Promise<LoadedConfig> {
 
   const entries: SourceEntry[] = sourcesRaw.map((rawEntry, index) => buildSourceEntry(rawEntry, index));
 
-  const rootIndices = entries.reduce<number[]>(
-    (acc, entry, i) => (entry.root ? [...acc, i] : acc),
-    [],
-  );
-  if (rootIndices.length > 1) {
-    throw new ConfigError(
-      "MULTIPLE_ROOT",
-      `multiple sources set root: true (indices ${rootIndices.join(", ")})`,
-    );
-  }
+  assertAtMostOne(entries, "root", "MULTIPLE_ROOT");
+  assertAtMostOne(entries, "default", "MULTIPLE_DEFAULT");
 
   const seenLabels = new Map<string, number>();
   entries.forEach((entry, i) => {

@@ -163,7 +163,8 @@ than one discriminant key present). Two fields are common to every variant:
 | Field | Type | Required | Meaning |
 |---|---|---|---|
 | `label` | string | no | The index's public name — shown by the catalog's index-scope tabs, and the first `/`-segment of every package name this source publishes. Must be unique across `sources[]` (`LABEL_CONFLICT`) and must match that segment (`LABEL_PREFIX_MISMATCH`): a label may restate the name an index gives itself, never rename it. When absent it is derived from the source's own data; `loadConfig` never invents a label itself. |
-| `root` | boolean | no | Marks this source as the catalog's self-mirror, served at the site root in addition to `index/<label>/`. At most one entry across `sources[]` may set this — `MULTIPLE_ROOT` otherwise. |
+| `root` | boolean | no | Marks this source as the catalog's self-mirror, served at the site root in addition to `index/<label>/`. Its packages keep bare `/<ns>/<pkg>` routes; every other index's are qualified with their own name. At most one entry across `sources[]` may set this — `MULTIPLE_ROOT` otherwise. |
+| `default` | boolean | no | Marks this source as the index the catalog view **opens on** — preselected on arrival, badged `default` in the scope tabs. Purely presentational: it moves no page's URL. At most one entry may set this — `MULTIPLE_DEFAULT` otherwise. When no entry sets it, the `root: true` source (if any) is the default; a catalog with **no** root source needs this key to name one at all. |
 
 === "path"
 
@@ -197,6 +198,7 @@ than one discriminant key present). Two fields are common to every variant:
 | `sources` must be non-empty | `EMPTY_SOURCES` | yes (`minItems: 1`) |
 | Each entry sets exactly one of `path`/`url`/`git` | `SOURCE_DISCRIMINANT` | yes (`oneOf` over three closed shapes) |
 | At most one entry may set `root: true` | `MULTIPLE_ROOT` | yes (`contains`/`minContains: 0`/`maxContains: 1`) |
+| At most one entry may set `default: true` | `MULTIPLE_DEFAULT` | yes (same shape — both live inside `allOf`, since one schema object can hold only one `contains`) |
 | Two entries must not declare the same explicit `label` | `LABEL_CONFLICT` | **no** — array-element uniqueness keyed on an optional field isn't expressed in the schema at all; loader-only |
 
 ## Path containment
@@ -297,5 +299,6 @@ that loads a config (`build`, `dev`, `ci`) maps every one of them to exit
 | `SOURCE_DISCRIMINANT` | A `sources[]` entry has zero, or more than one, of `path`/`url`/`git`. |
 | `EMPTY_SOURCES` | `sources` is present but empty. |
 | `MULTIPLE_ROOT` | More than one `sources[]` entry sets `root: true`. |
+| `MULTIPLE_DEFAULT` | More than one `sources[]` entry sets `default: true`. |
 | `LABEL_CONFLICT` | Two `sources[]` entries declare the same explicit `label`. |
 | `PATH_ESCAPE` | A `css`/`docs`/`publicDir`/`brand.logo`/`path` value resolves outside the config file's directory. |

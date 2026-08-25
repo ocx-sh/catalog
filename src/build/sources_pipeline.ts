@@ -277,9 +277,19 @@ export async function resolveCatalog(
   // would be unexplainable from the page.
   const perLabel = new Map<string, number>();
   for (const entry of merged) perLabel.set(entry.label, (perLabel.get(entry.label) ?? 0) + 1);
-  const indexes: CatalogIndexInfo[] = results.map((result) => ({
+  // Which index the catalog OPENS on, resolved here and once: the source that
+  // says `default: true`, else the `root: true` one, else nothing (the
+  // catalog then opens on "all"). Resolved at emit time rather than left to
+  // the theme so `indexes[].default` is a fact with one true entry at most —
+  // the preselect and the tab-row badge read the same field instead of two
+  // copies of the fallback rule. `sources` and `results` are index-parallel:
+  // `results` is built by iterating `sources.entries()` above.
+  const explicitDefault = sources.findIndex((source) => source.entry.default === true);
+  const defaultAt = explicitDefault === -1 ? results.findIndex((result) => result.resolved.root) : explicitDefault;
+  const indexes: CatalogIndexInfo[] = results.map((result, i) => ({
     name: result.resolved.label,
     root: result.resolved.root,
+    default: i === defaultAt,
     count: perLabel.get(result.resolved.label) ?? 0,
   }));
 
