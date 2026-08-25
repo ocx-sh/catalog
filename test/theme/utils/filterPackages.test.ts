@@ -58,24 +58,38 @@ describe('filterPackages', () => {
     expect(filterPackages(packages, { query: 'cma' }).map(p => p.name)).toEqual(['kitware/cmake'])
   })
 
-  test('platforms facet: OR within the facet (matches ANY selected platform)', () => {
+  // Issue #5: these two used to be OR-within-facet, so a second chip WIDENED
+  // the result set. Every chip now narrows.
+  test('platforms facet: AND within the facet (matches only packages shipping ALL of them)', () => {
     const packages = [
       pkg({ name: 'a', platforms: ['linux/amd64'] }),
       pkg({ name: 'b', platforms: ['darwin/arm64'] }),
-      pkg({ name: 'c', platforms: ['windows/amd64'] }),
+      pkg({ name: 'both', platforms: ['linux/amd64', 'darwin/arm64'] }),
     ]
-    const result = filterPackages(packages, { platforms: ['linux', 'darwin'] }).map(p => p.name)
-    expect(result.sort()).toEqual(['a', 'b'])
+    expect(filterPackages(packages, { platforms: ['linux', 'darwin'] }).map(p => p.name)).toEqual(['both'])
+    // One chip still selects everything shipping it — narrowing, not exclusion.
+    expect(filterPackages(packages, { platforms: ['linux'] }).map(p => p.name)).toEqual(['a', 'both'])
   })
 
-  test('keywords facet: OR within the facet (matches ANY selected keyword)', () => {
+  test('keywords facet: AND within the facet (matches only packages carrying ALL of them)', () => {
     const packages = [
       pkg({ name: 'a', keywords: ['build'] }),
       pkg({ name: 'b', keywords: ['lint'] }),
-      pkg({ name: 'c', keywords: ['test'] }),
+      pkg({ name: 'both', keywords: ['build', 'lint'] }),
     ]
-    const result = filterPackages(packages, { keywords: ['build', 'lint'] }).map(p => p.name)
-    expect(result.sort()).toEqual(['a', 'b'])
+    expect(filterPackages(packages, { keywords: ['build', 'lint'] }).map(p => p.name)).toEqual(['both'])
+    expect(filterPackages(packages, { keywords: ['build'] }).map(p => p.name)).toEqual(['a', 'both'])
+  })
+
+  // A selection no package satisfies must empty the grid, not fall back to a
+  // wider match — the visible difference between AND and OR when the two
+  // chips have no overlap at all.
+  test('a platform pair no package ships yields nothing', () => {
+    const packages = [
+      pkg({ name: 'a', platforms: ['linux/amd64'] }),
+      pkg({ name: 'b', platforms: ['windows/amd64'] }),
+    ]
+    expect(filterPackages(packages, { platforms: ['linux', 'windows'] })).toEqual([])
   })
 
   test('facets combine with AND across categories', () => {

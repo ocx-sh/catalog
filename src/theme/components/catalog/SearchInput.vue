@@ -8,7 +8,13 @@ import { ref } from 'vue'
 // exposes `focus()` for CatalogPage's page-scoped "/" handler to call.
 
 const props = defineProps<{ modelValue: string }>()
-const emit = defineEmits<{ 'update:modelValue': [value: string] }>()
+const emit = defineEmits<{
+  'update:modelValue': [value: string]
+  /** Plain Tab forward out of the field. The event travels with it so the
+   * parent — the only thing that knows whether there are results to jump to
+   * — can preventDefault, or decline and let Tab behave normally. */
+  next: [event: KeyboardEvent]
+}>()
 
 // Two-stage Escape (VS Code/Slack pattern): with text, first Esc clears the
 // query and keeps focus for a fresh one; on an empty field, Esc blurs.
@@ -66,6 +72,7 @@ defineExpose({
       @focus="onFocus"
       @mouseup="onMouseup"
       @keydown.esc="onEsc"
+      @keydown.tab.exact="emit('next', $event)"
     >
     <button
       v-if="modelValue"

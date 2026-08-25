@@ -46,37 +46,49 @@ const popoverKeywords = computed(() => {
 
 <template>
   <div class="filter-chips">
-    <button
-      v-for="os in OS_ORDER"
-      :key="os"
-      type="button"
-      class="chip"
-      :class="{ active: activePlatforms.includes(os) }"
-      :aria-pressed="activePlatforms.includes(os)"
-      @click="emit('toggle-platform', os)"
-    >
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-        <path v-for="(p, i) in OS_GLYPHS[os].paths" :key="i" :d="p" />
-        <rect v-for="(r, i) in OS_GLYPHS[os].rects" :key="i" :x="r.x" :y="r.y" :width="r.w" :height="r.h" />
-      </svg>
-      {{ os }}
-      <span v-if="activePlatforms.includes(os)" class="chip-close">✕</span>
-    </button>
+    <!-- Three groups, not one flat row: only the keyword group flexes, so
+         narrowing the window shrinks IT and never pushes the trailing
+         status chips onto a second line (issue #5). -->
+    <span class="chip-platforms">
+      <button
+        v-for="os in OS_ORDER"
+        :key="os"
+        type="button"
+        class="chip"
+        :class="{ active: activePlatforms.includes(os) }"
+        :aria-pressed="activePlatforms.includes(os)"
+        @click="emit('toggle-platform', os)"
+      >
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path v-for="(p, i) in OS_GLYPHS[os].paths" :key="i" :d="p" />
+          <rect v-for="(r, i) in OS_GLYPHS[os].rects" :key="i" :x="r.x" :y="r.y" :width="r.w" :height="r.h" />
+        </svg>
+        {{ os }}
+        <span v-if="activePlatforms.includes(os)" class="chip-close">✕</span>
+      </button>
+    </span>
 
     <span v-if="OS_ORDER.length" class="chip-divider" />
 
-    <button
-      v-for="kw in visibleKeywords"
-      :key="kw.keyword"
-      type="button"
-      class="chip"
-      :class="{ active: activeKeywords.includes(kw.keyword) }"
-      :aria-pressed="activeKeywords.includes(kw.keyword)"
-      @click="emit('toggle-keyword', kw.keyword)"
-    >
-      {{ kw.keyword }}
-      <span v-if="activeKeywords.includes(kw.keyword)" class="chip-close">✕</span>
-    </button>
+    <!-- The rail is rescored against the CURRENT result set, so this list
+         changes on every click — a chip you just picked slides to the front
+         and the rest re-flow around it. TransitionGroup's FLIP does the
+         sliding; without it the whole rail would silently teleport, which
+         reads as the chips having been replaced rather than reordered. -->
+    <TransitionGroup name="chip" tag="span" class="chip-keywords">
+      <button
+        v-for="kw in visibleKeywords"
+        :key="kw.keyword"
+        type="button"
+        class="chip"
+        :class="{ active: activeKeywords.includes(kw.keyword) }"
+        :aria-pressed="activeKeywords.includes(kw.keyword)"
+        @click="emit('toggle-keyword', kw.keyword)"
+      >
+        {{ kw.keyword }}
+        <span v-if="activeKeywords.includes(kw.keyword)" class="chip-close">✕</span>
+      </button>
+    </TransitionGroup>
 
     <PopoverRoot v-if="hiddenKeywordCount > 0">
       <PopoverTrigger class="chip-more">
@@ -109,47 +121,123 @@ const popoverKeywords = computed(() => {
       </PopoverPortal>
     </PopoverRoot>
 
-    <button
-      type="button"
-      class="chip chip-deprecated"
-      :class="{ active: deprecatedActive }"
-      :aria-pressed="deprecatedActive"
-      @click="emit('toggle-deprecated')"
-    >
-      deprecated
-      <span v-if="deprecatedActive" class="chip-close">✕</span>
-    </button>
+    <span class="chip-status">
+      <button
+        type="button"
+        class="chip chip-deprecated"
+        :class="{ active: deprecatedActive }"
+        :aria-pressed="deprecatedActive"
+        @click="emit('toggle-deprecated')"
+      >
+        deprecated
+        <span v-if="deprecatedActive" class="chip-close">✕</span>
+      </button>
 
-    <button
-      type="button"
-      class="chip chip-yanked"
-      :class="{ active: yankedActive }"
-      :aria-pressed="yankedActive"
-      @click="emit('toggle-yanked')"
-    >
-      yanked
-      <span v-if="yankedActive" class="chip-close">✕</span>
-    </button>
+      <button
+        type="button"
+        class="chip chip-yanked"
+        :class="{ active: yankedActive }"
+        :aria-pressed="yankedActive"
+        @click="emit('toggle-yanked')"
+      >
+        yanked
+        <span v-if="yankedActive" class="chip-close">✕</span>
+      </button>
+    </span>
   </div>
 </template>
 
 <style scoped>
 @layer ocx {
+/* One line, always. Wrapping was the defect: at a narrow width the rail
+   dropped `deprecated`/`yanked` onto a second row, because no chip shrinks
+   (each is content-sized and floored by its own longest word) and the rail's
+   keyword count is a plain constant, not viewport-aware. Instead the KEYWORD
+   group is the single flexible child and scrolls, the same treatment
+   `IndexTabs.vue` gives an over-long tab row. */
 .filter-chips {
   display: flex;
   align-items: center;
   gap: var(--ocx-space-2);
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  /* Backstop for the extreme case where platforms + status alone overflow. */
+  overflow-x: auto;
+}
+
+.chip-platforms,
+.chip-status {
+  display: flex;
+  align-items: center;
+  gap: var(--ocx-space-2);
+  flex-shrink: 0;
+}
+
+/* The one child that absorbs the shrink. Growing is also what pushes the
+   status chips to the right edge — the old `.chip-deprecated { margin-left:
+   auto }` is gone, since an auto margin on an overflowing flex line can put
+   the item out of scroll reach. */
+.chip-keywords {
+  display: flex;
+  align-items: center;
+  gap: var(--ocx-space-2);
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-x: auto;
+  /* Containing block for a leaving chip — see `.chip-leave-active`. */
+  position: relative;
+}
+
+/* Rail transitions. `.chip-move` is the FLIP transform TransitionGroup
+   measures for itself; enter/leave add the fade. A leaving chip is taken out
+   of flow, otherwise it holds its slot for the whole duration and the
+   survivors slide only after it is gone — two sequential movements where
+   there should be one. Global `prefers-reduced-motion` in base.css already
+   collapses all three to ~0ms; nothing extra is needed here. */
+.chip-move,
+.chip-enter-active,
+.chip-leave-active {
+  transition:
+    transform var(--ocx-duration-moderate) ease-out,
+    opacity var(--ocx-duration-moderate) ease-out;
+}
+
+.chip-enter-from,
+.chip-leave-to {
+  opacity: 0;
+  transform: translateX(calc(-1 * var(--ocx-space-4)));
+}
+
+.chip-leave-active {
+  position: absolute;
+}
+
+/* No visible scrollbar on either scroller: it would sit under the chips and
+   change the rail's HEIGHT as the window narrows, which is the same
+   layout-jump this whole change removes. Nothing is lost — every keyword,
+   scrolled-past or not, is listed in the "+N more" popover. */
+.filter-chips,
+.chip-keywords {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.filter-chips::-webkit-scrollbar,
+.chip-keywords::-webkit-scrollbar {
+  display: none;
 }
 
 .chip {
   display: inline-flex;
   align-items: center;
+  flex-shrink: 0;
   gap: var(--ocx-space-3);
   font-family: var(--ocx-font-mono);
   font-size: var(--ocx-text-xs);
   font-weight: var(--ocx-font-weight-medium);
   color: var(--ocx-color-fg-muted);
+  /* A long keyword is scrolled past, never broken across two lines inside
+     its own pill. */
+  white-space: nowrap;
   border: var(--ocx-border-width) solid var(--ocx-color-border);
   border-radius: var(--ocx-radius-full);
   padding: var(--ocx-space-2) var(--ocx-space-4);
@@ -182,6 +270,8 @@ const popoverKeywords = computed(() => {
   font-size: var(--ocx-text-2xs);
 }
 
+/* Pinned beside the status chips, never scrolled away — it is the only way
+   back to a keyword the rail has scrolled past. */
 .chip-more {
   font-family: var(--ocx-font-mono);
   font-size: var(--ocx-text-xs);
@@ -191,14 +281,12 @@ const popoverKeywords = computed(() => {
   border: none;
   padding: var(--ocx-space-2) var(--ocx-space-3);
   cursor: pointer;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .chip-more:hover {
   color: var(--ocx-color-fg);
-}
-
-.chip-deprecated {
-  margin-left: auto;
 }
 
 .chip-divider {
