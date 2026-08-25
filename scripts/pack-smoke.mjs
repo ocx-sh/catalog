@@ -214,7 +214,7 @@ function collectShippedSourceFiles(dir) {
   return files;
 }
 
-/** Strips line comments and block comments from `text`, replacing them with
+/** Strips line, block and `.vue` template comments from `text`, replacing them with
  * whitespace so the rest of the file keeps its shape; string/template
  * literal contents pass through untouched. Without this, a prose comment
  * like "derived from 'upstream data'" would extract "upstream data" as a
@@ -243,6 +243,30 @@ function stripComments(text) {
       }
       out += "  ";
       i += 2;
+    } else if (text.slice(i, i + 4) === "<!--" && text.indexOf("-->", i + 4) !== -1) {
+      // A `.vue` template comment, and only a CLOSED one — the `indexOf`
+      // guard above matters because this branch runs on every shipped source
+      // file, not just `.vue`. An unterminated `<!--` (a stray sequence in a
+      // `.ts` file, where `a<!--b` is legal as `a < --b`) would otherwise
+      // blank the rest of the file, hiding every import below it from
+      // `extractSpecifiers` — a dependency-completeness gate that silently
+      // stops looking is indistinguishable from one that passed.
+      //
+      // Not optional prose-stripping: an ordinary
+      // apostrophe in one ("the button's own label") reads as a string
+      // opener to the branch below, which then runs to the next apostrophe
+      // anywhere in the file and can swallow a real `/*` on the way — after
+      // which that block comment's body is scanned as code. That is exactly
+      // how a CSS comment mentioning `from "github"` became a phantom
+      // dependency on a package called `github`.
+      out += "    ";
+      i += 4;
+      while (i < text.length && text.slice(i, i + 3) !== "-->") {
+        out += text[i] === "\n" ? "\n" : " ";
+        i++;
+      }
+      out += "   ";
+      i += 3;
     } else if (text[i] === "'" || text[i] === '"' || text[i] === "`") {
       const quote = text[i];
       out += text[i];
