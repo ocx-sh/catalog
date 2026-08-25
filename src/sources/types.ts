@@ -121,7 +121,26 @@ export type SourceErrorCode =
   | "LABEL_CONFLICT"
   /** `labels.ts`: a resolved label (explicit or derived) isn't safe to use
    * as exactly one filesystem path segment under `dist/index/<label>/`. */
-  | "LABEL_PATH_UNSAFE";
+  | "LABEL_PATH_UNSAFE"
+  /** `labels.ts`: an EXPLICIT `label` disagrees with the single first-name
+   * segment its own package roots carry. The label is what the index-scope
+   * tab row shows; that segment is what every card prints as part of the
+   * qualified name — two names for one index is a UI that contradicts
+   * itself, so the config is rejected rather than reconciled. Derived
+   * labels satisfy this by construction. */
+  | "LABEL_PREFIX_MISMATCH"
+  /** `labels.ts`: a non-root source's label equals a namespace the `root`
+   * source publishes, so both claim the route `/<that segment>/…` — the
+   * root source's package page and the whole non-root index. Cross-source,
+   * so it can only be checked once every source is read. */
+  | "INDEX_NAMESPACE_COLLISION"
+  /** `labels.ts`: a non-root source's label equals a top-level path this
+   * build writes itself (`docs`, `data`, `assets`, `p`, `index`, `404`,
+   * `public`), so the index and that path both claim `/<label>/`. Sibling of
+   * `INDEX_NAMESPACE_COLLISION` — same collision, the other claimant.
+   * Compared case-insensitively, since macOS and Windows resolve `Docs` and
+   * `docs` to one directory. */
+  | "INDEX_LABEL_RESERVED";
 
 /**
  * Raised by the source-reading layer for any failure listed in

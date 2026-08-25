@@ -23,8 +23,14 @@ const SRC_DIR = "src";
 const CONSUMER_ACCENT = "#123456";
 const THEME_ACCENT = "#ff6047"; // src/theme/styles/tokens/palette.css, --ocx-color-accent
 
+/** A root:true source's route: namespace/package read straight back off segments. */
 function route(segments: readonly string[]): PackageRoute {
-  return { segments, wireBase: "" };
+  return {
+    segments,
+    namespace: segments[0]!,
+    package: segments.slice(1).join("/"),
+    wireBase: "",
+  };
 }
 
 /** Every stylesheet-loading `<link>` href in `html`, in document order.

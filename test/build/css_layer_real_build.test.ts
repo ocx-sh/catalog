@@ -28,8 +28,14 @@ import { linkNodeModules } from "./helpers.js";
 
 const SRC_DIR = "src";
 
+/** A root:true source's route: namespace/package read straight back off segments. */
 function route(segments: readonly string[]): PackageRoute {
-  return { segments, wireBase: "" };
+  return {
+    segments,
+    namespace: segments[0]!,
+    package: segments.slice(1).join("/"),
+    wireBase: "",
+  };
 }
 
 /** Every stylesheet the built page links, concatenated in document order. */

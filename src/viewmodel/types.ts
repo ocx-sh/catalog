@@ -142,11 +142,44 @@ export interface CatalogEntry {
 }
 
 /**
+ * One configured index, as the catalog's own index-scope control sees it.
+ * This package's own extension — no Python counterpart, see `catalogIndex`.
+ */
+export interface CatalogIndexInfo {
+  /** The index's name: the single first `/`-segment its package names
+   * carry, which `sources/labels.ts` also enforces its config label equals
+   * (`LABEL_PREFIX_MISMATCH`). One name for one index, so the scope tab and
+   * the qualified name printed on every card cannot disagree. */
+  readonly name: string;
+  /** This is the `root: true` source — the deployment's default index,
+   * preselected on arrival, and the only one whose packages keep bare
+   * `/<ns>/<pkg>` routes. At most one entry has it; a config with no root
+   * source has none, and then the catalog opens on "all". */
+  readonly root: boolean;
+  /** Packages this index contributes to the MERGED catalog. */
+  readonly count: number;
+}
+
+/**
  * `/data/catalog/catalog.json`'s envelope. Ported from Python
- * `_catalog_index` (`core/render.py:312-320`).
+ * `_catalog_index` (`core/render.py:312-320`), plus this package's own
+ * `indexes` extension.
+ *
+ * Field order IS the wire key order (see `serializeCatalog`): `generated`,
+ * `indexes`, `packages`.
+ *
+ * `indexes` is optional-not-nullable, the same convention as
+ * `CatalogEntry.variants` and for the same mechanical reason — an
+ * `undefined` property is what `JSON.stringify` drops on its own. Optional
+ * because a caller may have no indexes to state (the golden fixtures and
+ * `mirror.ts` build a catalog straight off one reader), NOT because a
+ * particular source count suppresses it: `sources_pipeline.ts` emits the
+ * envelope for every catalog it resolves, one source included, since route
+ * qualification depends on it.
  */
 export interface Catalog {
   readonly generated: string | null;
+  readonly indexes?: readonly CatalogIndexInfo[];
   readonly packages: readonly CatalogEntry[];
 }
 

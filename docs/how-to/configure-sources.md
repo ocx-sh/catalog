@@ -62,9 +62,25 @@ A common shape: your own local index, plus `index.ocx.sh` itself, rendered into 
 }
 ```
 
-The package grid and search merge entries from every configured source. When the same qualified package id (`<namespace>/<package>`) appears in more than one source, **config order is precedence order** — the first configured source's copy wins, and the later duplicate is dropped from the merged list.
+The package grid and search merge entries from every configured source, and nothing is dropped. When the same qualified package id (`<namespace>/<package>`) appears in more than one source, both copies appear as separate cards — each routed to its own index-qualified detail page, so neither shadows the other. See [Multi-source model](../explanation/multi-source-model.md) for how the merge and the routing work.
 
-Per-package detail pages have a narrower story than the grid — see [Multi-source model](../explanation/multi-source-model.md) for the current limitation there.
+!!! warning "Upgrading from 0.3.0 or earlier"
+
+    Two things changed for existing configs.
+
+    **A non-root source's detail-page URLs moved.** They are now
+    `/<label>/<namespace>/<package>` rather than the bare
+    `/<namespace>/<package>`, so that two indexes publishing the same id get
+    two pages. A config where no source sets `root: true` has *every* URL
+    move. Nothing redirects — inbound links and bookmarks to the old shapes
+    break, and translating them is the deployer's job, the same way
+    [`_headers`](../ops/hosting-and-headers.md) is.
+
+    **An explicit `label` may no longer rename an index.** It has to match the
+    first name segment its own package roots carry, or the build fails with
+    `LABEL_PREFIX_MISMATCH`. A config that aliased a source to a different
+    name stops building; drop the `label` and let it derive, or change the
+    name upstream.
 
 ## Self-host your own index
 
@@ -85,8 +101,18 @@ Neither `path` nor `git` makes an outbound network call to a public index — `p
 
 Every source resolves to a **label** — the segment it's mirrored under (`dist/index/<label>/`) and the identifier the `_headers` file names it by. A label comes from one of two places:
 
-- An explicit `label` key in that source's config entry, used verbatim.
+- An explicit `label` key in that source's config entry. It may only *restate* the name the index gives itself — see below — never rename it.
 - When `label` is absent, it's *derived*: the first `/`-segment of every package root's `name` found in that source. Exactly one distinct prefix across the source becomes the label; zero package roots or more than one distinct prefix is a hard error (`LABEL_DERIVATION_EMPTY` / `LABEL_DERIVATION_CONFLICT`) rather than a silently-guessed label.
+
+A label is also the index's **public name**: it is what the catalog's index-scope tabs show, and the first `/`-segment of every package name that index publishes is the same string. So an explicit `label` that disagrees with its own package names fails the build (`LABEL_PREFIX_MISMATCH`) rather than producing a page where the tab says one thing and every card says another:
+
+```json
+{ "url": "https://packages.acme.corp", "label": "acme-internal" }
+```
+
+is rejected when that index's roots are named `acme/…`; write `"label": "acme"`, or leave `label` out and let it derive. (A source with no package roots at all has nothing to disagree with, so an explicit label on an empty index is fine — its scope tab simply reads 0.)
+
+A non-root source's label also becomes the first segment of its packages' page URLs, so it may not equal a namespace the `root: true` source publishes — both would claim `/<that name>/**`. That pair fails the build too (`INDEX_NAMESPACE_COLLISION`).
 
 Two sources resolving to the same final label — whether explicit, derived, or one of each — fails the build (`LABEL_CONFLICT`).
 

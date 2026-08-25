@@ -3,13 +3,14 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { ResolvedSource, SourceEntry } from "../config/types.js";
 import { readGitSource } from "../sources/git.js";
-import { checkLabelConflicts, resolveLabel } from "../sources/labels.js";
+import { checkIndexNamespaceCollisions, checkLabelConflicts, checkReservedIndexLabels, resolveLabel } from "../sources/labels.js";
 import { compareQualifiedIds, mirrorSources } from "../sources/mirror.js";
 import { readPathSource } from "../sources/path.js";
 import { extractPackages, SourceError, type ResolvedSourceFiles, type WirePath } from "../sources/types.js";
 import { readUrlSource } from "../sources/walker.js";
 import { catalogIndex, serializeCatalog } from "../viewmodel/catalog.js";
-import type { CatalogSourcePackage } from "../viewmodel/types.js";
+import { packageRouteSegments } from "../viewmodel/route.js";
+import type { CatalogIndexInfo, CatalogSourcePackage } from "../viewmodel/types.js";
 import { BuildError } from "./errors.js";
 import type { PackageRoute } from "./pages.js";
 import { cacheBaseDir } from "./scratch.js";
@@ -143,6 +144,16 @@ function asBuildError(err: unknown, context: string): BuildError {
   return new BuildError(unavailable ? "UNAVAILABLE" : "DATA", `${context}: ${(err as Error).message}`);
 }
 
+/** One package plus the identity of the source it came from — the merge
+ * carries the label/root flag alongside each package because BOTH the route
+ * shape and the sort tiebreak now depend on which index published it. */
+interface MergedPackage {
+  readonly pkg: CatalogSourcePackage;
+  readonly wireBase: string;
+  readonly label: string;
+  readonly root: boolean;
+}
+
 interface SourceResult {
   readonly resolved: ResolvedSourceFiles;
   readonly packages: readonly CatalogSourcePackage[];
@@ -152,14 +163,23 @@ interface SourceResult {
   readonly wireBase: string;
 }
 
-async function readOneSource(source: ResolvedSource, index: number, configDir: string): Promise<SourceResult> {
+async function readOneSource(
+  source: ResolvedSource,
+  index: number,
+  configDir: string,
+  fallbackLabel: string | undefined,
+): Promise<SourceResult> {
   try {
     const files = await readSource(source.entry, configDir);
     // `labels.ts`: an explicit label is used verbatim, a `null` one is
     // derived from this source's OWN roots — which is why a source with
     // neither an explicit `label` nor a single package root is a hard error
     // (LABEL_DERIVATION_EMPTY), not an empty catalog.
-    const label = resolveLabel(source, files);
+    // Extracted ONCE and shared. `extractPackages` rescans the whole file
+    // map per package root, so it is O(roots x files); `resolveLabel` used to
+    // take the map and run it a second time for every source.
+    const extracted = extractPackages(files);
+    const label = resolveLabel(source, extracted, fallbackLabel);
     const root = source.entry.root === true;
     const wireBase = root ? "" : `index/${label}`;
     // Attached HERE, not inside `extractPackages`: that function reads one
@@ -167,7 +187,7 @@ async function readOneSource(source: ResolvedSource, index: number, configDir: s
     // `catalogEntry` builds this package's `logoUrl`/`readmeUrl` through it,
     // so a non-root source's assets resolve to the `index/<label>/p/...`
     // tree the mirror actually writes.
-    const packages = extractPackages(files).map((pkg) => ({ ...pkg, wireBase }));
+    const packages = extracted.map((pkg) => ({ ...pkg, wireBase }));
     return { resolved: { label, files, root }, packages, wireBase };
   } catch (err) {
     throw asBuildError(err, describeSource(index, source.entry));
@@ -183,10 +203,17 @@ async function readOneSource(source: ResolvedSource, index: number, configDir: s
  * racing it), and no source is fetched after another has already failed.
  *
  * Merge rules:
- * - A qualified package id (`<namespace>/<package>`) present in more than
- *   one source resolves to the FIRST configured source's copy — config order
- *   is precedence order. Without this the grid would show one row per
- *   duplicate and two sources would fight over the same detail-page route.
+ * - Every source's packages are kept. A qualified package id
+ *   (`<namespace>/<package>`) present in more than one source used to
+ *   resolve to the FIRST configured source's copy, because both would
+ *   otherwise claim one detail-page route; index-qualified routes (below)
+ *   removed that constraint, so config order is no longer precedence order
+ *   and nothing is dropped — an aggregating catalog that silently lost a
+ *   mirror's package was never the honest rendering.
+ * - A package's ROUTE is its bare `<namespace>/<package…>` path for the
+ *   `root: true` source and `<label>/<namespace>/<package…>` for every
+ *   other, so the two copies above land on two pages and a copied link
+ *   always names the index it came from.
  * - The merged list is then sorted by `compareQualifiedIds` (`mirror.ts`'s
  *   exported comparator — the same key that module sorts its own per-source
  *   catalogs by, so both agree), because `catalogIndex` explicitly does not
@@ -195,10 +222,11 @@ async function readOneSource(source: ResolvedSource, index: number, configDir: s
 export async function resolveCatalog(
   sources: readonly ResolvedSource[],
   configDir: string,
+  fallbackLabel?: string,
 ): Promise<ResolvedCatalog> {
   const results: SourceResult[] = [];
   for (const [index, source] of sources.entries()) {
-    results.push(await readOneSource(source, index, configDir));
+    results.push(await readOneSource(source, index, configDir, fallbackLabel));
   }
 
   try {
@@ -206,29 +234,71 @@ export async function resolveCatalog(
     // compare EXPLICIT labels pairwise, and derived ones aren't known until
     // every source above has been read.
     checkLabelConflicts(results.map((result) => result.resolved.label));
+    // Same deferral, different collision: a non-root label that is also a
+    // ROOT-source namespace makes two different things claim `/<label>/`.
+    const labelsAndRoots = results.map((result) => ({
+      label: result.resolved.label,
+      root: result.resolved.root,
+    }));
+    checkIndexNamespaceCollisions(
+      labelsAndRoots,
+      new Set(
+        results
+          .filter((result) => result.resolved.root)
+          .flatMap((result) => result.packages.map((pkg) => pkg.packageId.namespace)),
+      ),
+    );
+    // Third claimant on `/<label>/`, after a root namespace: a path this
+    // build writes itself (`docs`, `data`, `assets`, …).
+    checkReservedIndexLabels(labelsAndRoots);
   } catch (err) {
     throw asBuildError(err, "sources");
   }
 
-  const merged: { readonly pkg: CatalogSourcePackage; readonly wireBase: string }[] = [];
-  const seen = new Set<string>();
+  const merged: MergedPackage[] = [];
   for (const result of results) {
     for (const pkg of result.packages) {
-      const id = `${pkg.packageId.namespace}/${pkg.packageId.package}`;
-      if (seen.has(id)) continue;
-      seen.add(id);
-      merged.push({ pkg, wireBase: result.wireBase });
+      merged.push({ pkg, wireBase: result.wireBase, label: result.resolved.label, root: result.resolved.root });
     }
   }
-  merged.sort((a, b) => compareQualifiedIds(a.pkg, b.pkg));
+  // No dedupe by `<namespace>/<package>`: routes are index-qualified for
+  // every non-root source, so two indexes carrying the same id no longer
+  // fight over one detail page — they get one page each and both stay
+  // listed. `compareQualifiedIds` alone is no longer a TOTAL order once ids
+  // repeat, hence the label tiebreak (sources[] order would make the sort
+  // depend on config order for equal ids; the label is intrinsic).
+  merged.sort((a, b) => compareQualifiedIds(a.pkg, b.pkg) || a.label.localeCompare(b.label));
+
+  // Built BEFORE the routes, because the routes are derived FROM it.
+  //
+  // Tab order is config order. Counts come off `merged`, not off each
+  // source's own package list, so they stay the number of cards the grid
+  // actually shows for that index — a count that disagreed with the grid
+  // would be unexplainable from the page.
+  const perLabel = new Map<string, number>();
+  for (const entry of merged) perLabel.set(entry.label, (perLabel.get(entry.label) ?? 0) + 1);
+  const indexes: CatalogIndexInfo[] = results.map((result) => ({
+    name: result.resolved.label,
+    root: result.resolved.root,
+    count: perLabel.get(result.resolved.label) ?? 0,
+  }));
 
   const routes: PackageRoute[] = [];
   const descTable = new Map<string, { title: string; description: string }>();
-  for (const { pkg, wireBase } of merged) {
-    // Depth-N, never a fixed two-segment split ([#716]): the namespace is
-    // one segment, the package name is 1..N more.
-    const segments = [pkg.packageId.namespace, ...pkg.packageId.package.split("/")];
-    routes.push({ segments, wireBase });
+  for (const { pkg, wireBase, label } of merged) {
+    // `viewmodel/route.ts` owns the rule; this asks it rather than restating
+    // it, and asks it against `indexes` — the same array the theme resolves
+    // links from and the same one this function is about to publish. The
+    // source's own `root` flag would be a SECOND predicate for one fact, and
+    // that is precisely the shape that shipped a catalog whose pages and
+    // links disagreed.
+    const segments = packageRouteSegments(label, pkg.packageId.namespace, pkg.packageId.package, indexes);
+    routes.push({
+      segments,
+      namespace: pkg.packageId.namespace,
+      package: pkg.packageId.package,
+      wireBase,
+    });
     const desc = pkg.root.desc;
     if (desc !== null) {
       descTable.set(segments.join("/"), { title: desc.title, description: desc.description });
@@ -237,7 +307,19 @@ export async function resolveCatalog(
 
   let catalogJson: string;
   try {
-    catalogJson = serializeCatalog(catalogIndex(merged.map((entry) => entry.pkg)));
+    catalogJson = serializeCatalog(
+      // ALWAYS emitted, for every source count. It used to be suppressed
+      // below two sources, in the name of staying byte-identical to the
+      // Python bot — but that gate lives on `catalogIndex` itself
+      // (`test/golden/**` and `mirror.ts` both call it with ONE argument and
+      // never reach this function), so the suppression protected nothing and
+      // cost correctness: route qualification is decided per SOURCE at
+      // `:270` (`root ? bare : [label, ...bare]`) while this was decided per
+      // CATALOG, so a single non-root source wrote qualified pages and
+      // published no envelope to resolve them — every card, table row and
+      // ⌘K link 404'd. One predicate, one place.
+      catalogIndex(merged.map((entry) => entry.pkg), indexes),
+    );
   } catch (err) {
     // `catalogEntry` throws on a dangling CAS reference or an unparseable
     // image index — source-data problems, exit 65, not an internal crash.

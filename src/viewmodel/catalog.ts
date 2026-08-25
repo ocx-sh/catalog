@@ -20,6 +20,7 @@ import { findLatestVersion, variantNames } from "./version_order.js";
 import type {
   Catalog,
   CatalogEntry,
+  CatalogIndexInfo,
   CatalogPackageDetail,
   CatalogPackageRoot,
   CatalogSourcePackage,
@@ -384,10 +385,31 @@ export function generatedTimestamp(ordered: readonly CatalogSourcePackage[]): st
  * `packages[]`, packages in the same order as `ordered`. `build_render_plan`
  * upstream sorts `ordered` by package id before calling this — this
  * function does not itself sort.
+ *
+ * `indexes` is this package's own multi-source extension, with no Python
+ * counterpart — the theme's index-scope tab row reads it to learn which
+ * indexes exist, which one is the default, and how many packages each
+ * contributes AFTER the merge (so the per-index counts add up to the whole).
+ * A per-package index field would be redundant: `CatalogEntry.name` is the
+ * qualified wire name, whose first `/`-segment already IS the index.
+ *
+ * Optional at THIS boundary, and that is where the Python-bot byte gate
+ * lives: `test/golden/**` and `mirror.ts` both call this function with one
+ * argument, so omitting the parameter keeps every golden case byte-exact.
+ * That is a property of the CALL, not of the source count — callers that do
+ * have indexes pass them whatever their number, and `sources_pipeline.ts`
+ * does exactly that. It used to suppress the argument below two sources "to
+ * keep golden exact", which was never true (golden does not run through the
+ * pipeline) and broke every link on a single non-root source; see that call
+ * site's own comment.
  */
-export function catalogIndex(ordered: readonly CatalogSourcePackage[]): Catalog {
+export function catalogIndex(
+  ordered: readonly CatalogSourcePackage[],
+  indexes?: readonly CatalogIndexInfo[],
+): Catalog {
   return {
     generated: generatedTimestamp(ordered),
+    ...(indexes === undefined ? {} : { indexes }),
     packages: ordered.map((source) => catalogEntry(source)),
   };
 }

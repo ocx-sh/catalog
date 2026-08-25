@@ -3,6 +3,7 @@ import { readFile, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { createScratchRoot } from "../../src/build/scratch.js";
 import { synthesizePages, type PackageRoute } from "../../src/build/pages.js";
+import { parse as parseYaml } from "yaml";
 import { writeDocsFixture, writeNestedDocsFixture, writePublicDirFixture } from "./helpers.js";
 
 const SRC_DIR = "src";
@@ -29,8 +30,15 @@ async function withScratch<T>(fn: (scratchRoot: string) => Promise<T>): Promise<
   }
 }
 
+/** A root:true source's route: the URL segments ARE the wire identity, so
+ * the namespace/package pair is read straight back off them. */
 function route(segments: readonly string[]): PackageRoute {
-  return { segments, wireBase: "" };
+  return {
+    segments,
+    namespace: segments[0]!,
+    package: segments.slice(1).join("/"),
+    wireBase: "",
+  };
 }
 
 describe("C-005 synthesizePages — always-on root/404 pages", () => {
@@ -151,11 +159,23 @@ describe("C-005/S-008 synthesizePages — depth-N -> file mapping", () => {
       await synthesizePages({
         scratchRoot,
         srcDir: SRC_DIR,
-        packages: [{ segments: ["kitware", "cmake"], wireBase: "index/corp" }],
+        packages: [
+          {
+            segments: ["corp", "kitware", "cmake"],
+            namespace: "kitware",
+            package: "cmake",
+            wireBase: "index/corp",
+          },
+        ],
       });
-      const content = await readFile(join(scratchRoot, SRC_DIR, "kitware", "cmake.md"), "utf8");
+      // The FILE lives at the index-qualified route, while `ns`/`pkg` stay
+      // the wire identity — a CAS URL built from the route would ask for a
+      // namespace called `corp`, which does not exist.
+      const content = await readFile(join(scratchRoot, SRC_DIR, "corp", "kitware", "cmake.md"), "utf8");
       expect(content).toMatch(/^\s*layout:\s*detail\s*$/m);
-      expect(content).toMatch(/^\s*wireBase:\s*'index\/corp'\s*$/m);
+      expect(content).toMatch(/^\s*ns:\s*"kitware"\s*$/m);
+      expect(content).toMatch(/^\s*pkg:\s*"cmake"\s*$/m);
+      expect(content).toMatch(/^\s*wireBase:\s*"index\/corp"\s*$/m);
     });
   });
 
@@ -167,7 +187,95 @@ describe("C-005/S-008 synthesizePages — depth-N -> file mapping", () => {
     await withScratch(async (scratchRoot) => {
       await synthesizePages({ scratchRoot, srcDir: SRC_DIR, packages: [route(["kitware", "cmake"])] });
       const content = await readFile(join(scratchRoot, SRC_DIR, "kitware", "cmake.md"), "utf8");
-      expect(content).toBe("---\nlayout: detail\n---\n");
+      expect(content).toBe('---\nlayout: detail\nns: "kitware"\npkg: "cmake"\n---\n');
+    });
+  });
+
+  // Regression guard for a fixture-drift class this repo has actually hit:
+  // `namespace`/`package` are required PackageRoute fields, but nothing
+  // stops a test helper from building one without them — TypeScript can't
+  // catch it (test/ isn't in tsconfig.json's include, subsystem-tests.md),
+  // so a missing field only fails at `npm test` time, silently, as
+  // `undefined` interpolated straight into a page's frontmatter.
+  it("a synthesized page's frontmatter never carries the literal string undefined", async () => {
+    await withScratch(async (scratchRoot) => {
+      await synthesizePages({ scratchRoot, srcDir: SRC_DIR, packages: [route(["kitware", "cmake"])] });
+      const content = await readFile(join(scratchRoot, SRC_DIR, "kitware", "cmake.md"), "utf8");
+      expect(content).not.toMatch(/:\s*"?undefined"?/);
+    });
+  });
+
+  // A `path`/`git` source's namespace and package segments are real directory
+  // names, and `extractPackages` validates neither — `assertSafePackagePath`
+  // sits behind `casUrl`'s null-digest early return, so a package with no
+  // `desc` block reaches page synthesis unchecked. A dirent may legally
+  // contain `'` and a newline on every filesystem this runs on.
+  //
+  // Hand-quoting with `'…'` therefore let such a name CLOSE the quote and
+  // append frontmatter keys of its own. `head:` is the one that matters:
+  // VitePress renders it into the built page's `<head>`, so a source this
+  // renderer only mirrors could put its own `<script>` on the page. The
+  // `_headers` sandbox does not cover synthesized pages.
+  //
+  // `JSON.stringify` is the fix — YAML 1.2 is a JSON superset, so the value
+  // can only parse back as one string, whatever bytes it holds.
+  describe("frontmatter escaping — untrusted wire segments cannot inject a key", () => {
+    const HOSTILE_NS = 'x\'\nhead:\n  - - script\n    - {}\n    - "alert(document.domain)"\nz: \'';
+
+    it("a namespace carrying a quote and newlines stays one scalar", async () => {
+      await withScratch(async (scratchRoot) => {
+        const hostile: PackageRoute = {
+          segments: ["safe", "widget"],
+          namespace: HOSTILE_NS,
+          package: "widget",
+          wireBase: "",
+        };
+        await synthesizePages({ scratchRoot, srcDir: SRC_DIR, packages: [hostile] });
+        const content = await readFile(join(scratchRoot, SRC_DIR, "safe", "widget.md"), "utf8");
+
+        const parsed = parseYaml(content.replace(/^---\n/, "").replace(/---\n$/, "")) as Record<string, unknown>;
+        // The whole assertion: no THIRD key appeared. `head` is what an
+        // injection would add, and it is the one that executes.
+        expect(Object.keys(parsed)).toEqual(["layout", "ns", "pkg"]);
+        expect(parsed.ns).toBe(HOSTILE_NS);
+        expect(parsed.head).toBeUndefined();
+      });
+    });
+
+    it("a package segment carrying a quote and newlines stays one scalar", async () => {
+      await withScratch(async (scratchRoot) => {
+        const hostile: PackageRoute = {
+          segments: ["safe", "other"],
+          namespace: "safe",
+          package: HOSTILE_NS,
+          wireBase: "",
+        };
+        await synthesizePages({ scratchRoot, srcDir: SRC_DIR, packages: [hostile] });
+        const content = await readFile(join(scratchRoot, SRC_DIR, "safe", "other.md"), "utf8");
+
+        const parsed = parseYaml(content.replace(/^---\n/, "").replace(/---\n$/, "")) as Record<string, unknown>;
+        expect(Object.keys(parsed)).toEqual(["layout", "ns", "pkg"]);
+        expect(parsed.pkg).toBe(HOSTILE_NS);
+      });
+    });
+
+    // `wireBase` is label-derived and so far better constrained, but it rides
+    // the same channel and is escaped by the same rule — one mechanism, no
+    // per-field reasoning about which values happen to be safe today.
+    it("wireBase is escaped on the same terms", async () => {
+      await withScratch(async (scratchRoot) => {
+        const route: PackageRoute = {
+          segments: ["corp", "safe", "widget"],
+          namespace: "safe",
+          package: "widget",
+          wireBase: 'index/corp\nhead: "x"',
+        };
+        await synthesizePages({ scratchRoot, srcDir: SRC_DIR, packages: [route] });
+        const content = await readFile(join(scratchRoot, SRC_DIR, "corp", "safe", "widget.md"), "utf8");
+
+        const parsed = parseYaml(content.replace(/^---\n/, "").replace(/---\n$/, "")) as Record<string, unknown>;
+        expect(Object.keys(parsed)).toEqual(["layout", "ns", "pkg", "wireBase"]);
+      });
     });
   });
 });

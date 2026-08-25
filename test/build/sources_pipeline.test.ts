@@ -81,7 +81,20 @@ const WIDGET_ROOT = rootJsonBytes({
 /** Depth-3 package ([#716]) with NO `desc` block. */
 const GADGET_ROOT = rootJsonBytes({ name: "ocx.sh/acme/tools/gadget", created: "2026-01-03" });
 
-const BETA_ROOT = rootJsonBytes({ name: "ocx.sh/beta/thing", created: "2026-01-04" });
+/** The same package id under a DIFFERENT index — every source in a
+ * multi-source fixture must carry its own brand prefix, since a source's
+ * label and that prefix are now required to agree (`LABEL_PREFIX_MISMATCH`). */
+const CORP_BETA_ROOT = rootJsonBytes({ name: "corp.example/beta/thing", created: "2026-01-04" });
+const CORP_WIDGET_ROOT = rootJsonBytes({ name: "corp.example/acme/widget", created: "2026-01-05" });
+
+/** An index that names itself `acme` — which is also a NAMESPACE the root
+ * fixture publishes (`ocx.sh/acme/widget`), so both would claim `/acme/**`. */
+const ACME_BRAND_ROOT = rootJsonBytes({ name: "acme/tools/thing", created: "2026-01-07" });
+
+/** An index whose own roots name it `docs` — no hostile intent needed, just
+ * an org that called itself that. Its packages would be served at `/docs/**`,
+ * the same prefix `pages.ts` mounts a configured docs tree at. */
+const DOCS_BRAND_ROOT = rootJsonBytes({ name: "docs/guide/tool", created: "2026-01-06" });
 
 /** The wire tree both the `path` and the `git` fixtures use. */
 const WIRE_TREE: Readonly<Record<string, Uint8Array>> = {
@@ -156,8 +169,8 @@ describe("sources_pipeline resolveCatalog — path source", () => {
     // Depth-N segments, sorted `acme/tools/gadget` < `acme/widget`; the
     // root:true source's packages carry the empty wireBase.
     expect(catalog.routes).toEqual([
-      { segments: ["acme", "tools", "gadget"], wireBase: "" },
-      { segments: ["acme", "widget"], wireBase: "" },
+      { segments: ["acme", "tools", "gadget"], namespace: "acme", package: "tools/gadget", wireBase: "" },
+      { segments: ["acme", "widget"], namespace: "acme", package: "widget", wireBase: "" },
     ]);
 
     expect(catalog.descLookup(["acme", "widget"])).toEqual({ title: "Widget", description: "The widget." });
@@ -176,10 +189,19 @@ describe("sources_pipeline resolveCatalog — path source", () => {
     expect(parsed.generated).toBe("2026-01-02T00:00:00Z");
     expect(parsed.packages[1]?.platforms).toEqual(["linux/amd64"]);
 
-    // Byte-identical to the same view model built straight off the reader —
-    // the pipeline adds ordering, never a re-serialization of its own.
+    // Byte-identical to the same view model built straight off the reader,
+    // GIVEN the same `indexes` argument — the pipeline adds ordering and the
+    // envelope, never a re-serialization of its own. The envelope ships for
+    // every catalog now, one source included, because route qualification
+    // reads it; the Python-bot byte gate lives on `catalogIndex` itself
+    // (`test/golden/**` calls it with one argument and never comes through
+    // here), so it is unaffected either way.
     const files = await readPathSource({ path: "index" }, dir);
-    const expectedJson = serializeCatalog(catalogIndex([...extractPackages(files)].sort(compareQualifiedIds)));
+    const expectedJson = serializeCatalog(
+      catalogIndex([...extractPackages(files)].sort(compareQualifiedIds), [
+        { name: "ocx.sh", root: true, count: 2 },
+      ]),
+    );
     expect(catalog.catalogJson).toBe(expectedJson);
   });
 
@@ -187,10 +209,90 @@ describe("sources_pipeline resolveCatalog — path source", () => {
     const dir = await tempDir("catalog-pipeline-nonroot-");
     await writeTree(join(dir, "index"), WIRE_TREE);
 
-    const catalog = await resolveCatalog([pathSource("index", { label: "upstream" })], dir);
+    // An explicit label may only restate what the roots already say
+    // (`labels.ts`'s LABEL_PREFIX_MISMATCH), so it is the roots' own prefix.
+    const catalog = await resolveCatalog([pathSource("index", { label: "ocx.sh" })], dir);
 
-    expect(catalog.sources[0]).toMatchObject({ label: "upstream", root: false });
-    expect(catalog.routes.map((route) => route.wireBase)).toEqual(["index/upstream", "index/upstream"]);
+    expect(catalog.sources[0]).toMatchObject({ label: "ocx.sh", root: false });
+    expect(catalog.routes.map((route) => route.wireBase)).toEqual(["index/ocx.sh", "index/ocx.sh"]);
+    // Non-root: every route leads with the index name.
+    expect(catalog.routes.map((route) => route.segments[0])).toEqual(["ocx.sh", "ocx.sh"]);
+  });
+
+  // The bug this pins, and the reason it went unseen for a whole branch: the
+  // suite asserted the ROUTE shape for exactly this config (the case above)
+  // and never once looked at the catalog JSON it ships alongside. Route
+  // qualification was decided per source (`root`), the `indexes` envelope per
+  // catalog (`results.length > 1`), and with ONE non-root source those two
+  // disagreed — pages written at `/ocx.sh/acme/widget`, no envelope for the
+  // theme to resolve them with, so `packageRoutePath` fell back to the bare
+  // path and every card, table row and ⌘K link 404'd. `scripts/dev-indexes.mjs`
+  // even ships this config as its `single-noroot` case; nobody clicked a card.
+  it("a SINGLE non-root source still publishes the envelope its qualified routes need", async () => {
+    const dir = await tempDir("catalog-pipeline-lone-nonroot-");
+    await writeTree(join(dir, "index"), WIRE_TREE);
+
+    const catalog = await resolveCatalog([pathSource("index")], dir);
+
+    expect(catalog.routes.map((route) => route.segments[0])).toEqual(["ocx.sh", "ocx.sh"]);
+
+    const parsed = JSON.parse(catalog.catalogJson) as { indexes?: { name: string; root: boolean }[] };
+    expect(parsed.indexes).toEqual([{ name: "ocx.sh", root: false, count: 2 }]);
+
+    // The two halves agree by construction: no entry is `root`, so no bare
+    // route exists, and every route is qualified.
+    expect(parsed.indexes?.some((entry) => entry.root)).toBe(false);
+  });
+
+  // Same gap, the check that shipped first: `checkIndexNamespaceCollisions`
+  // was exercised only in isolation, so deleting its call from the pipeline
+  // left the whole suite green. A root source publishing namespace `acme`
+  // beside a non-root index that names itself `acme` is the collision — the
+  // root's `/acme/widget` page and the whole `acme` index both claim
+  // `/acme/**`, and whichever page synthesis wrote last would win silently.
+  it("rejects a non-root index whose label is a namespace the root source publishes", async () => {
+    const dir = await tempDir("catalog-pipeline-nscollide-");
+    await writeTree(join(dir, "root"), WIRE_TREE);
+    await writeTree(join(dir, "other"), {
+      "config.json": CONFIG_JSON,
+      "p/tools/thing.json": ACME_BRAND_ROOT,
+    });
+
+    await expect(
+      resolveCatalog([pathSource("root", { root: true }), pathSource("other")], dir),
+    ).rejects.toMatchObject({
+      code: "DATA",
+      message: expect.stringContaining("namespace the root source publishes"),
+    });
+  });
+
+  // The call site is the point. `checkReservedIndexLabels` has unit tests of
+  // its own, and those stay green with the call below deleted — the exact
+  // shape that let `checkIndexNamespaceCollisions` ship unreachable.
+  it("rejects a non-root index whose derived label is a path the build owns", async () => {
+    const dir = await tempDir("catalog-pipeline-reserved-");
+    await writeTree(join(dir, "index"), {
+      "config.json": CONFIG_JSON,
+      "p/guide/tool.json": DOCS_BRAND_ROOT,
+    });
+
+    await expect(resolveCatalog([pathSource("index")], dir)).rejects.toMatchObject({
+      code: "DATA",
+      message: expect.stringContaining("already owns"),
+    });
+  });
+
+  // The other end of the same rule: one ROOT source qualifies nothing, and
+  // still publishes the envelope that says so.
+  it("a single root source publishes a root envelope and keeps bare routes", async () => {
+    const dir = await tempDir("catalog-pipeline-lone-root-");
+    await writeTree(join(dir, "index"), WIRE_TREE);
+
+    const catalog = await resolveCatalog([pathSource("index", { root: true })], dir);
+
+    expect(catalog.routes.map((route) => route.segments[0])).toEqual(["acme", "acme"]);
+    const parsed = JSON.parse(catalog.catalogJson) as { indexes?: { name: string; root: boolean }[] };
+    expect(parsed.indexes).toEqual([{ name: "ocx.sh", root: true, count: 2 }]);
   });
 
   // The bug this pins: `wireBase` reached `routes` from the very first
@@ -225,25 +327,45 @@ describe("sources_pipeline resolveCatalog — path source", () => {
     });
   });
 
-  it("a package present in two sources resolves to the FIRST configured source", async () => {
+  // This used to keep only the FIRST configured source's copy, because both
+  // would otherwise claim one detail-page route. Index-qualified routes made
+  // that unnecessary, and silently dropping a mirror's package was never an
+  // honest rendering of an aggregating catalog.
+  it("a package present in two sources is kept twice, one route per index", async () => {
     const dir = await tempDir("catalog-pipeline-dupe-");
     await writeTree(join(dir, "first"), WIRE_TREE);
-    await writeTree(join(dir, "second"), { "p/acme/widget.json": WIDGET_ROOT });
+    await writeTree(join(dir, "second"), { "p/acme/widget.json": CORP_WIDGET_ROOT });
 
     const catalog = await resolveCatalog(
-      [pathSource("first", { root: true, label: "first" }), pathSource("second", { label: "second" })],
+      [pathSource("first", { root: true }), pathSource("second")],
       dir,
     );
 
-    // One row per package, and the shared one keeps the first source's
-    // (root) wireBase rather than the second's `index/second`.
+    // Same `acme/widget` id from both indexes: the root source keeps the
+    // bare route, the other one leads with its own index name. Equal ids
+    // order by label, so `corp.example` precedes `ocx.sh`.
     expect(catalog.routes).toEqual([
-      { segments: ["acme", "tools", "gadget"], wireBase: "" },
-      { segments: ["acme", "widget"], wireBase: "" },
+      { segments: ["acme", "tools", "gadget"], namespace: "acme", package: "tools/gadget", wireBase: "" },
+      {
+        segments: ["corp.example", "acme", "widget"],
+        namespace: "acme",
+        package: "widget",
+        wireBase: "index/corp.example",
+      },
+      { segments: ["acme", "widget"], namespace: "acme", package: "widget", wireBase: "" },
     ]);
-    // Both sources are still mirrored in full — dedup is a catalog/route
-    // concern, never a reason to drop a source's wire tree.
-    expect(catalog.sources.map((source) => source.label)).toEqual(["first", "second"]);
+    expect(catalog.sources.map((source) => source.label)).toEqual(["ocx.sh", "corp.example"]);
+
+    // Both copies reach the grid, and the per-index counts add up.
+    const parsed = JSON.parse(catalog.catalogJson) as {
+      indexes: { name: string; root: boolean; count: number }[];
+      packages: unknown[];
+    };
+    expect(parsed.packages).toHaveLength(3);
+    expect(parsed.indexes).toEqual([
+      { name: "ocx.sh", root: true, count: 2 },
+      { name: "corp.example", root: false, count: 1 },
+    ]);
   });
 });
 
@@ -293,9 +415,18 @@ describe("sources_pipeline resolveCatalog — url source", () => {
     cleanupDirs.push(expectedCacheDir);
 
     try {
-      const catalog = await resolveCatalog([{ entry: { url: server.url }, label: "remote" }], process.cwd());
+      const catalog = await resolveCatalog([{ entry: { url: server.url }, label: "ocx.sh" }], process.cwd());
 
-      expect(catalog.routes).toEqual([{ segments: ["acme", "widget"], wireBase: "index/remote" }]);
+      // Non-root: the route leads with the index name, and wireBase points at
+      // the `index/<label>/` tree the mirror writes.
+      expect(catalog.routes).toEqual([
+        {
+          segments: ["ocx.sh", "acme", "widget"],
+          namespace: "acme",
+          package: "widget",
+          wireBase: "index/ocx.sh",
+        },
+      ]);
       expect(catalog.sources[0]?.files.has("p/acme/widget.json")).toBe(true);
       // The cached enumeration lands in the consumer's node_modules cache,
       // which survives between builds — a scratch-root cache would be swept
@@ -336,10 +467,13 @@ describe("sources_pipeline resolveCatalog — git source", () => {
     execFileSync("git", ["add", "-A"], { cwd: repo });
     execFileSync("git", ["commit", "-q", "-m", "wire tree"], { cwd: repo });
 
-    const catalog = await resolveCatalog([{ entry: { git: repo }, label: "cloned" }], process.cwd());
+    const catalog = await resolveCatalog([{ entry: { git: repo }, label: "ocx.sh" }], process.cwd());
 
-    expect(catalog.routes.map((route) => route.segments.join("/"))).toEqual(["acme/tools/gadget", "acme/widget"]);
-    expect(catalog.sources[0]?.label).toBe("cloned");
+    expect(catalog.routes.map((route) => route.segments.join("/"))).toEqual([
+      "ocx.sh/acme/tools/gadget",
+      "ocx.sh/acme/widget",
+    ]);
+    expect(catalog.sources[0]?.label).toBe("ocx.sh");
   }, 30_000);
 });
 
@@ -348,7 +482,7 @@ describe("sources_pipeline resolveCatalog — failures map to the CLI's exit cod
     const dir = await tempDir("catalog-pipeline-malformed-");
     await writeTree(join(dir, "index"), { "p/acme/widget.json": utf8("{ not json") });
 
-    const error = await resolveCatalog([pathSource("index", { label: "broken" })], dir).catch((err: unknown) => err);
+    const error = await resolveCatalog([pathSource("index", { label: "ocx.sh" })], dir).catch((err: unknown) => err);
 
     expect(error).toBeInstanceOf(BuildError);
     expect((error as BuildError).code).toBe("DATA");
@@ -402,7 +536,7 @@ describe("sources_pipeline resolveCatalog — failures map to the CLI's exit cod
     // — `catalogEntry` raises, and that must be exit 65, not a crash.
     await writeTree(join(dir, "index"), { "p/acme/widget.json": WIDGET_ROOT });
 
-    const error = await resolveCatalog([pathSource("index", { label: "dangling" })], dir).catch((err: unknown) => err);
+    const error = await resolveCatalog([pathSource("index", { label: "ocx.sh" })], dir).catch((err: unknown) => err);
 
     expect(error).toBeInstanceOf(BuildError);
     expect((error as BuildError).code).toBe("DATA");
@@ -414,26 +548,28 @@ describe("sources_pipeline emitCatalogTree", () => {
   it("writes the mirror tree, _headers, and the MERGED catalog last", async () => {
     const dir = await tempDir("catalog-pipeline-emit-");
     await writeTree(join(dir, "primary"), WIRE_TREE);
-    await writeTree(join(dir, "extra"), { "p/beta/thing.json": BETA_ROOT });
+    await writeTree(join(dir, "extra"), { "p/beta/thing.json": CORP_BETA_ROOT });
     const outDir = join(dir, "out");
 
     const catalog = await resolveCatalog(
-      [pathSource("primary", { root: true, label: "primary" }), pathSource("extra", { label: "extra" })],
+      [pathSource("primary", { root: true, label: "ocx.sh" }), pathSource("extra", { label: "corp.example" })],
       dir,
     );
     await emitCatalogTree(catalog, outDir);
 
     // C-006: the root source at the dist root, EVERY source under index/<label>/.
     expect(await readFile(join(outDir, "p", "acme", "widget.json"))).toEqual(Buffer.from(WIDGET_ROOT));
-    expect(await readFile(join(outDir, "index", "primary", "p", "acme", "widget.json"))).toEqual(
+    expect(await readFile(join(outDir, "index", "ocx.sh", "p", "acme", "widget.json"))).toEqual(
       Buffer.from(WIDGET_ROOT),
     );
-    expect(await readFile(join(outDir, "index", "extra", "p", "beta", "thing.json"))).toEqual(Buffer.from(BETA_ROOT));
+    expect(await readFile(join(outDir, "index", "corp.example", "p", "beta", "thing.json"))).toEqual(
+      Buffer.from(CORP_BETA_ROOT),
+    );
 
     const headers = await readFile(join(outDir, "_headers"), "utf8");
     expect(headers).toContain("/p/*");
-    expect(headers).toContain("/index/primary/p/*");
-    expect(headers).toContain("/index/extra/p/*");
+    expect(headers).toContain("/index/ocx.sh/p/*");
+    expect(headers).toContain("/index/corp.example/p/*");
 
     // `mirrorSources` writes the ROOT SOURCE's own catalog at this path
     // first; the merged one (all three packages) must be what survives.
@@ -448,7 +584,7 @@ describe("sources_pipeline emitCatalogTree", () => {
     // The per-source copy under index/<label>/ stays exactly as mirror.ts
     // wrote it — only the site-root one is the merged view.
     const perSource = JSON.parse(
-      await readFile(join(outDir, "index", "extra", "data", "catalog", "catalog.json"), "utf8"),
+      await readFile(join(outDir, "index", "corp.example", "data", "catalog", "catalog.json"), "utf8"),
     ) as { packages: unknown[] };
     expect(perSource.packages).toHaveLength(1);
   });

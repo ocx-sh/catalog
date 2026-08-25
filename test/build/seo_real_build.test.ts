@@ -64,7 +64,7 @@ async function writeFixture(configDir: string): Promise<string> {
   await writeFile(
     configPath,
     JSON.stringify({
-      sources: [{ path: "index", root: true, label: "primary" }],
+      sources: [{ path: "index", root: true, label: "ocx.sh" }],
       brand: { title: BRAND_TITLE, logo: "assets/logo.svg" },
       siteUrl: SITE_URL,
     }),

@@ -36,8 +36,14 @@ import { linkNodeModules, withTempDir, writeDocsFixture } from "./helpers.js";
 const SRC_DIR = "src";
 const SITE_URL = "https://e2e.example.test";
 
+/** A root:true source's route: namespace/package read straight back off segments. */
 function route(segments: readonly string[]): PackageRoute {
-  return { segments, wireBase: "" };
+  return {
+    segments,
+    namespace: segments[0]!,
+    package: segments.slice(1).join("/"),
+    wireBase: "",
+  };
 }
 
 describe("C-005 real end-to-end build (no mocks)", () => {

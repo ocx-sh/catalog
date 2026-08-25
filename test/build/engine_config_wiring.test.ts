@@ -45,7 +45,7 @@ describe("C-005/C-002 buildCatalog — real config.css/siteUrl/docs reach dist/"
             // a hard `LABEL_DERIVATION_EMPTY` error now that the source
             // pipeline is wired (`labels.ts`) — this test is about css/
             // siteUrl/docs forwarding, not label derivation.
-            sources: [{ path: "packages", root: true, label: "packages" }],
+            sources: [{ path: "packages", root: true, label: "ocx.sh" }],
             brand: { title: "E2E Config Wiring Test" },
             css: "custom.css",
             siteUrl: SITE_URL,

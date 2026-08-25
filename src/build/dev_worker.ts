@@ -27,16 +27,25 @@ import { emitCatalogTree, resolveCatalog } from "./sources_pipeline.js";
 
 const SRC_DIR = "src";
 
-/** The label the `--source` sugar path assigns its one implicit source.
- * Explicit on purpose: `labels.ts` derives an absent label from the source's
- * own package roots and rejects a source that has none, so an ad-hoc
+/** The label the `--source` sugar path falls back to for its one implicit
+ * source, and ONLY when there is nothing to derive one from: `labels.ts`
+ * rejects a source with no explicit label and no package roots, so an ad-hoc
  * `ocx-catalog dev --source <dir>` against an index that is still empty (or
  * mid-edit) would otherwise fail to boot rather than serving an empty
  * catalog. Same class of default as the generic `brand.title` below — there
- * is no config file to read a real one from. */
+ * is no config file to read a real one from.
+ *
+ * Passed as `resolveCatalog`'s `fallbackLabel`, never as an explicit
+ * `label`. It used to be the latter, which meant a real index served through
+ * this path was silently renamed to "local" — and, once a label had to agree
+ * with the index's own name (`LABEL_PREFIX_MISMATCH`), refused to boot at
+ * all. A populated index derives its real name here; only an empty one is
+ * "local". */
 const IMPLICIT_SOURCE_LABEL = "local";
 
 interface DevInputs {
+  /** Only the `--source` sugar path sets this — see IMPLICIT_SOURCE_LABEL. */
+  readonly fallbackLabel: string | undefined;
   readonly brand: Brand;
   readonly nav: NavEntry[];
   readonly css: string | undefined;
@@ -63,6 +72,7 @@ interface DevInputs {
 async function resolveDevInputs(configPath: string | undefined, sourcePath: string | undefined): Promise<DevInputs> {
   if (configPath === undefined) {
     return {
+      fallbackLabel: IMPLICIT_SOURCE_LABEL,
       brand: { title: "OCX Catalog" },
       nav: [],
       css: undefined,
@@ -70,12 +80,13 @@ async function resolveDevInputs(configPath: string | undefined, sourcePath: stri
       description: undefined,
       favicon: undefined,
       docsSourceDir: undefined,
-      sources: [{ entry: { path: ".", root: true }, label: IMPLICIT_SOURCE_LABEL }],
+      sources: [{ entry: { path: ".", root: true }, label: null }],
       configDir: resolve(sourcePath ?? "."),
     };
   }
   const loaded = await loadConfig(configPath);
   return {
+    fallbackLabel: undefined,
     brand: loaded.config.brand,
     nav: loaded.config.nav ?? [],
     css: loaded.config.css !== undefined ? join(loaded.configDir, loaded.config.css) : undefined,
@@ -98,9 +109,9 @@ async function boot(
   sourcePath: string | undefined,
   port: number | undefined,
 ): Promise<Booted> {
-  const { brand, nav, css, siteUrl, description, favicon, docsSourceDir, sources, configDir } =
+  const { brand, nav, css, siteUrl, description, favicon, docsSourceDir, sources, configDir, fallbackLabel } =
     await resolveDevInputs(configPath, sourcePath);
-  const catalog = await resolveCatalog(sources, configDir);
+  const catalog = await resolveCatalog(sources, configDir, fallbackLabel);
   const scratchRoot = await createScratchRoot();
   await synthesizePages({ scratchRoot: scratchRoot.path, srcDir: SRC_DIR, packages: catalog.routes, docsSourceDir });
   // Live wire data (S-003): the same mirror tree + merged catalog `build`

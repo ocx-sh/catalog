@@ -1,6 +1,6 @@
 # Known limitations
 
-Five behaviours a deployer needs to know about before picking a host or a
+Four behaviours a deployer needs to know about before picking a host or a
 config shape. Each one is deliberate — none is a bug waiting on a fix — but
 none is documented anywhere a user would trip over it first, so it's
 collected here instead.
@@ -35,16 +35,7 @@ nginx/Caddy server, the sandboxing this package assumes exists has to be
 recreated by hand in that host's own header mechanism, or accepted as a
 known, named risk. See [Hosting and headers](hosting-and-headers.md).
 
-## 3. Detail pages are single-source
-
-A catalog aggregating more than one source shows every source's packages in
-the grid, but only the `root: true` source's packages have a working detail
-page — every other source's package 404s when clicked. This is a real gap
-in the multi-source model, not a config mistake to work around; see
-[Multi-source model](../explanation/multi-source-model.md) for the exact
-mechanism.
-
-## 4. The `docs:` mount's sidebar is hardcoded
+## 3. The `docs:` mount's sidebar is hardcoded
 
 `src/theme/components/docs/data/docsNav.ts` defines a fixed, static sidebar
 — five groups (`REFERENCE`, `HOW-TO`, `OPS`, `EXPLANATION`, `LEGAL`) with a
@@ -60,7 +51,7 @@ Every link that doesn't correspond to a real page in your own `docs` tree
 404s; any page you have that isn't one of these fixed slugs has no sidebar
 entry at all.
 
-## 5. `ocx-catalog ci` supports exactly two forges, and deploys nothing
+## 4. `ocx-catalog ci` supports exactly two forges, and deploys nothing
 
 `src/ci/types.ts`'s `Forge` type (mirroring `CiConfig["forge"]`) accepts
 only `"github"` and `"gitlab"` — no other forge is rendered. And on either
@@ -80,7 +71,5 @@ gives you the build, not the publish.
 - Does the host read a Cloudflare Pages/Netlify-style `_headers` file, and
   if not, are you translating those two headers yourself or accepting the
   risk knowingly? (#2)
-- Are all your sources' packages expected to have working detail pages, or
-  only the `root: true` one? (#3)
 
 Full host-by-host answers: [Hosting and headers](hosting-and-headers.md).

@@ -99,10 +99,22 @@ import { Semaphore } from "../sources/walker.js";
  * mirroring the current site's own `src/index.md`/`src/404.md`.
  */
 export interface PackageRoute {
-  /** Opaque 1..N path segments after the catalog root, in order —
-   * `segments[0]` is the namespace ("prefix"); `segments.slice(1)` is the
-   * (possibly multi-segment) package path. Never assume `length === 2`. */
+  /** Opaque 1..N path segments after the catalog root, in order — the URL
+   * this package's page is served at, and nothing else. For the `root: true`
+   * source that is `[namespace, ...package]`; for every other source it
+   * leads with that source's index label
+   * (`[label, namespace, ...package]`), so two indexes publishing the same
+   * id get two pages. Never assume `length === 2`, and never read identity
+   * back out of it — `namespace`/`package` below are the identity. */
   readonly segments: readonly string[];
+  /** Wire identity: the package's namespace, independent of where the route
+   * puts it. Every CAS/wire URL is built from this and `package` (the "CAS
+   * gotcha" in `subsystem-theme.md`), which is why it travels separately —
+   * an index-qualified route's first segment is a label, not a namespace,
+   * so splitting the route apart would build 404ing CAS URLs. */
+  readonly namespace: string;
+  /** Wire identity: the package path, 1..N `/`-joined segments. */
+  readonly package: string;
   /** This package's per-source wire-fetch mount prefix — `""` for the
    * root:true source, `"index/<label>"` otherwise. See the file doc's
    * "Multi-source wireBase" section. */
@@ -124,22 +136,54 @@ export interface SynthesizePagesOptions {
 }
 
 /** Frontmatter for one synthesized package page: the `layout` key every
- * page needs (see the file doc's "Layout dispatch" section), plus this
- * package's `wireBase` when it has one.
+ * page needs (see the file doc's "Layout dispatch" section), this package's
+ * wire identity (`ns`/`pkg`), plus its `wireBase` when it has one.
+ *
+ * `ns`/`pkg` are the identity channel `DetailPage.vue` reads. It used to
+ * recover them by splitting `useData().page.relativePath`, which held only
+ * while every route WAS `<ns>/<pkg…>`; an index-qualified route's first
+ * segment is a label, so that split would hand every CAS fetch a namespace
+ * that does not exist and the page would render as "publishes no
+ * description" rather than as a broken fetch. Frontmatter is a proven
+ * channel here (`wireBase` has ridden it since 0.2.1) — it is
+ * `useData().params` that is never populated for a plain synthesized file,
+ * see this file's own "Passing package identity" section.
  *
  * `wireBase` is how the per-source mount prefix reaches the BROWSER — the
  * detail page's own wire fetches (`usePackageRoot`, `useImageIndex`,
  * `ReadmePane`/`IdentityBlock` via `utils/cas.ts`) are client-side and have
- * no other channel to it. Emitted only when non-empty, so the root source's
- * pages keep byte-identical frontmatter to what this function has always
- * written.
+ * no other channel to it. Emitted only when non-empty.
  *
- * Single-quoted: `labels.ts`'s `SAFE_LABEL_RE` already bounds a label to
- * `[A-Za-z0-9._-]+` (no quote character can appear in one), and quoting
- * keeps the value a YAML string regardless of what the label looks like. */
-function packagePageContent(wireBase: string): string {
-  const base = wireBase === "" ? "" : `wireBase: '${wireBase}'\n`;
-  return `---\nlayout: detail\n${base}---\n`;
+ * Every value is emitted with `JSON.stringify`, and that is a SECURITY
+ * boundary, not a formatting preference. YAML 1.2 is a JSON superset, so a
+ * JSON double-quoted scalar is a valid YAML scalar with `"`, `\` and every
+ * control character — newlines included — already escaped; the value can
+ * only ever parse back as one string.
+ *
+ * This used to hand-quote with `'…'` and justify it by claiming
+ * `viewmodel/catalog.ts`'s `NAMESPACE_RE`/`PACKAGE_RE` made a quote
+ * character impossible in `namespace`/`package`. That claim was false.
+ * `extractPackages` does not validate either segment (`sources/types.ts`
+ * says so outright), and the only validator, `assertSafePackagePath`, is
+ * reached solely through `casUrl`, which returns early when a digest is
+ * `null` — so any package with no `desc` block skipped it entirely. A
+ * `path`/`git` source's segments are real directory names, where `'` and a
+ * newline are both legal, and `walker.ts`'s `assertSafeQualifiedId` guards
+ * `url` sources only. A namespace directory named
+ * `x'<LF>head:<LF>  - - script…` therefore closed the quote and appended a
+ * `head:` key of its own — VitePress's documented head-injection
+ * frontmatter, i.e. attacker-authored `<script>` in the built page's
+ * `<head>`, reached through content this renderer only mirrors. The
+ * `_headers` sandbox does not apply: it covers `/p/*`, never the
+ * synthesized HTML page.
+ *
+ * Escaping at the sink is the whole fix — no input shape can produce a
+ * second key. Validating the identity segments where routes are BUILT is
+ * still worth doing as a second layer; it is a separate change because it
+ * would newly reject packages the build accepts today. */
+function packagePageContent(route: PackageRoute): string {
+  const base = route.wireBase === "" ? "" : `wireBase: ${JSON.stringify(route.wireBase)}\n`;
+  return `---\nlayout: detail\nns: ${JSON.stringify(route.namespace)}\npkg: ${JSON.stringify(route.package)}\n${base}---\n`;
 }
 
 /** Always synthesized — the catalog's own landing page (see the file doc's
@@ -171,7 +215,7 @@ export async function synthesizePages(options: SynthesizePagesOptions): Promise<
       try {
         const filePath = join(srcRoot, ...route.segments.slice(0, -1), `${route.segments[route.segments.length - 1]}.md`);
         await mkdir(join(filePath, ".."), { recursive: true });
-        await writeFile(filePath, packagePageContent(route.wireBase), "utf8");
+        await writeFile(filePath, packagePageContent(route), "utf8");
       } finally {
         release();
       }

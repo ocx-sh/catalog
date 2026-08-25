@@ -34,8 +34,14 @@ const LOGO_BYTES = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 8 8"><!
  * is the one substring no consumer-configured logo asset would share. */
 const BUILT_IN_MARK = /src="[^"]*ocx-logo[^"]*\.svg"/;
 
+/** A root:true source's route: namespace/package read straight back off segments. */
 function route(segments: readonly string[]): PackageRoute {
-  return { segments, wireBase: "" };
+  return {
+    segments,
+    namespace: segments[0]!,
+    package: segments.slice(1).join("/"),
+    wireBase: "",
+  };
 }
 
 /** The `<a class="brand">…</a>` header block — logo + wordmark. `[^>]*`

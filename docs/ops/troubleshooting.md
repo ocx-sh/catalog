@@ -22,7 +22,7 @@ invented.
 | `READ_ERROR` | The config path exists but can't be read (e.g. it's a directory, or a permission error) | Fix the path or its permissions |
 | `INVALID_JSON` | The config file isn't valid JSON | Fix the JSON syntax |
 | `INVALID_TYPE` | A field's type doesn't match the schema (includes an empty string where a non-empty one is required, and a malformed `siteUrl`/`sources[].url`/`nav[].link`) | Fix the field named in the message |
-| `UNKNOWN_KEY` | An unrecognized key at the top level, or inside a `sources[]`/`nav[]`/`brand` entry (`ci`'s own keys are exempt) | Remove or rename the key |
+| `UNKNOWN_KEY` | An unrecognized key at the top level, or inside a `sources[]` entry, `brand`, `footer`, or a `nav[]`/`footer.links[]`/`docsNav[]` entry (`ci`'s own keys are exempt) | Remove or rename the key |
 | `UNSUPPORTED_VERSION` | `configVersion` names a version this loader doesn't support | Use a supported `configVersion`, or upgrade `@ocx-sh/catalog` |
 | `SOURCE_DISCRIMINANT` | A `sources[]` entry has zero, or more than one, of `path`/`url`/`git` | Set exactly one of those three keys per entry |
 | `EMPTY_SOURCES` | `sources` is present but has no entries | Add at least one source |
@@ -40,9 +40,12 @@ invented.
 | `GIT_SHA_UNSUPPORTED` | A commit-SHA `ref` was requested but the remote won't let you fetch an arbitrary commit it never advertised | Use a branch/tag name instead of a raw SHA, or a remote that allows `allow-tips-sha1-in-want` |
 | `LFS_POINTER` | A sourced blob is a Git LFS pointer file, not the real bytes (a `--depth 1` clone never fetches LFS objects) | Don't LFS-track files this package needs to read, or fetch them another way |
 | `LABEL_DERIVATION_EMPTY` | A source set no explicit `label` and has zero package roots to derive one from | Add an explicit `label`, or make sure the source actually publishes packages |
-| `LABEL_DERIVATION_CONFLICT` | A source set no explicit `label` and its own package roots disagree on their first name segment | Add an explicit `label` |
+| `LABEL_DERIVATION_CONFLICT` | A source set no explicit `label` and its own package roots disagree on their first name segment | Fix the source's data — its roots must agree on which index they belong to |
 | `LABEL_CONFLICT` | Two sources — any mix of explicit and derived labels — resolve to the same final label | Give one of them an explicit, distinct `label` |
 | `LABEL_PATH_UNSAFE` | A resolved label (explicit or derived) isn't safe as one filesystem path segment | Use a label matching `^[A-Za-z0-9._-]+$` |
+| `LABEL_PREFIX_MISMATCH` | An explicit `label` disagrees with the first name segment its own package roots carry — the scope tab and every card would name the index differently | Use the name the index gives itself, or drop `label` and let it derive |
+| `INDEX_NAMESPACE_COLLISION` | A non-root source's label is also a namespace the `root: true` source publishes, so both claim `/<that name>/**` | Rename the index, or move that namespace out of the root source |
+| `INDEX_LABEL_RESERVED` | A non-root source's label is a top-level path the build writes itself (`p`, `index`, `data`, `docs`, `assets`, `404`, `public`), so both claim `/<that name>/**`. Compared case-insensitively | Rename the index; these seven names are reserved |
 
 ### CI errors (`src/ci/errors.ts`, raised by `ocx-catalog ci`)
 
@@ -78,11 +81,13 @@ route serves the content you expect. Load the page yourself (interactive
 
 ## A package shows in the grid but its detail page 404s
 
-Expected behaviour for a package from any source other than the one marked
-`root: true` — see [Multi-source model](../explanation/multi-source-model.md)
-and [Known limitations #3](known-limitations.md#3-detail-pages-are-single-source).
-The merged catalog grid doesn't care which source a package came from; the
-detail page's own fetches do, and today they don't account for it.
+Every source's packages have working detail pages, so this is a stale link
+rather than a limitation. A package from a non-root index is served at
+`/<index>/<namespace>/<package>`, not at the bare `/<namespace>/<package>` —
+only the `root: true` source keeps the bare path. Copy the link from the card
+(or right-click → **Copy link**) rather than hand-building one from the
+namespace and package alone; see
+[Multi-source model](../explanation/multi-source-model.md).
 
 ## The deployed site is blank, or every asset 404s
 

@@ -20,62 +20,77 @@ still lands in full under its own label prefix.
 
 `resolveCatalog()` (`src/build/sources_pipeline.ts`) builds the single
 `/data/catalog/catalog.json` the theme's `useCatalog.ts` fetches, by walking
-every source **in `sources[]` config order** and keeping the first
-occurrence of each package id:
+every source **in `sources[]` config order** and keeping every package each
+one publishes.
 
-```ts
-for (const result of results) {
-  for (const pkg of result.packages) {
-    const id = `${pkg.packageId.namespace}/${pkg.packageId.package}`;
-    if (seen.has(id)) continue;
-    seen.add(id);
-    merged.push({ pkg, wireBase: result.wireBase });
-  }
+Nothing is dropped. If two sources both publish `acme/widget`, both copies
+appear in the grid, as two cards, linking to two different pages. That is
+newer behaviour: the merge used to keep only whichever source came first in
+`sources[]` and silently discard the rest, because both copies would
+otherwise have claimed one detail-page route. Index-qualified routes (below)
+removed that constraint, and a catalog that quietly lost a mirror's package
+was never an honest rendering of an aggregation.
+
+The merged list is then sorted by package id, with the index name breaking
+ties — so the two `acme/widget` cards sit next to each other rather than
+depending on config order.
+
+## Which index a package came from
+
+Every package's `name` is the fully qualified one its own index published —
+`ocx.sh/hashicorp/terraform`, `corp.example/platform/deploy-kit` — and its
+**first `/`-segment is the index**. `src/sources/labels.ts` derives a
+source's label from exactly that segment, and rejects a config whose explicit
+`label` disagrees with it (`LABEL_PREFIX_MISMATCH`), so there is exactly one
+name for one index and every surface can print it.
+
+That is why cards and table rows carry no badge, dot or colour marking their
+origin: the identity line already names the index as part of the package's
+own name. Long names elide in the middle
+(`ocx.sh/…/terraform-provider-aws`), never at the end, so both the index and
+the package survive.
+
+The catalog JSON also carries an `indexes` envelope — each index's name,
+whether it is the default (`root: true`), and how many packages it
+contributes after the merge:
+
+```json
+{
+  "generated": "…",
+  "indexes": [
+    { "name": "ocx.sh", "root": true, "count": 46 },
+    { "name": "corp.example", "root": false, "count": 13 }
+  ],
+  "packages": [ … ]
 }
 ```
 
-So config order **is** precedence: if two sources both publish
-`acme/widget`, the entry from whichever source appears earlier in
-`sources[]` wins, and the later one's copy of that package is silently
-dropped from the grid (its wire files are still mirrored under its own
-`index/<label>/`, just not surfaced in the merged catalog).
+It is written for **every** catalog, one source included — the theme needs it
+to resolve a package's route, and a single non-root source has qualified
+routes just as an aggregating one does. "This deployment aggregates nothing,
+so show no scope control" is then one fact about the data (`indexes` has a
+single entry), not a second predicate kept in sync with the first.
 
-## Why catalog entries carry no per-source badge
+## Detail-page routes are index-qualified
 
-Not a design choice made in the UI layer — it is structural. The type the
-merge step produces, `CatalogSourcePackage` (`src/sources/types.ts`), carries
-exactly three fields: `packageId`, `root`, `contentByDigest`. There is no
-source or label field on it at all. `catalogEntry()`/`catalogIndex()`
-(`src/viewmodel/catalog.ts`) consume that type directly, so by the time a
-package reaches `/data/catalog/catalog.json` there is nothing left to badge
-it with — source identity is discarded at the merge step, before
-serialization ever runs. The only place source identity survives past the
-merge is `wireBase` on each `PackageRoute`, used for page synthesis, not for
-the catalog JSON.
+The `root: true` source's packages keep the bare path they have always had:
 
-## The gap: detail pages are not multi-source aware
+| source | qualified name | route |
+|---|---|---|
+| `root: true` | `ocx.sh/hashicorp/terraform` | `/hashicorp/terraform` |
+| any other | `corp.example/platform/deploy-kit` | `/corp.example/platform/deploy-kit` |
 
-`PackageRoute.wireBase` (`src/build/pages.ts`) is the per-source fetch
-prefix a package's detail page would need — `""` for the `root: true`
-source, `"index/<label>"` for any other. It is computed and threaded through
-page synthesis, but **nothing downstream reads it**. `pages.ts`'s own doc
-comment is explicit about this:
+For a non-root index the route **is** the qualified identifier, so a copied
+package link and a copied identifier are the same string, and two indexes
+publishing the same `<namespace>/<package>` are never ambiguous.
 
-> `wireBase` is captured here so the synthesis contract does not need to
-> change again once it's consumed, but nothing downstream reads it yet:
-> `usePackageRoot.ts`/`useImageIndex.ts` fetch an unconditional root-relative
-> `/p/<ns>/<pkg>...` today... Until then this engine only renders correctly
-> for a single-source (or root-only) config.
+One consequence worth knowing at config time: a non-root index may not be
+named after a namespace the root source publishes, since both would claim
+`/<that name>/**`. The build rejects that pair by name
+(`INDEX_NAMESPACE_COLLISION`) rather than letting one silently overwrite the
+other.
 
-Concretely, `usePackageRoot()` fetches `` `/p/${ns}/${pkg}.json` `` and
-`useImageIndex()` fetches `` `/p/${ns}/${pkg}/o/sha256/${hex}.json` `` — both
-literal, root-relative, ignoring which source the package actually came
-from. Those paths only resolve when the package's source has `root: true`
-(mirrored at `dist/` itself); a non-root source's package root only exists
-under `dist/index/<label>/p/**`.
-
-The practical consequence: a package from a non-root source appears
-correctly in the grid — the merged catalog JSON doesn't need `wireBase` —
-but clicking through to its detail page fetches the wrong prefix and 404s.
-This is a known limitation, not an edge case to work around in config; see
-[Known limitations](../ops/known-limitations.md) for how it's tracked.
+Each package page carries its own wire identity (`ns`/`pkg`) and its source's
+mount prefix (`wireBase` — `""` for the root source, `index/<label>` for any
+other) in its frontmatter, which is how a client-side fetch on a non-root
+index's detail page reaches the tree `mirrorSources()` actually wrote.

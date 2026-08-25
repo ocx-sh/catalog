@@ -94,7 +94,7 @@ async function withValidConfig<T>(fn: (configPath: string) => Promise<T>): Promi
     await writeFile(
       configPath,
       JSON.stringify({
-        sources: [{ path: "packages", root: true, label: "packages" }],
+        sources: [{ path: "packages", root: true, label: "ocx.sh" }],
         brand: { title: "Test Catalog" },
       }),
       "utf8",

@@ -119,11 +119,56 @@ first-`/`-segment prefixes of every root's `name` in a source — exactly one
 hard error (`LABEL_DERIVATION_EMPTY`/`LABEL_DERIVATION_CONFLICT`), never a
 silently picked winner.
 
+An EXPLICIT label may only restate the name the index gives itself:
+`assertLabelMatchesPrefixes` holds it against that same first-`/`-segment set
+and throws `LABEL_PREFIX_MISMATCH` when they disagree. The label names the
+index in the scope tab row; the segment names it on every card — two names
+for one index is a page that contradicts itself. A source with zero package
+roots has nothing to contradict and keeps its explicit label (that is the
+legitimate empty-index case; only the DERIVED path needs roots to exist).
+
+`resolveLabel`'s third parameter, `fallbackLabel`, is for a caller that
+INVENTED the source rather than reading it from a config — today only
+`dev_worker.ts`'s `--source` sugar. It applies to the derived branch alone
+and only when there is nothing to derive, so `dev` against an empty index
+still boots. It is NOT an explicit label: passing a default as one is what
+silently renamed every index `dev --source` was pointed at.
+
+`checkIndexNamespaceCollisions` is the second deferred cross-source pass,
+beside `checkLabelConflicts` and for the same reason (both need every source
+read): a non-root label that is also a ROOT-source namespace makes two things
+claim `/<label>/` — `INDEX_NAMESPACE_COLLISION`.
+
+`checkReservedIndexLabels` is the other claimant on that same prefix: a
+non-root label equal to a top-level path this build writes itself (`p`,
+`index`, `data`, `docs`, `assets`, `404`, `public`) — `INDEX_LABEL_RESERVED`.
+No hostile source needed; an index whose roots are named `docs/…` derives the
+label `docs` and lands its pages in the directory `pages.ts` mounts the docs
+tree at. Compared case-INSENSITIVELY: `SAFE_LABEL_RE` admits `Docs`, and macOS
+and Windows resolve that to the same directory, so a case-sensitive check
+passes CI and collides on a laptop. A root source is exempt — its packages keep
+bare routes, so its label is never a top-level segment.
+
 Both an explicit and a derived label go through `assertLabelPathSafe` — an
 **allowlist** (`^[A-Za-z0-9._-]+$`), not a blocklist: a derived label comes
 straight from a hostile source's own `root.name`, and a blocklist naming only
 `/`/`\`/`.`/`..` still lets control characters (`\n`, injecting a new line or
 block into the shared `_headers` file) through.
+
+## Route shape and the merge
+
+`resolveCatalog` keeps EVERY source's packages — it no longer dedupes by
+`<namespace>/<package>`. That dedupe existed only because two copies would
+claim one detail-page route; routes are now index-qualified for every
+non-root source (`[label, namespace, ...package]`, the `root: true` source
+keeps the bare path), so both copies get their own page and both stay listed.
+Equal ids sort by index name, since `compareQualifiedIds` alone stopped being
+a total order once ids can repeat.
+
+`PackageRoute` therefore carries the ROUTE (`segments`) and the wire IDENTITY
+(`namespace`/`package`) separately. Never read identity back out of
+`segments`: its first element is a label, not a namespace, for every non-root
+source.
 
 ## Mirror placement rule
 

@@ -64,10 +64,10 @@ describe("C-304 synthesizePages — package-page writes stay bounded (16)", () =
     cleanupRoots.push(() => root.dispose());
 
     const packageCount = 60;
-    const packages = Array.from({ length: packageCount }, (_, i) => ({
-      segments: ["ns", `pkg${String(i).padStart(3, "0")}`],
-      wireBase: "",
-    }));
+    const packages = Array.from({ length: packageCount }, (_, i) => {
+      const segments = ["ns", `pkg${String(i).padStart(3, "0")}`];
+      return { segments, namespace: segments[0]!, package: segments.slice(1).join("/"), wireBase: "" };
+    });
 
     await synthesizePages({ scratchRoot: root.path, srcDir: "src", packages });
 

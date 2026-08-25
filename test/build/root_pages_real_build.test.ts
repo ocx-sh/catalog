@@ -32,7 +32,7 @@ describe("C-005/C-002 buildCatalog — root page, 404, and publicDir all reach d
             // a hard `LABEL_DERIVATION_EMPTY` error now that the source
             // pipeline is wired (`labels.ts`) — this test is about the root
             // page/404/publicDir, not label derivation.
-            sources: [{ path: "packages", root: true, label: "packages" }],
+            sources: [{ path: "packages", root: true, label: "ocx.sh" }],
             // `brand.logo` is a config-relative path (here a NESTED one) —
             // the build flattens it to its basename in the public root.
             brand: { title: "Root Pages Test", wordmark: "root.pages.example", logo: "assets/nested/logo.svg" },
@@ -86,7 +86,7 @@ describe("C-005/C-002 buildCatalog — root page, 404, and publicDir all reach d
         await writeFile(
           configPath,
           JSON.stringify({
-            sources: [{ path: "packages", root: true, label: "packages" }],
+            sources: [{ path: "packages", root: true, label: "ocx.sh" }],
             brand: { title: "No Public Dir Test" },
           }),
           "utf8",

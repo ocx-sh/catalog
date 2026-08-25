@@ -73,7 +73,7 @@ async function writeFixture(configDir: string): Promise<string> {
   await writeFile(
     configPath,
     JSON.stringify({
-      sources: [{ path: "index", root: true, label: "primary" }],
+      sources: [{ path: "index", root: true, label: "ocx.sh" }],
       brand: { title: BRAND_TITLE },
       publicDir: "public",
       favicon: FAVICON_HREF,
@@ -94,10 +94,17 @@ describe("C-003/C-005/C-006 buildCatalog — a configured source reaches dist/ e
           await buildCatalog({ configPath, outDir });
 
           // 1. The catalog view model the theme fetches — byte-identical to
-          // the same view model built directly off the source reader.
+          // the same view model built directly off the source reader, GIVEN
+          // the same `indexes` envelope. The build emits that envelope for
+          // every catalog, one source included, because the theme resolves
+          // every package's route through it; the Python-bot byte gate sits
+          // on `catalogIndex` itself (`test/golden/**` calls it with one
+          // argument), not on what the pipeline chooses to pass.
           const files = await readPathSource({ path: "index" }, configDir);
           const expectedCatalog = serializeCatalog(
-            catalogIndex([...extractPackages(files)].sort(compareQualifiedIds)),
+            catalogIndex([...extractPackages(files)].sort(compareQualifiedIds), [
+              { name: "ocx.sh", root: true, count: 2 },
+            ]),
           );
           const writtenCatalog = await readFile(join(outDir, "data", "catalog", "catalog.json"), "utf8");
           expect(writtenCatalog).toBe(expectedCatalog);
@@ -142,7 +149,7 @@ describe("C-003/C-005/C-006 buildCatalog — a configured source reaches dist/ e
           // root:true source) AND under index/<label>/.
           const [rootCopy, labelCopy, casCopy] = await Promise.all([
             readFile(join(outDir, "p", "acme", "widget.json")),
-            readFile(join(outDir, "index", "primary", "p", "acme", "widget.json")),
+            readFile(join(outDir, "index", "ocx.sh", "p", "acme", "widget.json")),
             readFile(
               join(
                 outDir,
@@ -162,7 +169,7 @@ describe("C-003/C-005/C-006 buildCatalog — a configured source reaches dist/ e
           // 5. The Cloudflare Pages header rules covering both mirror prefixes.
           const headers = await readFile(join(outDir, "_headers"), "utf8");
           expect(headers).toContain("/p/*\n  Content-Security-Policy: sandbox");
-          expect(headers).toContain("/index/primary/p/*\n  Content-Security-Policy: sandbox");
+          expect(headers).toContain("/index/ocx.sh/p/*\n  Content-Security-Policy: sandbox");
         });
       });
     },

@@ -49,7 +49,8 @@ overwrite of `data/catalog/catalog.json`, described below.
 ```
 dist/
 ├── index.html                    # VitePress-rendered pages: package grid, per-package detail pages, ...
-├── <namespace>/<package>/…       # one route per resolved package, depth-N to match its namespace + package segments
+├── <namespace>/<package>/…       # one route per resolved package from the root: true source, depth-N to match its namespace + package segments
+├── <label>/<namespace>/<package>/…  # same, for a non-root source — its route is qualified with its own label
 ├── assets/                       # VitePress's own built JS/CSS bundle
 ├── p/                            # present only when some sources[] entry sets root: true — that source's own wire tree
 │   └── <namespace>/<package>.json
