@@ -102,7 +102,13 @@ async function main() {
     server = await serve(outDir);
     const { port } = server.address();
     const puppeteer = (await import("puppeteer-core")).default;
-    browser = await puppeteer.launch({ executablePath: chromePath, headless: true, args: ["--no-sandbox"] });
+    // No path handed in (the CI runner has no puppeteer cache to glob): let
+    // puppeteer resolve the system Chrome install itself.
+    browser = await puppeteer.launch({
+      ...(chromePath ? { executablePath: chromePath } : { channel: "chrome" }),
+      headless: true,
+      args: ["--no-sandbox"],
+    });
     const page = await browser.newPage();
     await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: "networkidle0" });
     await page.waitForSelector('[data-slot="package-card"]', { timeout: 15_000 });
