@@ -5,9 +5,12 @@ not copies. Team-shared — commit it.
 
 ## Pointers
 
-- Verification: `AGENTS.md` › Commands — `npm run lint`, `npm run typecheck`,
-  `npm test`, `node scripts/pack-smoke.mjs`; all four together are the
-  local CI equivalent.
+- Verification: `AGENTS.md` › Commands — `task verify` (go-task, provisioned
+  via `ocx.toml`/`ocx.lock`) is the canonical local + CI surface, byte for
+  byte: lint → typecheck → test → pack-smoke. The npm scripts it wraps
+  (`npm run lint`/`typecheck`/`test`, `node scripts/pack-smoke.mjs`) still
+  work. `docs:*`, `quality:web`, `dev:*` and the repo-hygiene tasks are
+  standalone, deliberately not part of `verify`.
 - Plan / ADR conventions: plans in `.claude/state/plans/plan_*.md`
   (gitignored; Plan Status Protocol in `.claude/rules/meta-ai-config.md`);
   ADR/research artifacts in `.claude/artifacts/` (`adr_*.md`,

@@ -28,15 +28,17 @@ surfaces this package owns versus reads, and the non-goals →
 [`product-context.md`](./.claude/rules/product-context.md). Canonical; do
 not restate it here.
 
-> **Status: pre-1.0, published.** `0.1.0` and `0.1.1` are both on npm
-> (`latest` is `0.1.1`). The GitHub remote
+> **Status: pre-1.0, published.** `latest` on npm is `0.4.0` (verified via
+> `npm view @ocx-sh/catalog version`), the same version tagged `v0.4.0` in
+> this repo — the release lane has carried every version since `0.1.0`
+> through `0.2.0`, `0.2.1`, `0.3.0`, and `0.4.0`. The GitHub remote
 > [`ocx-sh/catalog`](https://github.com/ocx-sh/catalog) is public, and the
 > user documentation is a MkDocs Material site under `docs/`, published to
 > GitHub Pages (`README.md` is a pointer at it, not a second copy). The
 > release lane is fully operational: `0.1.0` was a one-time manual bootstrap
 > publish (trusted publishing cannot pre-provision a new package name), and
-> `0.1.1` went out through CI with a real provenance attestation. No release
-> setup remains — see [Release](#release).
+> every version since went out through CI with a real provenance
+> attestation. No release setup remains — see [Release](#release).
 
 ## Rule Catalog
 
@@ -67,13 +69,17 @@ task docs:build     # mkdocs build --strict (the docs site; standalone)
 task docs:serve     # local docs preview on 127.0.0.1:8000
 task changelog:preview   # git-cliff --unreleased
 task release:prepare BUMP=auto|patch|minor|major   # see Release
+task dev:indexes         # seed .dev-indexes/ (needs ../index checked out)
+task dev:catalog CASE=multi-root   # serve one seeded multi-index case
 ```
 
 `task verify` is the local equivalent of the CI quality gate — run it before
 calling anything done. Repo-hygiene tasks (`lint:actions`, `lint:links`,
 `secrets`, `lint:workflows`), `quality:web` (Lighthouse CI over a fixture
-site) and `docs:*` (the MkDocs documentation site) run standalone, not as part
-of `verify` — `verify` must stay runnable with the npm toolchain alone.
+site), `dev:*` (the manual multi-index review harness — the one task that
+needs the sibling `ocx-sh/index` checkout) and `docs:*` (the MkDocs
+documentation site) run standalone, not as part of `verify` — `verify` must
+stay runnable with the npm toolchain alone.
 
 CI (`.github/workflows/ci.yml`) runs: `lint`, `typecheck`, `test`,
 `pack-verify`, `workflows-lint` (zizmor), `audit-signatures`, `repo-checks`

@@ -44,7 +44,7 @@ already there. It never writes to an index and never invents index data. See
     ---
 
     Aggregate the official index alongside your own as a second, non-root
-    source — and what merging does to precedence and detail pages.
+    source — every package from both stays listed, on its own detail page.
 
     [:octicons-arrow-right-24: Aggregate the public index](how-to/configure-sources.md#aggregate-the-public-index)
 
