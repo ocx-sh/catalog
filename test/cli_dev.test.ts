@@ -171,9 +171,13 @@ describe("C-001/C-005/S-003 ocx-catalog dev — full CLI lifecycle", () => {
         const runPromise = runMain(["dev", "--source", sourcePath, "--port", String(port)]);
         await waitForPortOpen(port);
         process.emit("SIGINT");
-        const { exitCode } = await runPromise;
+        const { exitCode, stdout } = await runPromise;
         expect(exitCode).toBeUndefined();
         expect(await isPortOpen(port)).toBe(false);
+        // A server that says nothing is indistinguishable from a hung
+        // command — and with no --port the port is picked dynamically, so
+        // the URL is the only way to find it.
+        expect(stdout).toContain(`http://localhost:${port}/`);
       });
     },
     30_000,

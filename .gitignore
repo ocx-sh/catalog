@@ -14,3 +14,6 @@ site/
 
 # direnv local activation state (.envrc itself IS tracked)
 .direnv/
+
+# carved multi-index dev trees (task dev:indexes)
+.dev-indexes/

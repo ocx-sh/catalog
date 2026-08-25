@@ -110,6 +110,45 @@ tasks:
     cmds:
       - npm audit signatures
 
+  # dev:indexes / dev:catalog are STANDALONE, like quality:web — never part of
+  # `verify`, which must stay runnable on the npm toolchain alone. dev:indexes
+  # is also the one task here that needs a SECOND repository: it carves its
+  # trees out of the sibling ocx-sh/index checkout (INDEX_REPO overrides the
+  # path), deliberately, so no third-party package data is committed here.
+  dev:indexes:
+    desc: >-
+      Seed .dev-indexes/ — carved multi-index trees plus one config per case
+      (single-root, single-noroot, multi-root, multi-noroot, many, and the two
+      deliberately-invalid ones). Needs ../index checked out.
+    cmds:
+      - node scripts/dev-indexes.mjs
+
+  dev:catalog:
+    desc: >-
+      Serve one seeded case with a real `ocx-catalog dev` — `task dev:catalog
+      CASE=multi-root`. Run `task dev:indexes` first. The invalid-* cases are
+      expected to FAIL to build; that is what they are for.
+    # No default: CASE names which of seven quite different renders you get, and
+    # silently picking one for you is how a review ends up looking at the wrong
+    # case. `requires` makes task refuse and PRINT the accepted values, which is
+    # the closest thing go-task has to a picker — `prompt:` is yes/no only, not
+    # a value input. Keep this list in step with scripts/dev-indexes.mjs's
+    # writeConfig calls; they are the files this resolves against.
+    requires:
+      vars:
+        - name: CASE
+          enum:
+            - single-root
+            - single-noroot
+            - multi-root
+            - multi-noroot
+            - many
+            - invalid-prefix
+            - invalid-collision
+    cmds:
+      - npm run build
+      - node dist/cli/index.js dev --config .dev-indexes/{{.CASE}}.config.json
+
   # quality:web is STANDALONE — deliberately NOT part of `verify`. It builds the
   # committed fixture index at test/fixtures/quality-index/ into .lhci-site/,
   # which .lighthouserc.cjs points `staticDistDir` at, then asserts the measured

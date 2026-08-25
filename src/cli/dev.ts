@@ -80,6 +80,14 @@ export async function runDev(options: DevCommandOptions): Promise<void> {
       return;
     }
 
+    // Until this line, interactive `dev` printed NOTHING: `vitepress`'s
+    // `createServer()` has no banner of its own (that is `printUrls()`, which
+    // the worker deliberately never calls), so a server that was serving
+    // perfectly well was indistinguishable from a hung command — and without
+    // an explicit `--port` the port is chosen dynamically, so there was
+    // nothing to guess either.
+    process.stdout.write(`ocx-catalog dev: serving http://localhost:${handle.port}/ — Ctrl-C to stop\n`);
+
     await new Promise<void>((resolveDev) => {
       process.once("SIGINT", () => {
         handle.close().finally(resolveDev);
