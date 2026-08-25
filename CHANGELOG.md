@@ -5,6 +5,24 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.5.0] - 2026-08-25
+
+### Added
+
+- Index-qualified routes and one name per index *(build,sources)* **BREAKING**
+- A per-index scope for the catalog view *(theme)*
+- Footer.links[], a configurable docs nav, and a real shortcut badge *(config,theme)* **BREAKING**
+- A manual multi-index review harness *(dev)*
+
+### Documentation
+
+- Correct the claims this branch's own changes invalidated
+
+### Fixed
+
+- The toolbar narrows, facets AND, and the keyword rail rescores *(theme)*
+- Pack-smoke reads .vue template comments as comments *(scripts)*
+
 ## [0.4.0] - 2026-08-25
 
 ### Added
@@ -60,6 +78,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Added
 
 - Initial commit of @ocx-sh/catalog
+[0.5.0]: https://github.com/ocx-sh/catalog/compare/v0.4.0..v0.5.0
 [0.4.0]: https://github.com/ocx-sh/catalog/compare/v0.3.0..v0.4.0
 [0.3.0]: https://github.com/ocx-sh/catalog/compare/v0.2.1..v0.3.0
 [0.2.1]: https://github.com/ocx-sh/catalog/compare/v0.2.0..v0.2.1
