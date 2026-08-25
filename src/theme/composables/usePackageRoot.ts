@@ -7,8 +7,22 @@ import { wirePrefix } from '../utils/cas'
 // layer in between.
 
 export interface Owner {
-  github: string
-  github_id: number
+  /** The owner's forge USERNAME — never a display name. Canonical since
+   *  ocx-indexbot 0.5.0. Optional because an index published before that
+   *  carries only the legacy pair below. */
+  login?: string
+  /** The owner's numeric forge user id, and the index's own ownership key. */
+  id?: number
+  /** Pre-0.5.0 spelling of `login`. A root written by 0.5.0 or later carries
+   *  it too, derived from `login`, so the two never disagree. */
+  github?: string
+  /** Pre-0.5.0 spelling of `id`. */
+  github_id?: number
+}
+
+/** The owner's forge username, whichever spelling the root carries. */
+export function ownerLogin(owner: Owner): string | undefined {
+  return owner.login ?? owner.github
 }
 
 export interface Upstream {

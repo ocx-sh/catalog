@@ -2,7 +2,7 @@
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import { defineComponent, ref } from 'vue'
 import { mount } from '@vue/test-utils'
-import { usePackageRoot } from '../../../src/theme/composables/usePackageRoot.js'
+import { ownerLogin, usePackageRoot } from '../../../src/theme/composables/usePackageRoot.js'
 
 // WP-03 coverage-gap closure: usePackageRoot had no ported test (source repo
 // didn't carry one either). It fetches from `onMounted`/`watch`, both no-ops
@@ -195,5 +195,24 @@ describe('usePackageRoot', () => {
 
     expect(get().error.value).toBe('fresh network error')
     wrapper.unmount()
+  })
+})
+
+describe('ownerLogin', () => {
+  // ocx-indexbot 0.5.0 renamed `owners[].github` to `login` because the old
+  // name claimed a forge the index may not be hosted on (see that project's
+  // adr_forge_neutral_owners.md). Both spellings reach this renderer: a root
+  // published before 0.5.0 carries only the legacy one, and one written since
+  // carries both, derived and therefore always equal.
+  test('prefers the canonical login', () => {
+    expect(ownerLogin({ login: "alice", id: 1, github: "alice", github_id: 1 })).toBe("alice")
+  })
+
+  test('falls back to the pre-0.5.0 spelling', () => {
+    expect(ownerLogin({ github: "alice", github_id: 1 })).toBe("alice")
+  })
+
+  test('is undefined when the root names neither', () => {
+    expect(ownerLogin({})).toBeUndefined()
   })
 })

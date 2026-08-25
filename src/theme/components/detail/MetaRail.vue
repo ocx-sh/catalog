@@ -10,7 +10,8 @@ import CopyContextMenu, { buildTagCopyActions, type CopyAction } from '../shared
 import ExternalIcon from '../shared/ExternalIcon.vue'
 import { installCommand, useInstallFlavors, type InstallIcon } from '../../composables/useInstallFlavors'
 import { parseTag, type VersionTable } from '../../utils/version'
-import type { PackageRoot } from '../../composables/usePackageRoot'
+import type { Owner, PackageRoot } from '../../composables/usePackageRoot'
+import { ownerLogin } from '../../composables/usePackageRoot'
 import type { ImageIndex } from '../../composables/useImageIndex'
 import type { CatalogPackageDetail } from '../../../viewmodel/types.js'
 
@@ -209,12 +210,22 @@ async function copyRow(key: string, text: string) {
 const owners = computed(() => props.root.owners)
 
 // Owner profile links are a FIXED `https://github.com/<owner>` prefix
-// around wire-sourced `owner.github` text, not a raw wire URL — low risk
-// (the scheme/host are never attacker-controlled), but routed through
-// `safeHref` anyway for consistency with every other wire-adjacent href on
-// this page (C-605) rather than being the one exception.
-function ownerHref(owner: { github: string }): string | null {
-  return safeHref(`https://github.com/${owner.github}`)
+// around wire-sourced username text, not a raw wire URL — low risk (the
+// scheme/host are never attacker-controlled), but routed through `safeHref`
+// anyway for consistency with every other wire-adjacent href on this page
+// (C-605) rather than being the one exception.
+//
+// The field is `login` since ocx-indexbot 0.5.0, falling back to the
+// pre-0.5.0 `github`; `ownerLogin` owns that choice so nothing here reads
+// either key directly.
+//
+// KNOWN GAP: the `github.com` host is hard-coded, and `owners[]` is
+// forge-neutral — on a GitLab-hosted index these are GitLab usernames and
+// this link points at a GitHub profile that need not exist. Closing it needs
+// the index's own forge in the view-model, which this component cannot see.
+function ownerHref(owner: Owner): string | null {
+  const login = ownerLogin(owner)
+  return login ? safeHref(`https://github.com/${login}`) : null
 }
 
 // `upstream.repository_url` is third-party metadata (wire-sourced, not
@@ -361,8 +372,8 @@ const safeSourceUrl = computed(() => safeHref(props.root.source ?? props.detail?
           <div class="metadata-row">
             <span class="metadata-key">owners</span>
             <span class="metadata-value">
-              <a v-for="(owner, i) in owners" :key="owner.github" :href="ownerHref(owner)" target="_blank" rel="noopener noreferrer">
-                @{{ owner.github }}<template v-if="i < owners.length - 1">, </template>
+              <a v-for="(owner, i) in owners" :key="ownerLogin(owner)" :href="ownerHref(owner)" target="_blank" rel="noopener noreferrer">
+                @{{ ownerLogin(owner) }}<template v-if="i < owners.length - 1">, </template>
               </a>
             </span>
           </div>
