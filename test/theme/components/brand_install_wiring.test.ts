@@ -191,18 +191,29 @@ describe("C-601 mirror-agnostic install / copy-link", () => {
     expect(html).not.toContain("ocx.sh/");
   });
 
-  test("buildTagCopyActions' Copy-link strips exactly the brand's own first segment, for any brand token", () => {
-    for (const qualifiedName of ["ocx.sh/kitware/cmake", "acme.example/widgets/tool"]) {
-      const actions = buildTagCopyActions(qualifiedName, null, []);
+  // Copy-link used to DERIVE the route by stripping the qualified name's
+  // first segment. That held only while every package sat at a bare
+  // `<ns>/<pkg>` route; a non-root index's package is served at
+  // `/<index>/<ns>/<pkg>`, so the route is no longer a function of the name
+  // and the owner of the link passes it in.
+  test("buildTagCopyActions' Copy-link uses the route it is given, brand token and all", () => {
+    for (const [qualifiedName, routePath] of [
+      ["ocx.sh/kitware/cmake", "/kitware/cmake"],
+      ["acme.example/widgets/tool", "/acme.example/widgets/tool"],
+    ]) {
+      const actions = buildTagCopyActions(qualifiedName, null, [], routePath);
       const copyLink = actions.find((a) => a.label === "Copy link");
-      const barePath = qualifiedName.split("/").slice(1).join("/");
-      expect(copyLink?.command).toBe(`${window.location.origin}/${barePath}`);
-      // Never leaves the brand-prefixed whole name unstripped (the pre-fix
-      // bug when the brand token wasn't literally "ocx.sh": the regex-strip
-      // silently no-op'd, leaving the WHOLE qualified name — brand included
-      // — inside the path segment instead of just `<ns>/<pkg>`).
-      expect(copyLink?.command).not.toContain(qualifiedName);
+      expect(copyLink?.command).toBe(`${window.location.origin}${routePath}`);
     }
+  });
+
+  // The detail page's own menus (MetaRail/VersionTree/TagBadge) pass no
+  // route: the page being viewed IS the package, so its own URL is the link
+  // and there is nothing to derive.
+  test("buildTagCopyActions' Copy-link falls back to the current page's own URL", () => {
+    const actions = buildTagCopyActions("acme.example/widgets/tool", null, []);
+    const copyLink = actions.find((a) => a.label === "Copy link");
+    expect(copyLink?.command).toBe(`${window.location.origin}${window.location.pathname}`);
   });
 });
 

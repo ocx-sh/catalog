@@ -34,8 +34,25 @@ export interface CatalogPackage {
   readmeUrl: string | null
 }
 
+/** One configured index, as the catalog's scope control sees it. Present
+ * only when the deployment aggregates MORE than one — a single-source
+ * catalog carries no envelope at all, which is what makes "render no scope
+ * control" a fact about the data rather than a count the theme has to keep
+ * in sync. */
+export interface CatalogIndexInfo {
+  /** The index's own name — the first `/`-segment of every package name it
+   * publishes, and what the scope tab shows. */
+  name: string
+  /** The default index: preselected on arrival, and the only one whose
+   * packages keep bare routes. No entry has it when no source is `root`. */
+  root: boolean
+  /** Packages this index contributes to the merged catalog. */
+  count: number
+}
+
 export interface CatalogData {
   generated: string | null
+  indexes?: CatalogIndexInfo[]
   packages: CatalogPackage[]
 }
 

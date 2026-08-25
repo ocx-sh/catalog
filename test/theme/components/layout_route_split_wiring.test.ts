@@ -30,13 +30,13 @@ vi.mock("vitepress", () => ({
   useRouter: () => ({ go: vi.fn() }),
 }));
 
-// SearchModal.vue statically imports `@localSearchIndex`, a VitePress
+// SearchModal.vue imports `@localSearchIndex`, a VitePress
 // local-search-Vite-plugin-only virtual module (see its own docblock) that
-// has no meaning outside a real `vitepress build`/`dev` run — nothing else
-// provides it here, so Vite's import-analysis fails to even TRANSFORM
-// SearchModal.vue's compiled source under plain vitest, independent of
-// C-606 (SearchModal.vue was simply never mounted, directly or via Layout,
-// by any test before this one). Mocked at the module level so Vue's async-
+// has no meaning outside a real `vitepress build`/`dev` run.
+// `vitest.config.ts` now aliases it to a stub so the palette can be mounted
+// at all (`palette_route_wiring.test.ts` does exactly that), but this test
+// is about Layout's async-component split, not about the palette: the
+// module-level mock keeps Vue's async-
 // component resolution for it never touches the real file at all. The
 // `__esModule`/`__isTeleport`/`__isKeepAlive`/`__isSuspense` markers mirror
 // what a real ES module namespace object carries — `@vue/test-utils`'

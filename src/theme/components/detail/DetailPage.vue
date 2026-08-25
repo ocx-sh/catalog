@@ -17,16 +17,17 @@ import MetaRail from './MetaRail.vue'
 // pure, this is the one caller that owns the timer).
 const HOVER_DEBOUNCE_MS = 180
 
-// Identity comes from the page's own route path, NOT `useData().params`
-// (Specify-spike correction — see `pages.ts`'s doc "Passing package
-// identity to DetailPage.vue" section): a synthesized package page is a
-// plain static file, not a `defineRoutes`/`[param]`-named route, so
-// `params` is never populated for it. `relativePath` is exactly the string
-// `pages.ts` wrote the file to (e.g. `kitware/cmake.md`), depth-N safe —
-// `ns` is always the first segment, `pkg` is every remaining segment
-// rejoined (never re-split), matching every existing fetch/CAS URL builder
-// below (`${ns}/${pkg}` reproduces the full logical name for any depth).
-const { page, frontmatter } = useData()
+// Identity comes from this page's own FRONTMATTER, not from its route and
+// not from `useData().params` (which is never populated for a synthesized
+// static page — see `pages.ts`'s "Passing package identity" section).
+// It was read off `page.relativePath` until multi-index routing: a non-root
+// source's page is served at `/<label>/<ns>/<pkg>`, so the first path
+// segment is an index label, and splitting the route would hand every CAS
+// URL a namespace that does not exist — which the theme's image-fallback
+// chains degrade silently, reading as "this package publishes nothing"
+// rather than as a broken fetch. `pages.ts` writes `ns`/`pkg` verbatim;
+// `pkg` is never re-split, so any depth-N package path survives.
+const { frontmatter } = useData()
 // Per-source wire mount prefix, written into this page's frontmatter by
 // `build/pages.ts`'s `packagePageContent` — `''` for the `root: true`
 // source, `index/<label>` for every other configured source. It is the only
@@ -34,9 +35,8 @@ const { page, frontmatter } = useData()
 // actually used; without it every wire request on a non-root source's page
 // goes to the site root and 404s.
 const wireBase = computed(() => (typeof frontmatter.value.wireBase === 'string' ? frontmatter.value.wireBase : ''))
-const segments = computed(() => page.value.relativePath.replace(/\.md$/, '').split('/'))
-const ns = computed(() => segments.value[0] ?? '')
-const pkg = computed(() => segments.value.slice(1).join('/'))
+const ns = computed(() => (typeof frontmatter.value.ns === 'string' ? frontmatter.value.ns : ''))
+const pkg = computed(() => (typeof frontmatter.value.pkg === 'string' ? frontmatter.value.pkg : ''))
 const bareName = computed(() => `${ns.value}/${pkg.value}`)
 
 const { root, loading, error, notFound } = usePackageRoot(ns, pkg, wireBase)

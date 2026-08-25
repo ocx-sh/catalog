@@ -29,18 +29,126 @@ Substitute `{name}` with `split('{name}').join(...)`, never
 `root.name` carries the brand prefix (`ocx.sh/<ns>/<pkg>`). Every CAS/wire
 fetch (`casUrl()`, `usePackageRoot`, `useImageIndex`) must build its URL from
 the bare `ns`/`pkg` route params, never from `root.name` — building a CAS URL
-from `root.name` 404s. `DetailPage.vue` derives `ns`/`pkg` from
-`useData().page.relativePath` (see "Route identity" below), not from a
-fetched root field.
+from `root.name` 404s. `DetailPage.vue` derives `ns`/`pkg` from frontmatter
+(see "Route identity" below), not from a fetched root field.
 
-## Route identity: `relativePath`, not `useData().params`
+## Route identity: frontmatter, never the route, never `useData().params`
 
 A synthesized package page is a plain static file (`src/build/pages.ts`), not
 a `defineRoutes`/`[param]`-named dynamic route, so `useData().params` is
-never populated for it. `DetailPage.vue` derives `ns`/`pkg` by splitting
-`useData().page.relativePath` on `/` — `ns` is the first segment, `pkg` is
-every remaining segment rejoined (never re-split), matching depth-N package
-paths.
+never populated for it. `pages.ts` writes `ns`/`pkg` into each page's
+frontmatter instead, and `DetailPage.vue` reads them from there. `pkg` is
+never re-split, so depth-N package paths survive.
+
+Do NOT recover identity from the route. `DetailPage.vue` used to split
+`page.relativePath`, which held only while every route was the bare
+`<ns>/<pkg>`; a non-root index's page is served at `/<index>/<ns>/<pkg>`, so
+that split reads an index label as a namespace and every CAS URL built from
+it 404s — which the theme's image-fallback chains degrade silently, reading
+as "this package publishes nothing" rather than as a broken fetch. Same class
+of bug as the CAS gotcha above, and the same rule: route is presentation,
+`ns`/`pkg` is identity.
+
+## The index is the name's first segment, not a badge
+
+A catalog aggregating several indexes prints each package's FULL qualified
+name (`pkg.name`, e.g. `corp.example/platform/deploy-kit`) on cards and table
+rows — its first `/`-segment IS the index (`sources/labels.ts` derives a
+source's label from exactly it and rejects a config whose label disagrees).
+So a package's origin needs no badge, dot or coloured edge; adding one is a
+second marker for a fact the line already carries.
+
+`bareName` (`<ns>/<pkg>`) stays what every CAS/wire URL and the monogram hash
+are built from — see the CAS gotcha above. Only DISPLAY uses the qualified
+name, and it elides in the middle (`utils/elideMiddle.ts`) so both the index
+and the package leaf survive; plain `text-overflow` eats the leaf.
+
+**The route rule has exactly one implementation, `src/viewmodel/route.ts`.**
+`utils/packageRoute.ts` re-exports it; `build/sources_pipeline.ts` imports it
+too, so the path a page is WRITTEN at and the path it is LINKED at cannot
+drift. Every link goes through it — cards, table rows and the ⌘K palette. The
+default index keeps bare `/<ns>/<pkg>` routes; every other index qualifies its
+pages with its own name, and a call site that rebuilds the bare path by hand
+404s on all of them.
+
+This branch paid for the two-copy version twice. The palette rebuilt the bare
+path inline, and no test caught it because `@localSearchIndex` (a
+VitePress-plugin virtual module) made `SearchModal.vue` untransformable under
+vitest — `vitest.config.ts` now aliases it to a stub so the palette is
+mountable. `DetailPage.vue` recovered `ns`/`pkg` by splitting the route, which
+reads an index label as a namespace. A duplicated rule looks correct in each
+copy; that is why neither was caught by reading them.
+
+**`catalog.indexes` ships for every catalog, one source included** — the theme
+resolves routes through it, so suppressing it below two sources gave a lone
+non-root deployment qualified pages and no way to link them (every card 404'd).
+Presence of the envelope is therefore NOT the question "is there a scope to
+pick"; a one-entry envelope means one place to be. `CatalogPage.vue`'s
+`hasScope` is that question, asked once and read by both the tab row and the
+`?index=` mirror. `packageRoutePath` still accepts `undefined` — a catalog.json
+this renderer did not write has no such key.
+
+Scope selection lives in `IndexTabs.vue` above the toolbar, never as a fifth
+filter chip: platforms and keywords are attributes a package HAS, an index is
+where it comes FROM. It renders only under `hasScope`, and the selection is
+mirrored into `?index=` with `replaceState` (the same mechanism `?q=` uses) so
+Back from a detail page restores it — the mirror watches `indexes` as well as
+the selection, or a cold load settles the scope after the URL was already
+rewritten and the shared link loses it permanently.
+
+## Catalog toolbar and grid: five invariants that each cost a defect
+
+Four landed together from issue #5, the keyword-rail one right after, and
+each is easy to undo by accident. `catalog_layout_wiring.test.ts`
+(`test/theme/components/`) pins Tab-out-of-search, the table's fixed
+platform slots, chip-rail nowrap, and card-keyword clipping — the AND-within-
+a-facet invariant below is pinned separately by
+`test/theme/utils/filterPackages.test.ts` ("AND within the facet"), since it
+lives in `filterPackages` itself rather than in component wiring.
+`keyword_rail_narrowing_wiring.test.ts` pins the rail.
+
+- **Every filter selection narrows.** `filterPackages` combines values
+  *within* a facet with AND, not just across facets — two platform chips mean
+  "ships both", two keyword chips mean "carries both". They used to be OR
+  within a facet, so a second click widened the result set, which reads as the
+  rail being broken rather than as a feature.
+- **The chip rail never wraps.** No chip shrinks (each is floored by its own
+  longest word) and `KEYWORD_CHIP_LIMIT` is a plain constant, not
+  viewport-aware — so a flat `flex-wrap: wrap` row dropped `deprecated`/
+  `yanked` onto a second line as the window narrowed. `FilterChips.vue` is
+  three groups; only `.chip-keywords` flexes and scrolls (the same treatment
+  `IndexTabs.vue` gives an over-long tab row). Flattening the grouping back
+  silently restores the wrap.
+- **The keyword rail comes from `filtered`, and the popover never does.**
+  Opposite call to the table columns below, on purpose. Scored against the
+  whole catalog the rail keeps offering keywords no surviving package
+  carries, and under AND semantics each of those is a click straight to "no
+  matches"; scored against the survivors every chip is a real further cut.
+  Active keywords are PINNED first, in click order, and excluded from the
+  scoring — greedy gives a keyword every survivor carries a score of ~0, so
+  the chip you need in order to UNDO the filter is exactly the one it drops.
+  The "+N more" popover stays whole-catalog: it is the one way back to a
+  keyword the current result set no longer offers. The rail's contents
+  therefore move on every click, which is why the keyword group is a
+  `TransitionGroup` — the set changing invisibly is what reads as broken.
+- **Table platform columns come from the whole catalog, never `filtered`.**
+  `PackageTable` draws one slot per OS whether or not the row ships it, so
+  icons line up down the table; `CatalogPage` derives the column list from
+  `catalog.packages`. Deriving it from the visible rows would make columns
+  appear and vanish as filters change, which is the same misalignment wearing
+  a different hat.
+- **A card's keyword strip is one clipped line.** The title is already pinned
+  to one line and the description clamped to two with a floor; keywords were
+  the last thing that could grow, so wrapping made two cards side by side
+  different heights purely because one package's keywords were longer. No
+  fade over the clip — a gradient mask cannot tell whether it is actually
+  overflowing, so it would dim a keyword that fits.
+
+Tab out of the search field goes to the first card/row, not into the toolbar
+(`CatalogPage.vue`'s `onSearchNext`). C-330 is unchanged and no `tabindex`
+appears anywhere: the toolbar controls are still real Tab stops, reachable by
+Shift+Tab back out of the grid. Reordering the DOM instead would have made
+focus order disagree with visual order — the worse defect.
 
 ## Theme-aware, not palette-assuming
 

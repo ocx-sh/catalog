@@ -13,6 +13,7 @@ import {
 import MiniSearch, { type SearchResult } from 'minisearch'
 import { useCatalog } from '../../composables/useCatalog'
 import { filterPackages } from '../../utils/filterPackages'
+import { packageRoutePath } from '../../utils/packageRoute'
 import { useCommandPalette, useGlobalPaletteShortcut } from '../../composables/useCommandPalette'
 
 // Mounted once in Layout.vue — this is THE singleton palette consumer, so
@@ -92,10 +93,15 @@ interface FlatResult {
   sublabel: string
 }
 
-/** Bare `<ns>/<pkg>` — the route path. Never `pkg.name`, which carries the
- * `ocx.sh/` prefix (same trap documented in `PackageCard`/`usePackageRoot`). */
-function pkgHref(pkg: { namespace: string, package: string }) {
-  return `/${pkg.namespace}/${pkg.package}`
+/** The same route rule `PackageCard`/`PackageTable` link by, via the one
+ * shared helper — a bare `/<ns>/<pkg>` for the default index, `/<index>/<ns>/
+ * <pkg>` for every other. This built the bare path unconditionally and so
+ * 404'd on every package from a non-root index: `build/sources_pipeline.ts`
+ * writes those pages under their index name, and nothing bare exists there
+ * to land on. Route rules belong in `utils/packageRoute.ts`, never
+ * re-derived at a call site. */
+function pkgHref(pkg: { name: string }) {
+  return packageRoutePath(pkg.name, catalog.value.indexes)
 }
 
 const flatResults = computed<FlatResult[]>(() => [

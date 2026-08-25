@@ -37,27 +37,27 @@ export function buildTagCopyActions(
   qualifiedName: string,
   tag: string | null | undefined,
   flavors: readonly InstallFlavor[],
+  routePath?: string,
 ): CopyAction[] {
   const identifier = tag ? `${qualifiedName}:${tag}` : qualifiedName
   const list: CopyAction[] = [
     { label: 'Copy identifier', command: identifier, icon: 'identifier' },
   ]
   if (tag) list.push({ label: 'Copy tag', command: tag, icon: 'tag' })
-  // Detail-page URL — `qualifiedName` is `<brand>/<ns>/<pkg>` (WHATEVER
-  // this deployment's own brand token is, e.g. wire `root.name` — see
-  // `subsystem-sources.md`'s labels.ts note), the path after that FIRST
-  // segment IS the route. C-601: a hardcoded `.replace(/^ocx\.sh\//, '')`
-  // here left the brand prefix in place (producing a double-prefixed,
-  // wrong link) on any deployment whose index uses a different brand
-  // token — stripping exactly the first `/`-segment is brand-agnostic and
-  // matches the SAME invariant `sources/types.ts`'s S-008 check already
-  // enforces on every `root.name` this function ever receives (every
-  // caller passes a wire-qualified name, never a hand-built string). SSR
-  // guard: this runs in consumers' computeds during the SSG build, where
-  // there is no origin to resolve against.
+  // Detail-page URL. This used to derive the route by stripping
+  // `qualifiedName`'s first `/`-segment, which held only while EVERY route
+  // was the bare `<ns>/<pkg>`. With multi-index routing the brand segment
+  // survives in a non-root index's route (`/acme/platform/deploy-kit`), so
+  // the route is no longer a function of the name alone and is passed in by
+  // whoever owns it: the catalog card and table row hand over the same
+  // string they use as `href`. Omitted on the detail page's own menus
+  // (MetaRail/VersionTree/TagBadge), where the page being viewed IS the
+  // package, so its own pathname is the canonical link with nothing to
+  // derive. SSR guard: this runs in consumers' computeds during the SSG
+  // build, where there is no origin to resolve against.
   if (typeof window !== 'undefined') {
-    const path = qualifiedName.split('/').slice(1).join('/')
-    list.push({ label: 'Copy link', command: `${window.location.origin}/${path}`, icon: 'link' })
+    const path = routePath ?? window.location.pathname
+    list.push({ label: 'Copy link', command: new URL(path, window.location.origin).href, icon: 'link' })
   }
   for (const flavor of flavors) {
     list.push({ label: flavor.label, command: installCommand(flavor.command, identifier), icon: flavor.icon })

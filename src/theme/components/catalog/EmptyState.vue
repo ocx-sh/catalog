@@ -16,12 +16,18 @@ interface EmptyStateNavItem { text: string, link: string }
 const { theme } = useData()
 const navItems = computed(() => (theme.value.nav ?? []) as EmptyStateNavItem[])
 
-defineProps<{
+const props = defineProps<{
   variant: 'no-data' | 'no-match' | 'error'
   /** Only meaningful for `no-match` — the query that produced zero results. */
   query?: string
   /** Only meaningful for `no-match` — total catalog size for the hint copy. */
   total?: number
+  /** Only meaningful for `no-match` with an EMPTY `query` — the active
+   * filter-chip labels, so the copy can name what emptied the grid instead
+   * of headlining an empty search string (owner finding: under AND-within-
+   * facet semantics, filter-only emptying is the common path, not the query
+   * typo the old copy assumed). */
+  activeFilterLabels?: string[]
   /** Only meaningful for `error` (C-604) — `useCatalog()`'s own `error`
    * message, distinguishing a genuine broken-deploy fetch failure from a
    * real empty index (never "no packages published yet" for a 5xx/network/
@@ -29,7 +35,12 @@ defineProps<{
   errorMessage?: string | null
 }>()
 
-defineEmits<{ 'clear-search': [], retry: [] }>()
+defineEmits<{ 'clear-search': [], 'clear-filters': [], retry: [] }>()
+
+// "No matches for “”" on an empty query, with a `clear search` CTA that
+// clears an already-empty string, is what filter-only emptying used to look
+// like — nothing on the panel named the filters that actually did it.
+const filterSummary = computed(() => (props.activeFilterLabels ?? []).join(' · '))
 </script>
 
 <template>
@@ -52,10 +63,17 @@ defineEmits<{ 'clear-search': [], retry: [] }>()
       </div>
     </template>
     <template v-else-if="variant === 'no-match'">
-      <span class="empty-title">No matches for &ldquo;{{ query }}&rdquo;</span>
-      <p class="empty-copy">Check the spelling or drop a filter — {{ total }} packages total.</p>
+      <template v-if="query">
+        <span class="empty-title">No matches for &ldquo;{{ query }}&rdquo;</span>
+        <p class="empty-copy">Check the spelling or drop a filter — {{ total }} packages total.</p>
+      </template>
+      <template v-else>
+        <span class="empty-title">{{ filterSummary ? `No packages match ${filterSummary}` : 'No packages in this view' }}</span>
+        <p class="empty-copy">{{ total }} packages total — try dropping a filter.</p>
+      </template>
       <div class="empty-ctas">
-        <button type="button" class="cta-outline" @click="$emit('clear-search')">clear search</button>
+        <button v-if="query" type="button" class="cta-outline" @click="$emit('clear-search')">clear search</button>
+        <button v-else type="button" class="cta-outline" @click="$emit('clear-filters')">clear filters</button>
         <a
           v-for="item in navItems"
           :key="item.link"

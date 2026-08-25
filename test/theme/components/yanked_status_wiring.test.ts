@@ -10,10 +10,19 @@ import { describe, expect, test, vi } from "vitest";
 import { ref } from "vue";
 
 const relativePath = ref("widgets/tool.md");
+
+// `build/pages.ts` writes each package's identity into its page frontmatter
+// (`ns`/`pkg`) and DetailPage reads it from there — never from the route,
+// which leads with an index name for any non-root source. These tests keep
+// driving navigation by path, so the stub derives the same pair from it.
+function identityFromPath(path) {
+  const segments = path.replace(/\.md$/, '').split('/')
+  return { ns: segments[0], pkg: segments.slice(1).join('/') }
+}
 vi.mock("vitepress", () => ({
   useData: () => ({
     page: ref({ relativePath: relativePath.value }),
-    frontmatter: ref({ layout: 'detail' }),
+    frontmatter: ref({ layout: 'detail', ...identityFromPath(relativePath.value) }),
     isDark: ref(false),
   }),
 }));

@@ -1,15 +1,25 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useClipboard } from '@vueuse/core'
-import type { CatalogPackage } from '../../composables/useCatalog'
+import type { CatalogIndexInfo, CatalogPackage } from '../../composables/useCatalog'
 import CopyContextMenu, { buildTagCopyActions } from '../shared/CopyContextMenu.vue'
 import { useInstallFlavors } from '../../composables/useInstallFlavors'
+import { elideMiddle } from '../../utils/elideMiddle'
 import { monogramHue, monogramInitials } from '../../utils/monogram'
+import { packageRoutePath } from '../../utils/packageRoute'
 import { OS_GLYPHS, osRank } from '../../utils/osGlyphs'
 import LogoTile from './LogoTile.vue'
 import InstallRow from './InstallRow.vue'
 
-const props = defineProps<{ pkg: CatalogPackage, keywordRank?: Map<string, number> }>()
+const props = defineProps<{
+  pkg: CatalogPackage
+  keywordRank?: Map<string, number>
+  /** The catalog's configured indexes, straight off `catalog.indexes` —
+   * optional only because a catalog.json this renderer did not write has no
+   * such key. Only the route needs it; nothing about the card's appearance
+   * changes with it. */
+  indexes?: CatalogIndexInfo[]
+}>()
 
 // Cards show at most 3 keywords, the globally most common first (rank map
 // from CatalogPage's frequency list) — full list lives on the detail page.
@@ -29,11 +39,24 @@ const displayKeywords = computed(() => {
  * `ocx.sh/` synthesis, which breaks on a corporate mirror's own prefix. */
 const bareName = computed(() => `${props.pkg.namespace}/${props.pkg.package}`)
 
+const routePath = computed(() => packageRoutePath(props.pkg.name, props.indexes))
+
+/** How much of the identity line fits at card width: ~268px of
+ * `--ocx-text-xs` mono. A character budget is the right unit here precisely
+ * because the line is monospaced — see `elideMiddle`. */
+const NAME_BUDGET = 38
+/** The FULL qualified name, whose first segment is the index this package
+ * came from. The card used to print the bare `<ns>/<pkg>`, which made two
+ * indexes' copies of one package indistinguishable; printing the name whole
+ * is what identifies them, so this line needs no badge, dot or colour of its
+ * own. */
+const displayName = computed(() => elideMiddle(props.pkg.name, NAME_BUDGET))
+
 // Card-wide right-click copy menu (shared builder, like the table rows).
 // InstallRow deliberately has no menu of its own any more — see its note.
 const flavors = useInstallFlavors()
 const menuActions = computed(() =>
-  buildTagCopyActions(props.pkg.name, props.pkg.latestVersion, flavors.value),
+  buildTagCopyActions(props.pkg.name, props.pkg.latestVersion, flavors.value, routePath.value),
 )
 const { copy: menuCopy } = useClipboard()
 
@@ -54,7 +77,7 @@ const platforms = computed(() =>
 
 <template>
   <CopyContextMenu :actions="menuActions" :copy-text="menuCopy">
-    <a :href="`/${bareName}`" class="package-card" data-slot="package-card">
+    <a :href="routePath" class="package-card" data-slot="package-card">
     <div class="card-header">
       <LogoTile v-if="pkg.logoUrl || initials" :logo-url="pkg.logoUrl" :hue="hue" :initials="initials" />
       <div v-else class="card-tile-cube">
@@ -71,7 +94,7 @@ const platforms = computed(() =>
           <span v-if="pkg.status === 'deprecated'" class="card-deprecated">DEPRECATED</span>
           <span v-else-if="pkg.status === 'yanked'" class="card-deprecated card-yanked">YANKED</span>
         </div>
-        <div class="card-name">{{ bareName }}</div>
+        <div class="card-name" :title="pkg.name">{{ displayName }}</div>
       </div>
     </div>
 
@@ -237,13 +260,24 @@ const platforms = computed(() =>
   margin-top: auto;
 }
 
+/* Exactly one line, always. This was the last thing on a card that could
+   grow: the title is pinned to one line and the description clamped to two
+   with a floor, but the keyword chips wrapped freely — so two cards side by
+   side ended up different heights purely because one package's keywords were
+   longer. Chips that don't fit are clipped rather than wrapped. No fade over
+   the cut: a gradient mask can't tell whether it is actually overflowing, so
+   it would dim the tail of a keyword that fits perfectly well. The full
+   keyword list is on the detail page either way. */
 .card-keywords {
   display: inline-flex;
   gap: var(--ocx-space-3);
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .card-keyword {
+  flex-shrink: 0;
   font-family: var(--ocx-font-mono);
   font-size: var(--ocx-text-2xs);
   font-weight: var(--ocx-font-weight-medium);

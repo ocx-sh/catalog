@@ -1,7 +1,23 @@
+import { fileURLToPath } from "node:url";
 import vue from "@vitejs/plugin-vue";
 import { defaultExclude, defineConfig } from "vitest/config";
 
 export default defineConfig({
+  resolve: {
+    alias: {
+      // `@localSearchIndex` is a VitePress virtual module, published only by
+      // the local-search Vite plugin during a real `vitepress build`/`dev`.
+      // `SearchModal.vue` imports it, so without a stand-in Vite's
+      // import-analysis cannot even TRANSFORM that SFC and the command
+      // palette is unmountable — which is exactly how the palette shipped
+      // linking every package at a bare `/<ns>/<pkg>` path, 404ing on every
+      // non-root index, with no test able to see it. The stub resolves to an
+      // empty locale map, so `ensureDocsIndex` returns before it searches
+      // anything: this makes the PACKAGE half of the palette testable and
+      // deliberately does not fake the docs half.
+      "@localSearchIndex": fileURLToPath(new URL("./test/fixtures/local-search-index.mts", import.meta.url)),
+    },
+  },
   // Lets vitest/vite resolve `.vue` SFC imports (theme components) —
   // WP-03: no ported test currently imports one directly, but coverage
   // collection walks every file `coverage.include` matches, .vue included.
