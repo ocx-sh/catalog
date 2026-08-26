@@ -62,7 +62,7 @@ import type { Brand, FooterConfig, NavEntry } from "../config/types.js";
  * | `sitemap.hostname` / `transformHead` `og:url`/`link rel=canonical` (C-301) | Only emitted when `siteUrl` is given — degrades to no sitemap + no `og:url`/canonical, never a build failure. `canonical` is emitted for every routable page (index, docs, detail) from the SAME clean-URL path `og:url` already derives; a 404 page gets neither (nothing to canonicalize). |
  * | `public/robots.txt` (C-303) | Emitted by `generateConfig()` (not `transformHead` — this is a static file write, not a per-request head hook) under the SAME `siteUrl` guard as `sitemap.hostname` above, into the same `public/` mount `copyBrandLogo` writes into, carrying a `Sitemap:` line pointing at VitePress's own `sitemap.xml`. Written with the `wx` flag — a `publicDir`-supplied `robots.txt` (already copied there by `synthesizePages()`, which runs BEFORE this function) always wins; this is a default, not an override. |
  * | `transformPageData` per-page `title` (C-301) | Sets `pageData.title` to the package's own resolved title (desc title, or the bare `<ns>/<pkg>` key on a miss) for a detail page ONLY — index/404/docs pages are left alone, so VitePress's OWN `createTitle()` templating (`"<page title> \| <site title>"`, or the bare site title when no override is set) does the suffixing; this package does not reimplement that logic. Fixes the identity-gate defect where every detail page's rendered `<title>` was literally the SITE title, `brand.title` itself, never the package's own name. |
- * | `transformHead` per-page `og:title`/`og:description`/CAS preload (C-301) | Derives the page's identity from `pageData.relativePath` (NOT `pageData.params` — see `pages.ts`'s "Specify-spike correction" doc note; a synthesized page is a plain static file, `params` is never populated for it), looks up `DESC_LOOKUP[key]` (the baked table above), degrades to generic copy on a miss. Detail pages additionally get `link rel=preload as=fetch crossorigin` for their own `/p/<key>.json` — the wire root `usePackageRoot.ts` fetches on mount, so a bare navigation now beats the first fetch's own round-trip. |
+ * | `transformHead` per-page `og:title`/`og:description`/CAS preload (C-301) | Derives the page's identity from `pageData.relativePath` (NOT `pageData.params` — see `pages.ts`'s "Specify-spike correction" doc note; a synthesized page is a plain static file, `params` is never populated for it), looks up `DESC_LOOKUP[key]` (the baked table above), degrades to generic copy on a miss. Detail pages additionally get `link rel=preload as=fetch crossorigin` for their own `/p/<key>/_root.json` — the wire-root alias `usePackageRoot.ts` fetches on mount, so a bare navigation now beats the first fetch's own round-trip. |
  * | `themeConfig.githubUrl` | **Open item, unchanged**: no C-002 field carries it yet; `SiteHeader.vue`'s own nav is still hardcoded too (WP-10 territory, depends on WP-06). |
  *
  * ## CSS cascade order (C-005 named requirement)
@@ -401,8 +401,12 @@ export default defineConfig({
         ["meta", { property: "og:description", content: meta.description }],
         ["meta", { name: "description", content: meta.description }],
         // C-301: prefetches this page's own wire root ahead of
-        // usePackageRoot.ts's mount-time fetch.
-        ["link", { rel: "preload", href: \`/p/\${meta.key}.json\`, as: "fetch", crossorigin: "" }],
+        // usePackageRoot.ts's mount-time fetch. Must name the SAME url that
+        // composable asks for -- the _root.json alias, not the canonical
+        // <pkg>.json an ad blocker can match (see packageRootAliasPath in
+        // sources/types.ts); preloading the blocked url warms nothing and
+        // spends a request the browser then rejects.
+        ["link", { rel: "preload", href: \`/p/\${meta.key}/_root.json\`, as: "fetch", crossorigin: "" }],
       );
       if (SITE_URL) head.push(["meta", { property: "og:url", content: \`\${SITE_URL}/\${meta.key}\` }]);
     }

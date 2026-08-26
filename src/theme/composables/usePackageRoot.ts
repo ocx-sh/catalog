@@ -71,8 +71,10 @@ export interface PackageRoot {
 }
 
 /**
- * Fetches the wire package root at `<wireBase>/p/<ns>/<pkg>.json` (schema:
- * `root.schema.json`). `wireBase` is the mount prefix of the source this
+ * Fetches the wire package root — `<wireBase>/p/<ns>/<pkg>/_root.json`, the
+ * ad-blocker-safe alias `sources/mirror.ts` writes beside the canonical
+ * `<wireBase>/p/<ns>/<pkg>.json`, which is used as the 404 fallback (schema:
+ * `root.schema.json` either way; the two are byte-identical). `wireBase` is the mount prefix of the source this
  * package came from — `''` (the site root) for the `root: true` source,
  * `index/<label>` for every other; the detail page reads it off its own
  * frontmatter. See `utils/cas.ts`'s `wirePrefix`.
@@ -118,7 +120,26 @@ export function usePackageRoot(
         error.value = null
         notFound.value = false
         try {
-          const resp = await fetch(`${wirePrefix(baseVal)}/p/${nsVal}/${pkgVal}.json`)
+          // Alias first, canonical second. `/p/<ns>/<pkg>.json` — the wire
+          // root's own URL — is BLOCKED by any browser running EasyList/
+          // EasyPrivacy when the package name matches one of their ~800
+          // unanchored `/<word>.js` rules: the rule matches that substring
+          // inside `/<word>.json`, `fetch` rejects, and this composable's
+          // catch below renders "Failed to load: NetworkError" on a page
+          // whose data is perfectly fine (`ocx.sh/hawkeye/hawkeye` vs
+          // EasyPrivacy's `/hawkeye.js`, 2026-08-27). `sources/mirror.ts`
+          // writes `_root.json` beside every root for exactly this fetch —
+          // see `sources/types.ts`'s `packageRootAliasPath`.
+          //
+          // The canonical path stays as the fallback: a tree mirrored by an
+          // older build of this package has no alias, and 404-then-retry is
+          // strictly better there than a bogus "Package not found".
+          const base = wirePrefix(baseVal)
+          let resp = await fetch(`${base}/p/${nsVal}/${pkgVal}/_root.json`)
+          if (token !== requestToken) return
+          if (resp.status === 404) {
+            resp = await fetch(`${base}/p/${nsVal}/${pkgVal}.json`)
+          }
           if (token !== requestToken) return
           if (resp.status === 404) {
             notFound.value = true

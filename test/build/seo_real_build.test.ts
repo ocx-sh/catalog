@@ -101,9 +101,14 @@ describe("C-301/C-303 buildCatalog — per-page SEO head + robots.txt reach dist
           expect(indexHtml).toContain(`<link rel="canonical" href="${SITE_URL}/">`);
           expect(widgetHtml).toContain(`<link rel="canonical" href="${SITE_URL}/acme/widget">`);
 
-          // 3. Detail-page-only preload for its own wire root (C-301).
-          expect(widgetHtml).toContain('<link rel="preload" href="/p/acme/widget.json" as="fetch" crossorigin="">');
-          expect(indexHtml).not.toContain("/p/acme/widget.json");
+          // 3. Detail-page-only preload for its own wire root (C-301) — the
+          // `_root.json` alias `usePackageRoot.ts` actually fetches, never
+          // the canonical `<pkg>.json` an ad blocker's unanchored
+          // `/<word>.js` rule matches (sources/types.ts
+          // `packageRootAliasPath`).
+          expect(widgetHtml).toContain('<link rel="preload" href="/p/acme/widget/_root.json" as="fetch" crossorigin="">');
+          expect(widgetHtml).not.toContain('href="/p/acme/widget.json"');
+          expect(indexHtml).not.toContain("/p/acme/widget");
 
           // 4. Site-wide og:image/twitter:image from the brand logo,
           // absolute (siteUrl is set) — present on every page, including
