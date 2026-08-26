@@ -228,6 +228,38 @@ const textDecoder = new TextDecoder("utf-8");
  * never be misidentified as a package root. */
 const CAS_SUFFIX_RE = /\/o\/sha256\/[^/]+$/;
 
+/** Basename of the ad-blocker-safe ALIAS copy of a package root, written
+ * beside the package's own CAS directory: `p/<ns>/<pkg>/_root.json`.
+ *
+ * Why an alias exists at all: the wire root's own URL ends in
+ * `<pkg>.json`, so a package whose name matches one of the ~800 unanchored
+ * `/<word>.js` rules in EasyList/EasyPrivacy has its root fetch BLOCKED in
+ * any browser running those lists — the rule's substring matches
+ * `/<word>.js` inside `/<word>.json`. Observed 2026-08-27 on
+ * `ocx.sh/hawkeye/hawkeye`: EasyPrivacy's `/hawkeye.js` killed
+ * `/p/hawkeye/hawkeye.json` and the detail page rendered "Failed to load:
+ * NetworkError". The alias moves the package name out of the final
+ * segment, which no such rule can match.
+ *
+ * `_root` is collision-proof by construction: `PACKAGE_RE`
+ * (`viewmodel/catalog.ts`) requires a package segment to START with
+ * `[a-z0-9]`, so no package — at any depth — can ever own this filename.
+ * It sits INSIDE `p/`, so the `_headers` sandbox block for `/p/*` covers it
+ * with no second rule. The canonical `p/<ns>/<pkg>.json` is still written:
+ * this is an ADDITIONAL copy for the site's own fetch, never a wire-format
+ * change. */
+const ROOT_ALIAS_BASENAME = "_root.json";
+
+/** The alias path for a package-root wire path, or `null` for any other
+ * wire file (config/index files, CAS objects — including the
+ * `p/.../o/sha256/<hex>.json` image indices `CAS_SUFFIX_RE` excludes). */
+export function packageRootAliasPath(wirePath: WirePath): WirePath | null {
+  if (!wirePath.startsWith("p/") || !wirePath.endsWith(".json")) return null;
+  const opaque = wirePath.slice("p/".length, -".json".length);
+  if (!opaque.includes("/") || CAS_SUFFIX_RE.test(opaque)) return null;
+  return `p/${opaque}/${ROOT_ALIAS_BASENAME}`;
+}
+
 interface RawTagEntry {
   content: string;
   observed: string;

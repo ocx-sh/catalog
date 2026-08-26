@@ -39,6 +39,47 @@ describe('usePackageRoot', () => {
     const { get, wrapper } = mountHost('kitware', 'cmake')
     await vi.waitFor(() => expect(get().loading.value).toBe(false))
 
+    expect(globalThis.fetch).toHaveBeenCalledWith('/p/kitware/cmake/_root.json')
+    expect(get().root.value).toEqual({ name: 'ocx.sh/kitware/cmake' })
+    expect(get().notFound.value).toBe(false)
+    expect(get().error.value).toBeNull()
+    wrapper.unmount()
+  })
+
+  test('fetches the ad-blocker-safe alias, never the canonical <pkg>.json url', async () => {
+    // The canonical url is what EasyList/EasyPrivacy's unanchored
+    // `/<word>.js` rules match (`/hawkeye.js` inside `/hawkeye.json`), so a
+    // regression here silently breaks the detail page for every uBlock user
+    // whose package name collides. Assert the alias positively AND the
+    // canonical path's absence — a fallback that fires on a 200 would still
+    // pass the first assertion alone.
+    globalThis.fetch = vi.fn(() =>
+      Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ name: 'ocx.sh/hawkeye/hawkeye' }) }),
+    ) as unknown as typeof fetch
+
+    const { get, wrapper } = mountHost('hawkeye', 'hawkeye')
+    await vi.waitFor(() => expect(get().loading.value).toBe(false))
+
+    expect(globalThis.fetch).toHaveBeenCalledWith('/p/hawkeye/hawkeye/_root.json')
+    expect(globalThis.fetch).not.toHaveBeenCalledWith('/p/hawkeye/hawkeye.json')
+    wrapper.unmount()
+  })
+
+  test('a 404 on the alias falls back to the canonical root url', async () => {
+    // A wire tree mirrored by an older build of this package has no alias;
+    // the canonical copy is always there, so the page must still load.
+    globalThis.fetch = vi.fn((url: string) =>
+      Promise.resolve(
+        url.endsWith('/_root.json')
+          ? { ok: false, status: 404 }
+          : { ok: true, status: 200, json: () => Promise.resolve({ name: 'ocx.sh/kitware/cmake' }) },
+      ),
+    ) as unknown as typeof fetch
+
+    const { get, wrapper } = mountHost('kitware', 'cmake')
+    await vi.waitFor(() => expect(get().loading.value).toBe(false))
+
+    expect(globalThis.fetch).toHaveBeenCalledWith('/p/kitware/cmake/_root.json')
     expect(globalThis.fetch).toHaveBeenCalledWith('/p/kitware/cmake.json')
     expect(get().root.value).toEqual({ name: 'ocx.sh/kitware/cmake' })
     expect(get().notFound.value).toBe(false)
@@ -100,9 +141,9 @@ describe('usePackageRoot', () => {
 
     nsRef.value = 'ocx-contrib'
     pkgRef.value = 'shellcheck'
-    await vi.waitFor(() => expect(get().root.value).toEqual({ name: '/p/ocx-contrib/shellcheck.json' }))
+    await vi.waitFor(() => expect(get().root.value).toEqual({ name: '/p/ocx-contrib/shellcheck/_root.json' }))
 
-    expect(globalThis.fetch).toHaveBeenCalledWith('/p/ocx-contrib/shellcheck.json')
+    expect(globalThis.fetch).toHaveBeenCalledWith('/p/ocx-contrib/shellcheck/_root.json')
     wrapper.unmount()
   })
 
@@ -116,20 +157,20 @@ describe('usePackageRoot', () => {
     ) as unknown as typeof fetch
 
     const { get, wrapper, nsRef, pkgRef } = mountHost('kitware', 'cmake')
-    await vi.waitFor(() => expect(resolvers.has('/p/kitware/cmake.json')).toBe(true))
+    await vi.waitFor(() => expect(resolvers.has('/p/kitware/cmake/_root.json')).toBe(true))
 
     // Navigate to a second package before the first request resolves.
     nsRef.value = 'ocx-contrib'
     pkgRef.value = 'shellcheck'
-    await vi.waitFor(() => expect(resolvers.has('/p/ocx-contrib/shellcheck.json')).toBe(true))
+    await vi.waitFor(() => expect(resolvers.has('/p/ocx-contrib/shellcheck/_root.json')).toBe(true))
 
     // Resolve the STALE (first) request after the newer one is in flight.
-    resolvers.get('/p/kitware/cmake.json')!({
+    resolvers.get('/p/kitware/cmake/_root.json')!({
       ok: true,
       status: 200,
       json: () => Promise.resolve({ name: 'stale' }),
     })
-    resolvers.get('/p/ocx-contrib/shellcheck.json')!({
+    resolvers.get('/p/ocx-contrib/shellcheck/_root.json')!({
       ok: true,
       status: 200,
       json: () => Promise.resolve({ name: 'fresh' }),
@@ -157,14 +198,14 @@ describe('usePackageRoot', () => {
     ) as unknown as typeof fetch
 
     const { get, wrapper, nsRef, pkgRef } = mountHost('kitware', 'cmake')
-    await vi.waitFor(() => expect(jsonResolvers.has('/p/kitware/cmake.json')).toBe(true))
+    await vi.waitFor(() => expect(jsonResolvers.has('/p/kitware/cmake/_root.json')).toBe(true))
 
     nsRef.value = 'ocx-contrib'
     pkgRef.value = 'shellcheck'
-    await vi.waitFor(() => expect(jsonResolvers.has('/p/ocx-contrib/shellcheck.json')).toBe(true))
+    await vi.waitFor(() => expect(jsonResolvers.has('/p/ocx-contrib/shellcheck/_root.json')).toBe(true))
 
-    jsonResolvers.get('/p/ocx-contrib/shellcheck.json')!({ name: 'fresh' })
-    jsonResolvers.get('/p/kitware/cmake.json')!({ name: 'stale' })
+    jsonResolvers.get('/p/ocx-contrib/shellcheck/_root.json')!({ name: 'fresh' })
+    jsonResolvers.get('/p/kitware/cmake/_root.json')!({ name: 'stale' })
     await vi.waitFor(() => expect(get().loading.value).toBe(false))
 
     expect(get().root.value).toEqual({ name: 'fresh' })
@@ -181,16 +222,16 @@ describe('usePackageRoot', () => {
     ) as unknown as typeof fetch
 
     const { get, wrapper, nsRef, pkgRef } = mountHost('kitware', 'cmake')
-    await vi.waitFor(() => expect(rejecters.has('/p/kitware/cmake.json')).toBe(true))
+    await vi.waitFor(() => expect(rejecters.has('/p/kitware/cmake/_root.json')).toBe(true))
 
     nsRef.value = 'ocx-contrib'
     pkgRef.value = 'shellcheck'
-    await vi.waitFor(() => expect(rejecters.has('/p/ocx-contrib/shellcheck.json')).toBe(true))
+    await vi.waitFor(() => expect(rejecters.has('/p/ocx-contrib/shellcheck/_root.json')).toBe(true))
 
     // Reject the now-stale first request — its catch block's own token
     // guard must discard this before writing error.value.
-    rejecters.get('/p/kitware/cmake.json')!(new Error('stale network error'))
-    rejecters.get('/p/ocx-contrib/shellcheck.json')!(new Error('fresh network error'))
+    rejecters.get('/p/kitware/cmake/_root.json')!(new Error('stale network error'))
+    rejecters.get('/p/ocx-contrib/shellcheck/_root.json')!(new Error('fresh network error'))
     await vi.waitFor(() => expect(get().loading.value).toBe(false))
 
     expect(get().error.value).toBe('fresh network error')
