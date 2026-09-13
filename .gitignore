@@ -4,7 +4,10 @@ node_modules/
 dist/
 coverage/
 .lhci-site/
+.lhci-bulk/
+.lhci-bulk-src/
 .lighthouseci/
+.lighthouseci-bulk/
 
 # mkdocs build output (task docs:build)
 site/

@@ -16,7 +16,10 @@ export default tseslint.config(
       "coverage/**",
       "node_modules/**",
       ".lhci-site/**",
+      ".lhci-bulk/**",
+      ".lhci-bulk-src/**",
       ".lighthouseci/**",
+      ".lighthouseci-bulk/**",
       // mkdocs build output (task docs:build) — ships minified JS bundles that
       // js.configs.recommended would otherwise try to parse.
       "site/**",

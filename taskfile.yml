@@ -119,9 +119,11 @@ tasks:
     desc: >-
       Seed .dev-indexes/ — carved multi-index trees plus one config per case
       (single-root, single-noroot, multi-root, multi-noroot, many, and the two
-      deliberately-invalid ones). Needs ../index checked out.
+      deliberately-invalid ones). Needs ../index checked out. `BULK=3000`
+      clones the default index up to that many packages, for looking at the
+      catalog at corporate size — then `task dev:catalog CASE=single-root`.
     cmds:
-      - node scripts/dev-indexes.mjs
+      - node scripts/dev-indexes.mjs {{if .BULK}}--bulk {{.BULK}}{{end}}
 
   dev:catalog:
     desc: >-

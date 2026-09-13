@@ -49,10 +49,25 @@
  *    no root source at all, so every route is qualified and the catalog still
  *    opens on a named index — the split between placement and preselection
  *    only shows on a page, never in a unit assertion about one of them.
+ *
+ * ## `--bulk N`
+ *
+ * The carved trees are ~65 packages across seven indexes, which is the right
+ * size for "does multi-index routing hold" and the wrong one for "does the
+ * toolbar, the keyword rail, the sort and the table view still hold at the
+ * size a corporate mirror reaches". `--bulk N` clones the DEFAULT index's
+ * roots up to N and leaves the other trees curated, so the aggregate cases
+ * keep their edge states while the page has real volume behind them. Clones
+ * are made in `.dev-indexes/` (gitignored, rebuilt by every run), never in a
+ * fixture. The same `lib/inflate.mjs` builds the site
+ * `scripts/quality-site.mjs` measures.
  */
 import { cp, mkdir, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { parseArgs } from "node:util";
+
+import { inflate } from "./lib/inflate.mjs";
 
 const REPO = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const INDEX_REPO = resolve(process.env.INDEX_REPO ?? join(REPO, "..", "index"));
@@ -265,6 +280,17 @@ async function main() {
     "Label That Renames Its Index",
   );
   await writeConfig("invalid-collision", [source(ROOT, { root: true }), source("acme")], "Namespace Collision");
+
+  const { values } = parseArgs({ options: { bulk: { type: "string" } } });
+  if (values.bulk !== undefined) {
+    const bulk = Number(values.bulk);
+    if (!Number.isInteger(bulk) || bulk < 1) {
+      console.error(`--bulk ${JSON.stringify(values.bulk)}: must be a package count (1 or more)`);
+      process.exit(64);
+    }
+    const made = await inflate(join(TREES, ROOT), bulk);
+    console.log(`dev-indexes: cloned ${made} package(s) into ${ROOT} for --bulk ${bulk}`);
+  }
 
   const cases = (await readdir(OUT)).filter(name => name.endsWith(".config.json")).sort();
   console.log(`dev-indexes: seeded ${(await readdir(TREES)).length} index trees in ${relative(REPO, OUT)}`);
