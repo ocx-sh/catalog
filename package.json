@@ -1,6 +1,6 @@
 {
   "name": "@ocx-sh/catalog",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "description": "OCX catalog renderer — VitePress-based site generator for OCI-backed package indices",
   "keywords": [
     "ocx",
