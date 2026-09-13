@@ -2,7 +2,9 @@
 defineProps<{
   total: number
   filtered: number
-  /** Active FILTER CHIP labels only (platforms/keywords/deprecated). */
+  /** Active FILTER CHIP labels only (platforms/keywords/deprecated). Not
+   * rendered — the rail's lit chips already say it — only consulted for
+   * whether there is anything to clear. */
   activeFilterLabels: string[]
   /** Free-text query active — the clear button covers it too ("clear all
    * filters"), it just isn't echoed in the labels line. */
@@ -19,9 +21,11 @@ defineEmits<{ 'clear-filters': [] }>()
          "N of M packages" as filters change, never the result list itself
          (that would spam a screen reader on every keystroke/toggle). -->
     <span class="count" role="status" aria-atomic="true">{{ filtered === total ? `${total} packages` : `${filtered} of ${total} packages` }}</span>
-    <!-- No placeholder text when unfiltered — the meta row's sort select
-         (CatalogPage) states the order now. -->
-    <span v-if="activeFilterLabels.length" class="filters">{{ activeFilterLabels.join(' · ') }}</span>
+    <!-- No echo of the active filters here: each one is already a lit chip
+         in the rail directly above, so a second line naming them read as a
+         repeat. The labels still arrive as a prop because they decide whether
+         the clear button shows, and EmptyState names them when the result is
+         empty — the one place the reader cannot see which chips did it. -->
     <button v-if="activeFilterLabels.length || hasQuery" type="button" class="clear-btn" @click="$emit('clear-filters')">
       clear filters
     </button>
@@ -42,12 +46,6 @@ defineEmits<{ 'clear-filters': [] }>()
   font-size: var(--ocx-text-sm);
   font-weight: var(--ocx-font-weight-semibold);
   color: var(--ocx-color-fg);
-}
-
-.filters {
-  font-family: var(--ocx-font-mono);
-  font-size: var(--ocx-text-xs);
-  color: var(--ocx-color-fg-subtle);
 }
 
 .clear-btn {
