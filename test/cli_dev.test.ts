@@ -40,15 +40,6 @@ function isPortOpen(port: number): Promise<boolean> {
   });
 }
 
-/** Polls `isPortOpen` until it resolves true — used to know when a real
- * dev server the test just started is actually listening, before
- * proceeding (e.g. sending it a SIGINT). */
-async function waitForPortOpen(port: number): Promise<void> {
-  while (!(await isPortOpen(port))) {
-    await new Promise((r) => setTimeout(r, 25));
-  }
-}
-
 /*
  * `ocx-catalog dev`'s `--source`/`--config` mutual-exclusion (C-001),
  * Implement phase (`cli/dev.ts`'s `runDev`).
@@ -168,8 +159,15 @@ describe("C-001/C-005/S-003 ocx-catalog dev — full CLI lifecycle", () => {
       await withTempDir("cli-dev-sigint-", async (dir) => {
         const sourcePath = await writeSourceFixture(dir);
         const port = await findFreePort();
+        // Wait for runDev's own SIGINT listener, not for the port: the
+        // worker's port opens BEFORE its boot IPC message reaches runDev,
+        // so an emit gated on the port can land while the only SIGINT
+        // listener in this process is signal-exit's (loaded by vite's
+        // rolldown at import) — which, alone on the signal, re-raises a
+        // REAL SIGINT and kills the vitest worker (`Channel closed` in CI).
+        const sigintListenersBefore = process.listenerCount("SIGINT");
         const runPromise = runMain(["dev", "--source", sourcePath, "--port", String(port)]);
-        await waitForPortOpen(port);
+        await waitUntil(() => process.listenerCount("SIGINT") > sigintListenersBefore, 30_000);
         process.emit("SIGINT");
         const { exitCode, stdout } = await runPromise;
         expect(exitCode).toBeUndefined();
