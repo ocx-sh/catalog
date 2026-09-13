@@ -81,13 +81,13 @@ A token whose default is shown as `var(--ocx-…)` is an **alias**: it follows w
 
 | Token | Light | Dark |
 |---|---|---|
-| `--ocx-color-monogram-0` | `#d84a34` | `#ff8570` |
+| `--ocx-color-monogram-0` | `#c53a24` | `#ff8570` |
 | `--ocx-color-monogram-0-tint` | `rgba(255, 96, 71, 0.1)` | `rgba(255, 96, 71, 0.14)` |
 | `--ocx-color-monogram-1` | `#0a7652` | `#3edea6` |
 | `--ocx-color-monogram-1-tint` | `rgba(14, 159, 110, 0.1)` | `rgba(62, 222, 166, 0.12)` |
 | `--ocx-color-monogram-2` | `#6f5bd0` | `#c0b3ff` |
 | `--ocx-color-monogram-2-tint` | `rgba(111, 91, 208, 0.1)` | `rgba(192, 179, 255, 0.12)` |
-| `--ocx-color-monogram-3` | `#9a6b13` | `#fab833` |
+| `--ocx-color-monogram-3` | `#8f610f` | `#fab833` |
 | `--ocx-color-monogram-3-tint` | `rgba(250, 184, 51, 0.16)` | `rgba(250, 184, 51, 0.12)` |
 
 ## Type

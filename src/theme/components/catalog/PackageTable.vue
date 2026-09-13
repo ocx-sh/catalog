@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, watch } from 'vue'
 import { useClipboard } from '@vueuse/core'
 import type { CatalogIndexInfo, CatalogPackage } from '../../composables/useCatalog'
 import { elideMiddle } from '../../utils/elideMiddle'
@@ -7,7 +7,7 @@ import { monogramHue, monogramInitials } from '../../utils/monogram'
 import { packageRoutePath } from '../../utils/packageRoute'
 import { OS_GLYPHS, osRank } from '../../utils/osGlyphs'
 import LogoTile from './LogoTile.vue'
-import CopyContextMenu, { buildTagCopyActions } from '../shared/CopyContextMenu.vue'
+import CopyContextMenu, { buildTagCopyActions, type CopyAction } from '../shared/CopyContextMenu.vue'
 import { useInstallFlavors } from '../../composables/useInstallFlavors'
 
 // Concise table view — CatalogPage's cards/table toggle picks between this
@@ -55,9 +55,24 @@ const supports = (p: CatalogPackage, os: string) => p.platforms.some(x => x.spli
 // install box (InstallRow): the wire-qualified name (`p.name`, already
 // carrying this deployment's own brand prefix — C-601, never a hardcoded
 // `ocx.sh/` re-synthesis) + latest version tag.
+//
+// Cached per package, by identity. Called from the template, a plain call
+// would hand every row a NEW array on every render of this component — and
+// this component re-renders each time the window grows, so every row already
+// on the page re-rendered for each 48 that arrived. Measured at 1500 rows:
+// ~150ms of Vue prop diffing per slice, all of it for rows that had not
+// changed. A stable array per package means an unchanged row is skipped.
 const flavors = useInstallFlavors()
-const rowActions = (p: CatalogPackage) =>
-  buildTagCopyActions(p.name, p.latestVersion, flavors.value, route(p))
+const actionsFor = new Map<string, CopyAction[]>()
+watch(flavors, () => actionsFor.clear())
+function rowActions(p: CatalogPackage): CopyAction[] {
+  let actions = actionsFor.get(p.name)
+  if (!actions) {
+    actions = buildTagCopyActions(p.name, p.latestVersion, flavors.value, route(p))
+    actionsFor.set(p.name, actions)
+  }
+  return actions
+}
 const { copy: copyText } = useClipboard()
 </script>
 
@@ -116,6 +131,13 @@ const { copy: copyText } = useClipboard()
 }
 
 .table-row {
+  /* NO `content-visibility` here, unlike `.package-card`. It implies layout
+   * containment at all times (not only while skipped), and a subgrid under
+   * layout containment is not a subgrid: Chromium 152 resolves
+   * `grid-template-columns` to `none` and every cell stacks on its own line.
+   * Reproduced, and asserted in catalog_windowing_wiring.test.ts so it
+   * cannot come back. The row's build cost is bounded by `useWindowedList`
+   * instead, which is the larger half anyway. */
   grid-column: 1 / -1;
   display: grid;
   grid-template-columns: subgrid;

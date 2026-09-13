@@ -23,43 +23,17 @@
 /* The `page.evaluate()` callback below is serialised and run inside Chrome, so
    its identifiers resolve against the browser, not Node. */
 /* global document, getComputedStyle */
-import { createServer } from "node:http";
 import { readFile, writeFile, rm, mkdtemp } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
-import { join, extname, dirname } from "node:path";
+import { join, dirname } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
+
+import { serve } from "./lib/serve.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const FIXTURE_DIR = join(ROOT, "test/fixtures/quality-index");
 const PROBE_CONFIG = join(FIXTURE_DIR, "cascade-probe.config.json");
-
-const MIME = {
-  ".html": "text/html",
-  ".css": "text/css",
-  ".js": "text/javascript",
-  ".json": "application/json",
-  ".svg": "image/svg+xml",
-  ".md": "text/markdown",
-  ".woff2": "font/woff2",
-};
-
-function serve(dir) {
-  const server = createServer(async (req, res) => {
-    let path = decodeURI(req.url.split("?")[0]);
-    if (path.endsWith("/")) path += "index.html";
-    if (!extname(path)) path += ".html";
-    try {
-      const body = await readFile(join(dir, path));
-      res.writeHead(200, { "content-type": MIME[extname(path)] ?? "application/octet-stream" });
-      res.end(body);
-    } catch {
-      res.writeHead(404);
-      res.end("not found");
-    }
-  });
-  return new Promise((resolve) => server.listen(0, "127.0.0.1", () => resolve(server)));
-}
 
 /** The probe stylesheet uses ONLY public surface: a data-slot selector, a
  *  component hook, and a token. Nothing here targets an internal class. */

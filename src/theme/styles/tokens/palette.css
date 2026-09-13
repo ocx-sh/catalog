@@ -108,14 +108,27 @@
    * `color-mix()` derivations of the status tokens: three of the four tints
    * predate WP6's a11y darkening (light -1 is #0e9f6e, not today's
    * --ocx-color-success #0a7652) and light -3's tint is the DARK warning hue.
-   * Deriving them would silently change three of the four. */
-  --ocx-color-monogram-0: #d84a34;
+   * Deriving them would silently change three of the four.
+   *
+   * Two exceptions to that byte-for-byte rule, both WCAG AA fixes measured
+   * against each hue's OWN tint over --ocx-color-surface (the only background
+   * a monogram is ever read on) rather than against a neutral:
+   *   light -0  #d84a34 -> #c53a24  (3.80:1 -> 4.70:1)
+   *   light -3  #9a6b13 -> #8f610f  (4.28:1 -> 4.94:1)
+   * WP6 darkened five light tokens for exactly this reason and missed these
+   * two, because the hue a card gets is a hash of its package name and the
+   * six-package Lighthouse fixture never drew either one. The corporate-size
+   * run (`scripts/quality-site.mjs`, 250 packages) draws all four, and is
+   * what reported 122 failing tiles on one page. Light -1 (5.03:1) and -2
+   * (4.52:1) clear as they stand; all four dark hues clear at 6.15:1 or
+   * better. */
+  --ocx-color-monogram-0: #c53a24;
   --ocx-color-monogram-0-tint: rgba(255, 96, 71, 0.1);
   --ocx-color-monogram-1: #0a7652;
   --ocx-color-monogram-1-tint: rgba(14, 159, 110, 0.1);
   --ocx-color-monogram-2: #6f5bd0;
   --ocx-color-monogram-2-tint: rgba(111, 91, 208, 0.1);
-  --ocx-color-monogram-3: #9a6b13;
+  --ocx-color-monogram-3: #8f610f;
   --ocx-color-monogram-3-tint: rgba(250, 184, 51, 0.16);
 
 

@@ -10,7 +10,12 @@ import { read } from "./css_contract_helpers.js";
  * That move is only correct if every value survived byte-for-byte AND the
  * index mapping did not shift. A wrong hue renders a *different but still
  * plausible* colour — it looks fine, so no reviewer catches it and no
- * rendering test notices. This pins all 16 against the values the arrays held.
+ * rendering test notices. This pins all 16 against the values the arrays held,
+ * with two deliberate exceptions: light -0 and light -3 were darkened to clear
+ * WCAG AA against their own tints (3.80:1 -> 4.70:1 and 4.28:1 -> 4.94:1), the
+ * same measured-not-eyeballed fix WP6 applied to five other light tokens. See
+ * palette.css's own docblock for the measurements and for why the six-package
+ * fixture never drew either hue.
  *
  * Tokens are indexed 0-3 rather than 1-4 precisely so there is no arithmetic
  * between `monogramHue()`'s return value and the token name for an off-by-one
@@ -18,10 +23,12 @@ import { read } from "./css_contract_helpers.js";
  */
 
 const LIGHT: ReadonlyArray<readonly [string, string]> = [
-  ["#d84a34", "rgba(255, 96, 71, 0.1)"],
+  // Darkened for AA; the tint it is read against is unchanged.
+  ["#c53a24", "rgba(255, 96, 71, 0.1)"],
   ["#0a7652", "rgba(14, 159, 110, 0.1)"],
   ["#6f5bd0", "rgba(111, 91, 208, 0.1)"],
-  ["#9a6b13", "rgba(250, 184, 51, 0.16)"],
+  // Darkened for AA; the tint it is read against is unchanged.
+  ["#8f610f", "rgba(250, 184, 51, 0.16)"],
 ];
 
 const DARK: ReadonlyArray<readonly [string, string]> = [

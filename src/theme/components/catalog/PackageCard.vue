@@ -129,6 +129,25 @@ const platforms = computed(() =>
 <style scoped>
 @layer ocx {
 .package-card {
+  /* The card is the CSS grid item — `.catalog-grid-item` (the `<li>` that
+   * carries the list semantics) is `display: contents`, so a bound put there
+   * would apply to no box at all.
+   *
+   * The catalog is a long list of expensive items: a logo, a monogram tile,
+   * a keyword strip, a context-menu trigger. `content-visibility` keeps the
+   * ones off screen out of layout and paint, and stops the browser fetching
+   * a logo for a card nobody has scrolled to. Cards stay focusable and
+   * find-in-page-able — the engine renders one on focus or on find.
+   *
+   * `auto` on the intrinsic size means the real height is remembered once a
+   * card has been rendered, so the scrollbar settles after the first pass
+   * instead of jumping; 188px is only the guess before that (measured at
+   * 1440px, where a card is 187.5px).
+   *
+   * This bounds the PAINT, not the component build — that is
+   * `useWindowedList`'s job. */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 188px;
   display: flex;
   flex-direction: column;
   gap: var(--ocx-space-3);

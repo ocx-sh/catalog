@@ -119,9 +119,11 @@ tasks:
     desc: >-
       Seed .dev-indexes/ — carved multi-index trees plus one config per case
       (single-root, single-noroot, multi-root, multi-noroot, many, and the two
-      deliberately-invalid ones). Needs ../index checked out.
+      deliberately-invalid ones). Needs ../index checked out. `BULK=3000`
+      clones the default index up to that many packages, for looking at the
+      catalog at corporate size — then `task dev:catalog CASE=single-root`.
     cmds:
-      - node scripts/dev-indexes.mjs
+      - node scripts/dev-indexes.mjs {{if .BULK}}--bulk {{.BULK}}{{end}}
 
   dev:catalog:
     desc: >-
@@ -178,6 +180,28 @@ tasks:
       # so a shim would pass whether or not the mechanism works.
       - >-
         node scripts/quality-css-cascade.mjs
+        "${CHROME_PATH:-$(ls -d "$HOME"/.cache/puppeteer/chrome/*/chrome-linux64/chrome 2>/dev/null | tail -1)}"
+      # Third question, and the one the six-package fixture cannot ask: what
+      # does the catalog cost at the size a corporate mirror reaches? The
+      # fixture is cloned to 250 packages in a scratch copy (nothing is written
+      # back) and built into .lhci-bulk/, then audited for payload and measured
+      # for the work of BUILDING a card or a row for every package — the half
+      # a category score does not isolate and no DOM emulator can see.
+      #
+      # `BULK=3000` measures a larger catalog instead. The budgets and the
+      # Lighthouse floors are set for 250, so a bigger run is for LOOKING at
+      # the numbers, not for passing — the probe prints them either way.
+      #
+      # The bin path rather than `npx lhci` here: npm 11's `npx` claims
+      # `--config` as its own flag and never hands it to lhci. Same pinned
+      # binary, same node_modules/.bin, just not through npm's arg parser.
+      - node scripts/quality-site.mjs --bulk {{.BULK | default "250"}}
+      - >-
+        CHROME_PATH="${CHROME_PATH:-$(ls -d "$HOME"/.cache/puppeteer/chrome/*/chrome-linux64/chrome 2>/dev/null | tail -1)}"
+        NODE_OPTIONS="--require ./scripts/lhci-posix-tmpdir.cjs"
+        ./node_modules/.bin/lhci autorun --config=.lighthouserc.bulk.cjs
+      - >-
+        node scripts/quality-view-switch.mjs
         "${CHROME_PATH:-$(ls -d "$HOME"/.cache/puppeteer/chrome/*/chrome-linux64/chrome 2>/dev/null | tail -1)}"
 
   # Regenerate CHANGELOG.md from the full git history.
