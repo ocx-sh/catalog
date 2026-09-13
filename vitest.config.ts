@@ -57,10 +57,12 @@ export default defineConfig({
         // pipeline — same "smoke gate, not branch coverage" call as the
         // SFCs it wires together (WP-03 decision, flagged for review).
         "src/theme/index.mts",
-        // Lighthouse CI config (WP2): a CommonJS config object read by the
-        // `@lhci/cli` binary out-of-process during `task quality:web`, never
-        // imported into the vitest process — nothing for v8 to instrument.
+        // Lighthouse CI configs: CommonJS config objects read by the
+        // `@lhci/cli` binary out-of-process during `task quality:web` (the
+        // second one for the corporate-size run), never imported into the
+        // vitest process — nothing for v8 to instrument.
         ".lighthouserc.cjs",
+        ".lighthouserc.bulk.cjs",
         // Web-quality fixture wire index (WP2): committed JSON/markdown/asset
         // fixtures (config.json + p/**) that drive the Lighthouse fixture-site
         // build; data, not executable source.
