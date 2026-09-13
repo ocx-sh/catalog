@@ -241,6 +241,58 @@ Logos are always `<img src="…">`, never inlined raw SVG DOM — an
   catalog table) — a consumer hand-rolling its own action list is how the
   catalog menu previously missed an action `TagBadge.vue` already had.
 
+## Rendering at corporate size
+
+The catalog page renders CLIENT-ONLY (the grid/table mount after
+`useCatalog`'s fetch resolves), so every package it shows is built in the
+browser, in one commit — and an item is not just a card, it is a
+`CopyContextMenu` (four reka-ui components plus a computed building seven
+copy actions) wrapped around one. The grid and the table share no element
+types, so switching view unmounts every card as it mounts every row.
+
+Two bounds, and they are not interchangeable:
+
+- **Paint** — `content-visibility: auto` + `contain-intrinsic-size: auto <px>`
+  on `.package-card` ONLY. Not on `.catalog-grid-item`: that `<li>` is
+  `display: contents` and generates no box, so a bound written there applies
+  to nothing while looking correct. And NEVER on `.table-row`: it is a
+  `subgrid` item, `content-visibility` implies layout containment at all
+  times, and a subgrid under layout containment is not a subgrid — Chromium
+  resolves its columns to `none` and stacks every cell on its own line. That
+  shipped once, on a claim carried over from another repo instead of
+  reproduced here; `catalog_windowing_wiring.test.ts` now asserts the row
+  does not carry it. `auto` on the intrinsic size is load-bearing — a fixed
+  guess makes the scrollbar jump for the whole scroll.
+- **Build** — `useWindowedList` renders a growing slice (48, then doubling
+  to a cap of 384 per step, grown by an `IntersectionObserver` sentinel below
+  the list). It never shrinks while scrolling, so a built item stays built
+  and find-in-page keeps working over everything reached; it resets to one
+  slice on a new result set and on a VIEW SWITCH (the two views share no
+  element types, so a switch after a deep scroll was rebuilding hundreds).
+  The window is a RENDER slice and nothing else: `ResultMeta`'s count, the
+  keyword rail and every filter read the full result set. Two things about
+  the sentinel that each cost a real stall: an `IntersectionObserver` reports
+  transitions, not states, so the composable RE-OBSERVES after every growth
+  (a sentinel still inside the margin would otherwise never fire again — a
+  scroll to the bottom of 3000 stopped at 720); and every growth re-lays-out
+  the whole table (subgrid tracks are sized over every row), so growth is
+  geometric to keep the number of those logarithmic. Past a few thousand the
+  answer is virtualization, not another tweak here.
+- **Per-row props must be stable.** `PackageTable` caches each row's copy
+  actions by package: a plain `rowActions(pkg)` call in the template handed
+  every row a new array on every render, and this component re-renders on
+  every growth — so every row already on the page re-rendered for each
+  slice that arrived (~150ms at 1500 rows). `PackageCard` computes its own
+  inside the component, which is the same property by construction.
+
+Neither is measurable in a DOM emulator — happy-dom and jsdom lay nothing
+out. `task quality:web` builds a 250-package clone of the fixture
+(`scripts/quality-site.mjs`) and measures it in real Chrome at 4x CPU
+throttle (`scripts/quality-view-switch.mjs`); that probe's budgets are the
+gate. The same bulk site is also what first drew all four monogram hues and
+so caught two of them failing WCAG AA — a hue is a hash of the package name,
+and six fixture packages never draw them all.
+
 ## Not linted (deliberate gap)
 
 `eslint.config.js` excludes `src/theme/**/*.vue` — no `eslint-plugin-vue`

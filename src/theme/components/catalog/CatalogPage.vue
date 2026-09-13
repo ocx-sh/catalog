@@ -4,6 +4,7 @@ import { useData } from 'vitepress'
 import { useLocalStorage } from '@vueuse/core'
 import { SelectRoot, SelectTrigger, SelectPortal, SelectContent, SelectViewport, SelectItem, SelectItemText } from 'reka-ui'
 import { useCatalog } from '../../composables/useCatalog'
+import { useWindowedList } from '../../composables/useWindowedList'
 import { filterPackages } from '../../utils/filterPackages'
 import { selectRailKeywords } from '../../utils/keywordRail'
 import { isEditableTarget } from '../../utils/dom'
@@ -219,6 +220,18 @@ const sorted = computed(() => {
     : [...filtered.value].sort((a, b) => (b[key] ?? '').localeCompare(a[key] ?? ''))
   return sortInverted.value ? [...list].reverse() : list
 })
+
+// What the grid and the table actually BUILD. `sorted` stays the answer to
+// "how many packages are there" — the count, the keyword rail and every
+// filter read it whole, so nothing the reader is told about the catalog
+// depends on how far they have scrolled. See useWindowedList for why the
+// window exists and why it only ever grows.
+const { visible, sentinel, hasMore, reset: resetWindow } = useWindowedList(sorted)
+// A view switch rebuilds every item whatever the window holds — the two
+// views share no element types — so the switch costs one slice, not the
+// several hundred a reader may have scrolled through. Their scroll position
+// means nothing across views anyway (cards and rows are different heights).
+watch(view, resetWindow)
 
 // C-330 (owner-override, ADR Decision 3, supersedes owner spec #44 for
 // interactive toolbar controls): every toolbar affordance (chips, clear
@@ -521,7 +534,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
         @clear-filters="clearFilters"
       />
       <CatalogGrid v-else-if="view === 'cards'" @keydown="onGridKeydown">
-        <li v-for="pkg in sorted" :key="pkg.name" class="catalog-grid-item">
+        <li v-for="pkg in visible" :key="pkg.name" class="catalog-grid-item">
           <PackageCard
             :pkg="pkg"
             :keyword-rank="keywordRank"
@@ -529,7 +542,14 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
           />
         </li>
       </CatalogGrid>
-      <PackageTable v-else :packages="sorted" :indexes="indexes" :os-columns="osColumns" @keydown="onTableKeydown" />
+      <PackageTable v-else :packages="visible" :indexes="indexes" :os-columns="osColumns" @keydown="onTableKeydown" />
+      <!-- The sentinel that grows the window. Outside the grid and the table
+           rather than inside either, so it is neither a stray child of a
+           `<ul>` whose children are all `<li>` nor an extra row of tracks in
+           the table's grid. `aria-hidden` because it is a scroll position and
+           not content — ResultMeta above the list is what tells a screen
+           reader how many packages there are. -->
+      <div v-if="hasMore" ref="sentinel" class="catalog-sentinel" aria-hidden="true" />
     </template>
   </main>
 </template>
