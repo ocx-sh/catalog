@@ -107,6 +107,51 @@ describe("mirrorSources — byte-verbatim copy under dist/index/<label>/", () =>
     await expect(readAt(distDir, "p/zzz/pkg.json")).rejects.toMatchObject({ code: "ENOENT" });
   });
 
+  it("writes an ad-blocker-safe `_root.json` alias beside every package root, byte-identical, at BOTH placements", async () => {
+    // Why: `/p/<ns>/<pkg>.json` is blocked outright by EasyList/EasyPrivacy
+    // for any package whose name matches one of their ~800 unanchored
+    // `/<word>.js` rules — the rule's substring matches inside `<pkg>.json`
+    // (`/hawkeye.js` vs `/p/hawkeye/hawkeye.json`, observed 2026-08-27).
+    // The alias is what the theme fetches; the canonical copy stays put.
+    const distDir = await tempDistDir();
+    await mirrorSources([alphaSource(), betaSource()], distDir);
+
+    expect(
+      bytesEqual(await readAt(distDir, "index/alpha/p/zzz/pkg/_root.json"), rootJsonBytes({ name: "ocx.sh/zzz/pkg" })),
+    ).toBe(true);
+    // root: true ⇒ the alias exists at the site root too, beside the
+    // canonical copy, which is NEVER replaced by it.
+    expect(
+      bytesEqual(await readAt(distDir, "p/beta-ns/thing/_root.json"), rootJsonBytes({ name: "ocx.sh/beta-ns/thing" })),
+    ).toBe(true);
+    expect(
+      bytesEqual(await readAt(distDir, "p/beta-ns/thing.json"), rootJsonBytes({ name: "ocx.sh/beta-ns/thing" })),
+    ).toBe(true);
+    // A non-root source's alias is not written at the site root either.
+    await expect(readAt(distDir, "p/zzz/pkg/_root.json")).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  it("aliases ONLY package roots — never a CAS image index, a config file, or a c/index.json", async () => {
+    const distDir = await tempDistDir();
+    const casIndex = utf8('{"schemaVersion":2}');
+    await mirrorSources(
+      [
+        source("gamma", true, [
+          ["config.json", BETA_CONFIG],
+          ["c/index.json", utf8('{"format_version":1,"packages":{}}')],
+          ["p/ns/pkg.json", rootJsonBytes({ name: "ocx.sh/ns/pkg" })],
+          ["p/ns/pkg/o/sha256/aa.json", casIndex],
+        ]),
+      ],
+      distDir,
+    );
+
+    expect(bytesEqual(await readAt(distDir, "p/ns/pkg/_root.json"), rootJsonBytes({ name: "ocx.sh/ns/pkg" }))).toBe(true);
+    await expect(readAt(distDir, "p/ns/pkg/o/sha256/aa/_root.json")).rejects.toMatchObject({ code: "ENOENT" });
+    await expect(readAt(distDir, "config/_root.json")).rejects.toMatchObject({ code: "ENOENT" });
+    await expect(readAt(distDir, "c/index/_root.json")).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
   it("no source is skipped — there is no serve flag; a non-root source still gets its full mirror copy", async () => {
     const distDir = await tempDistDir();
     await mirrorSources([alphaSource()], distDir);

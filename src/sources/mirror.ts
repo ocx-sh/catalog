@@ -8,7 +8,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { catalogIndex, serializeCatalog } from "../viewmodel/catalog.js";
-import { extractPackages, type ResolvedSourceFiles, type SourceWarning, type WirePath } from "./types.js";
+import { extractPackages, packageRootAliasPath, type ResolvedSourceFiles, type SourceWarning, type WirePath } from "./types.js";
 import { Semaphore } from "./walker.js";
 
 /** In-flight write cap for the mirror copy, matching `walker.ts`'s fetch cap
@@ -172,6 +172,18 @@ export async function mirrorSources(
       enqueue(`index/${source.label}/${wirePath}`, bytes);
       if (source.root) {
         enqueue(wirePath, bytes);
+      }
+      // Ad-blocker-safe alias of every package root, written beside the
+      // canonical copy at both placements (see `types.ts`'s
+      // `packageRootAliasPath` for why it exists). The theme fetches this
+      // one; the canonical `p/<ns>/<pkg>.json` stays exactly where the wire
+      // format puts it, byte-identical, for every other consumer.
+      const aliasPath = packageRootAliasPath(wirePath);
+      if (aliasPath) {
+        enqueue(`index/${source.label}/${aliasPath}`, bytes);
+        if (source.root) {
+          enqueue(aliasPath, bytes);
+        }
       }
     }
 
