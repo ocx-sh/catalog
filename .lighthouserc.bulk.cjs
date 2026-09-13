@@ -20,15 +20,15 @@
  * Measured medians of the bulk landing page, then dropped by a >=0.03 margin
  * so ordinary run-to-run variance never reds the build while a real
  * regression still does — the same discipline, and the same re-measure rule,
- * as `.lighthouserc.cjs`. `performance` is the assertion that earns its keep
- * here; the other three are held at their fixture-run levels so a
- * size-dependent regression in any of them still reds.
+ * as `.lighthouserc.cjs`. The three non-performance categories are held at
+ * their fixture-run levels so a size-dependent regression in any of them
+ * still reds.
  *
  *   category         bulk median   threshold
  *   accessibility    1.00          0.97   error
  *   best-practices   1.00          0.93   error
  *   seo              1.00          0.97   error
- *   performance      0.93          0.90   error
+ *   performance      0.93          0.90   warn
  *
  * Both numbers this gate moved are the reason it exists — at 250 packages
  * and before the two rendering bounds, this page scored 0.74 performance
@@ -37,6 +37,25 @@
  * never draws). It now medians 0.93 and 1.00: 110ms blocking, 1,688
  * elements. The fixture run scores a flat 1.00 in all four categories
  * throughout and saw none of it.
+ *
+ * ## Why the performance SCORE is a warn and the two bounds are the errors
+ *
+ * The score is a timing-derived aggregate, and a shared GitHub runner moves
+ * it more than any margin measured elsewhere allows for: the first main run
+ * after the bounds landed scored 0.89 three times in a row against the 0.90
+ * error and went red on a page that had regressed nothing
+ * (https://github.com/ocx-sh/catalog/actions/runs/34779144840). So the gate
+ * asserts the two quantities the bounds actually changed, each with a margin
+ * a real regression clears and runner noise does not:
+ *
+ *   audit                  bounded   pre-bounds   threshold
+ *   dom-size               1,688     7,579        3000   error  (deterministic)
+ *   total-blocking-time    110ms     950ms        500ms  error
+ *
+ * `dom-size` is an element count — the same on every machine — and catches
+ * either rendering bound coming loose. `total-blocking-time` is the one
+ * timing that the size actually drives, held at ~5x its bounded value and
+ * half its pre-bounds one. The score stays visible as a warn.
  */
 module.exports = {
   ci: {
@@ -54,7 +73,9 @@ module.exports = {
         'categories:accessibility': ['error', { minScore: 0.97 }],
         'categories:best-practices': ['error', { minScore: 0.93 }],
         'categories:seo': ['error', { minScore: 0.97 }],
-        'categories:performance': ['error', { minScore: 0.90 }],
+        'categories:performance': ['warn', { minScore: 0.9 }],
+        'dom-size': ['error', { maxNumericValue: 3000 }],
+        'total-blocking-time': ['error', { maxNumericValue: 500 }],
       },
     },
     upload: { target: 'filesystem', outputDir: '.lighthouseci-bulk' },
