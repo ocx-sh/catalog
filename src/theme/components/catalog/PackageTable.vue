@@ -116,6 +116,13 @@ const { copy: copyText } = useClipboard()
 }
 
 .table-row {
+  /* NO `content-visibility` here, unlike `.package-card`. It implies layout
+   * containment at all times (not only while skipped), and a subgrid under
+   * layout containment is not a subgrid: Chromium 152 resolves
+   * `grid-template-columns` to `none` and every cell stacks on its own line.
+   * Reproduced, and asserted in catalog_windowing_wiring.test.ts so it
+   * cannot come back. The row's build cost is bounded by `useWindowedList`
+   * instead, which is the larger half anyway. */
   grid-column: 1 / -1;
   display: grid;
   grid-template-columns: subgrid;
