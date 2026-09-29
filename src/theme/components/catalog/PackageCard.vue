@@ -8,6 +8,7 @@ import { elideMiddle } from '../../utils/elideMiddle'
 import { monogramHue, monogramInitials } from '../../utils/monogram'
 import { packageRoutePath } from '../../utils/packageRoute'
 import { OS_GLYPHS, osRank } from '../../utils/osGlyphs'
+import { AGNOSTIC_OS, isPlatformAgnostic, osOf } from '../../utils/platformAgnostic'
 import LogoTile from './LogoTile.vue'
 import InstallRow from './InstallRow.vue'
 
@@ -70,8 +71,13 @@ const initials = computed(() => monogramInitials(props.pkg.package))
 // mock's own two example tile styles are visual variety in the fixture
 // generator, not two independently-random UI states.
 
+// `any` (platform-agnostic) is a glyph like any other here: `OS_GLYPHS.any` is
+// the globe labelled "Any platform". It subsumes every platform-specific
+// build beside it, so an agnostic package shows the globe alone.
 const platforms = computed(() =>
-  [...new Set(props.pkg.platforms.map(p => p.split('/')[0]))].sort((a, b) => osRank(a) - osRank(b)),
+  isPlatformAgnostic(props.pkg.platforms)
+    ? [AGNOSTIC_OS]
+    : [...new Set(props.pkg.platforms.map(osOf))].sort((a, b) => osRank(a) - osRank(b)),
 )
 </script>
 

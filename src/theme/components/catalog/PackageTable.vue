@@ -6,6 +6,7 @@ import { elideMiddle } from '../../utils/elideMiddle'
 import { monogramHue, monogramInitials } from '../../utils/monogram'
 import { packageRoutePath } from '../../utils/packageRoute'
 import { OS_GLYPHS, osRank } from '../../utils/osGlyphs'
+import { concreteOses, isPlatformAgnostic } from '../../utils/platformAgnostic'
 import LogoTile from './LogoTile.vue'
 import CopyContextMenu, { buildTagCopyActions, type CopyAction } from '../shared/CopyContextMenu.vue'
 import { useInstallFlavors } from '../../composables/useInstallFlavors'
@@ -38,7 +39,7 @@ const identifier = (p: CatalogPackage) => elideMiddle(p.name, IDENT_BUDGET)
 const columns = computed(
   () =>
     props.osColumns ??
-    [...new Set(props.packages.flatMap(p => p.platforms.map(x => x.split('/')[0]!)))].sort(
+    [...new Set(props.packages.flatMap(p => concreteOses(p.platforms)))].sort(
       (a, b) => osRank(a) - osRank(b) || a.localeCompare(b),
     ),
 )
@@ -49,6 +50,13 @@ const columns = computed(
 // === '/'`) measures 0.058ms and is the remaining headroom — left alone
 // because at index.ocx.sh's 125 packages the whole column is sub-millisecond
 // either way.
+// An any-only package has no OS to sit under, and inventing an `any` column
+// would leave every other row an empty slot forever. So it draws ONE piece of
+// text ("any platform", `.t-os-any`) that spans every slot from the left edge,
+// instead of picking a slot to squat in. Mixed packages (any + real OSes) show
+// their real slots only — their concrete platforms are the more specific claim
+// and have a slot to sit in; the matrix on the detail page still lists the
+// agnostic row.
 const supports = (p: CatalogPackage, os: string) => p.platforms.some(x => x.split('/')[0] === os)
 
 // Right-click copy menu per row — same shared action list as the card's
@@ -90,7 +98,8 @@ const { copy: copyText } = useClipboard()
       <span class="t-desc">{{ pkg.description }}</span>
       <span class="t-version">{{ pkg.latestVersion ?? '—' }}</span>
       <span class="t-platforms" :style="{ '--os-cols': columns.length }">
-        <template v-for="os in columns" :key="os">
+        <span v-if="isPlatformAgnostic(pkg.platforms)" class="t-os-any">any platform</span>
+        <template v-else v-for="os in columns" :key="os">
           <svg
             v-if="supports(pkg, os)"
             width="12"
@@ -259,6 +268,9 @@ const { copy: copyText } = useClipboard()
      at all, so `--os-cols` is 0. No visible defect today (the cell is
      childless then too), but a silently-dropped value either way. */
   grid-template-columns: repeat(max(1, var(--os-cols)), 12px);
+  /* Room for the italic "any platform" of an any-only row (`.t-os-any`) —
+     three 12px icon slots are ~52px, the text needs a little more. */
+  min-width: 4.5rem;
   align-items: center;
   justify-items: center;
   gap: var(--ocx-space-3);
@@ -268,6 +280,18 @@ const { copy: copyText } = useClipboard()
 .t-os-empty {
   width: 12px;
   height: 12px;
+}
+
+/* "any platform": one italic run of text across every OS slot, flush left
+ * where the first icon would start. `nowrap` because the slots are 12px wide
+ * and the text is wider than one; `.t-platforms`'s `min-width` is what gives
+ * it the room, so the column is the same width in every row. */
+.t-os-any {
+  grid-column: 1 / -1;
+  justify-self: start;
+  white-space: nowrap;
+  font-style: italic;
+  font-size: var(--ocx-text-2xs);
 }
 
 @media (max-width: 899px) {

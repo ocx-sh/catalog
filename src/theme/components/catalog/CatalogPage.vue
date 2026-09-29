@@ -9,6 +9,7 @@ import { filterPackages } from '../../utils/filterPackages'
 import { selectRailKeywords } from '../../utils/keywordRail'
 import { isEditableTarget } from '../../utils/dom'
 import { osRank } from '../../utils/osGlyphs'
+import { concreteOses } from '../../utils/platformAgnostic'
 import SearchInput from './SearchInput.vue'
 import FilterChips from './FilterChips.vue'
 import IndexTabs from './IndexTabs.vue'
@@ -329,10 +330,12 @@ function onTableKeydown(event: KeyboardEvent) {
 // change defeats the alignment it exists to give. (The keyword rail below
 // makes the OPPOSITE call, deliberately: a column is a fixed slot the eye
 // tracks down the table, a chip is a suggestion for the next cut.)
+// Real OSes only: `any` (platform-agnostic) is not a slot — PackageTable
+// draws an any-only package's globe as one cell spanning the slots.
 const osColumns = computed(() => {
   const seen = new Set<string>()
   for (const pkg of filterPackages(catalog.value.packages, { excludeIndexes: excludedFromAll.value })) {
-    for (const platform of pkg.platforms) seen.add(platform.split('/')[0]!)
+    for (const os of concreteOses(pkg.platforms)) seen.add(os)
   }
   return [...seen].sort((a, b) => osRank(a) - osRank(b) || a.localeCompare(b))
 })

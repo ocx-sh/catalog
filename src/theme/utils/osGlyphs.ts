@@ -5,6 +5,8 @@
 // `currentColor`-filled — a consuming component supplies color/size, this
 // module only supplies shape + label.
 
+import { AGNOSTIC_OS } from './platformAgnostic'
+
 export interface OsGlyph {
   label: string
   viewBox: string
@@ -31,6 +33,18 @@ export const OS_GLYPHS: Record<string, OsGlyph> = {
       { x: 13, y: 13, w: 8, h: 8 },
     ],
   },
+  // Platform-agnostic (`any/any`): a globe — outer ring, meridian ring and an
+  // equator bar. Each ring is two sub-paths wound in opposite directions so
+  // the hole survives the default nonzero fill rule the consumers use.
+  [AGNOSTIC_OS]: {
+    label: 'Any platform',
+    viewBox: '0 0 24 24',
+    paths: [
+      'M12 2a10 10 0 1 0 0 20a10 10 0 1 0 0-20zM12 3.5a8.5 8.5 0 1 1 0 17a8.5 8.5 0 1 1 0-17z',
+      'M12 2a4.5 10 0 1 0 0 20a4.5 10 0 1 0 0-20zM12 3.5a3 8.5 0 1 1 0 17a3 8.5 0 1 1 0-17z',
+    ],
+    rects: [{ x: 2, y: 11.25, w: 20, h: 1.5 }],
+  },
 }
 
 /** Canonical display order: linux, darwin, windows, then anything unknown
@@ -40,6 +54,9 @@ export const OS_GLYPHS: Record<string, OsGlyph> = {
 export const OS_ORDER = ['linux', 'darwin', 'windows']
 
 export function osRank(os: string): number {
+  // The platform-agnostic entry leads wherever OSes are listed together — it
+  // is the widest claim, and `-1` keeps it clear of every real OS's rank.
+  if (os === AGNOSTIC_OS) return -1
   const index = OS_ORDER.indexOf(os)
   return index === -1 ? OS_ORDER.length : index
 }

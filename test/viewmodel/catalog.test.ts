@@ -71,6 +71,26 @@ describe("catalogPlatforms", () => {
     expect(catalogPlatforms(source)).toEqual([]);
   });
 
+  // OCX's platform-agnostic platform is an ordinary `{os, architecture}`
+  // descriptor whose both halves are "any" — nothing here special-cases it, so
+  // it surfaces as `any/any`, the string the theme's `isPlatformAgnostic`
+  // (src/theme/utils/platformAgnostic.ts) recognises.
+  it("passes the platform-agnostic descriptor through as `any/any`", () => {
+    const d = digest("any");
+    const root = emptyRoot({
+      tags: { "1.0.0": { content: d, observed: "2026-01-01T00:00:00Z", yanked: null } },
+    });
+    const source = sourceOf(root, {
+      [`${d}.json`]: indexOf({
+        mediaType: "application/vnd.oci.image.manifest.v1+json",
+        digest: "sha256:placeholder",
+        size: 1,
+        platform: { os: "any", architecture: "any" },
+      }),
+    });
+    expect(catalogPlatforms(source)).toEqual(["any/any"]);
+  });
+
   // JSDoc: "a live-tag digest missing from contentByDigest" must propagate
   // as a lookup failure, never be silently swallowed into an empty result.
   it("throws when a live tag's digest is missing from contentByDigest", () => {

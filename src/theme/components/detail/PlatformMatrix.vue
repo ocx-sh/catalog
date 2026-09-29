@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { OS_GLYPHS, osRank } from '../../utils/osGlyphs'
 import { visiblePlatforms } from '../../utils/platforms'
+import { AGNOSTIC_OS } from '../../utils/platformAgnostic'
 import type { ManifestDescriptor } from '../../composables/useImageIndex'
 
 // Presentational only — glyph + label + arch chips from one OCI image
@@ -37,17 +38,29 @@ function archRank(arch: string): number {
   return index === -1 ? ARCH_PRIORITY.length : index
 }
 
+// The platform-agnostic platform (`os: any`) subsumes every platform-specific
+// build beside it, so when a tag has one it is the ONLY row — and, having no
+// architecture to show, it contributes no arch column either (its literal
+// `any` architecture would otherwise become one).
+const visible = computed(() =>
+  shown.value.some(p => p.platform.os === AGNOSTIC_OS)
+    ? shown.value.filter(p => p.platform.os === AGNOSTIC_OS)
+    : shown.value,
+)
+
 const columns = computed<string[]>(() => {
-  const arches = new Set(shown.value.map(p => p.platform.architecture))
+  const arches = new Set(
+    visible.value.filter(p => p.platform.os !== AGNOSTIC_OS).map(p => p.platform.architecture),
+  )
   return [...arches].sort((a, b) => archRank(a) - archRank(b) || a.localeCompare(b))
 })
 
 const groups = computed<PlatformGroup[]>(() => {
   const byOs = new Map<string, Set<string>>()
-  for (const entry of shown.value) {
+  for (const entry of visible.value) {
     const os = entry.platform.os
     if (!byOs.has(os)) byOs.set(os, new Set())
-    byOs.get(os)!.add(entry.platform.architecture)
+    if (os !== AGNOSTIC_OS) byOs.get(os)!.add(entry.platform.architecture)
   }
   return [...byOs.entries()]
     .map(([os, arches]) => ({ os, label: OS_GLYPHS[os]?.label ?? os, arches }))
@@ -56,8 +69,17 @@ const groups = computed<PlatformGroup[]>(() => {
 </script>
 
 <template>
-  <div v-if="groups.length" class="platform-matrix" :style="{ '--arch-cols': columns.length }">
+  <div
+    v-if="groups.length"
+    class="platform-matrix"
+    :class="{ 'platform-matrix-flat': columns.length === 0 }"
+    :style="{ '--arch-cols': columns.length }"
+  >
     <div v-for="group in groups" :key="group.os" class="platform-row">
+      <!-- Platform-agnostic: no glyph, no architecture — just the words,
+           italic, across every column from the left edge. -->
+      <span v-if="group.os === AGNOSTIC_OS" class="platform-any">any platform</span>
+      <template v-else>
       <span class="platform-glyph">
         <svg v-if="OS_GLYPHS[group.os]" width="16" height="16" :viewBox="OS_GLYPHS[group.os].viewBox" aria-hidden="true">
           <path v-for="(d, i) in OS_GLYPHS[group.os].paths || []" :key="`p${i}`" :d="d" fill="currentColor" />
@@ -78,6 +100,7 @@ const groups = computed<PlatformGroup[]>(() => {
       <span v-for="arch in columns" :key="arch" class="platform-arch-cell">
         <span v-if="group.arches.has(arch)" class="platform-arch">{{ arch }}</span>
       </span>
+      </template>
     </div>
   </div>
   <p v-else class="platform-empty">Hover a version to preview its platforms.</p>
@@ -108,8 +131,22 @@ const groups = computed<PlatformGroup[]>(() => {
   column-gap: var(--ocx-space-4);
 }
 
+/* No arch columns at all (an agnostic-only package): `repeat(0, …)` is
+   invalid and would drop the whole template, so name the two tracks. */
+.platform-matrix-flat {
+  grid-template-columns: 18px 1fr;
+}
+
 .platform-row {
   display: contents;
+}
+/* Spans the glyph, label and every arch column — the row's whole width. */
+.platform-any {
+  grid-column: 1 / -1;
+  font-family: var(--ocx-font-sans);
+  font-size: var(--ocx-text-sm);
+  font-style: italic;
+  color: var(--ocx-color-fg-muted);
 }
 
 .platform-glyph {
