@@ -3,7 +3,7 @@
  * Build a corporate-sized catalog site, for the measurements that only mean
  * anything at that size.
  *
- * `task quality:web`'s Lighthouse run audits the committed six-package
+ * `task quality:web`'s Lighthouse run audits the committed seven-package
  * fixture, which is the right size for "does every page score well" and says
  * nothing about the two costs that grow with the catalog: the payload the
  * landing page hands the browser, and the work of building a card or a row

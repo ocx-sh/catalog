@@ -1,0 +1,38 @@
+{
+  "name": "ocx.sh/acme/portable",
+  "repository": "oci://ghcr.io/ocx-contrib/acme/portable",
+  "owners": [
+    {
+      "github": "ocx-bot",
+      "github_id": 309019509
+    }
+  ],
+  "status": "active",
+  "deprecated_message": null,
+  "created": "2026-06-15",
+  "upstream": {
+    "org": "acme",
+    "repository_url": "https://github.com/acme/portable",
+    "disclaimer": "Unaffiliated mirror of the upstream acme/portable project."
+  },
+  "desc": {
+    "digest": "sha256:be80c82e6cfc7d7a7b8ffecb830641d3eb3cbc4462306790b72b79ac40dbd31a",
+    "title": "portable",
+    "description": "A platform-agnostic script package: one build for every host, published as any/any.",
+    "keywords": [
+      "cli",
+      "portable"
+    ],
+    "readme": "sha256:91be578958fd5ff5de879322c5fd70d2b882d4c74712d4f7f234be0c9972843e"
+  },
+  "tags": {
+    "1.0.0": {
+      "content": "sha256:01e1796eef419c053927a18e2e84d1e10da4d12d9b4ec2e7c1f8ff91c27d6767",
+      "observed": "2026-06-15T09:00:00Z"
+    },
+    "latest": {
+      "content": "sha256:01e1796eef419c053927a18e2e84d1e10da4d12d9b4ec2e7c1f8ff91c27d6767",
+      "observed": "2026-06-15T09:00:00Z"
+    }
+  }
+}

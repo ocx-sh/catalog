@@ -23,7 +23,7 @@ import type { Catalog, CatalogEntry, CatalogSourcePackage } from "../../src/view
  * `resolveCatalog` (what `buildCatalog` itself calls) — plus the detail-page
  * annotation path (`readImageIndexAnnotations`), asserting the fixture exercises
  * every axis the gate needs it to span: active/deprecated/yanked status,
- * multi-platform image indices, OCI license/source/revision annotations,
+ * multi-platform image indices, a platform-agnostic (`any/any`) one, OCI license/source/revision annotations,
  * readme+logo / readme-only / logo-only, and a derived variant.
  */
 
@@ -45,7 +45,7 @@ describe("quality-index fixture", () => {
     expect(loaded.config.favicon).toBe("/logo.svg");
   });
 
-  it("resolves to the six spanning packages through the real build pipeline", async () => {
+  it("resolves to the seven spanning packages through the real build pipeline", async () => {
     const loaded = await loadConfig(CONFIG_PATH);
     const resolved = await resolveCatalog(loaded.sources, loaded.configDir);
     const catalog = JSON.parse(resolved.catalogJson) as Catalog;
@@ -55,6 +55,7 @@ describe("quality-index fixture", () => {
       "acme/gadget",
       "acme/husk",
       "acme/legacy-tool",
+      "acme/portable",
       "contrib/mono",
       "oxidize/ripgrep",
       "sharkdp/bat",
@@ -93,6 +94,13 @@ describe("quality-index fixture", () => {
     expect(entries.get("oxidize/ripgrep")!.logoUrl).toBeNull();
     expect(entries.get("contrib/mono")!.readmeUrl).toBeNull();
     expect(entries.get("contrib/mono")!.logoUrl).not.toBeNull();
+
+    // Platform-agnostic: the only platform is OCX's `any/any`, which the theme
+    // renders as one "Any platform" glyph/row instead of an OS.
+    const portable = entries.get("acme/portable")!;
+    expect(portable.platforms).toEqual(["any/any"]);
+    expect(portable.status).toBe("active");
+    expect(portable.readmeUrl).not.toBeNull();
 
     // A per-tag yank never counts toward the live tag total.
     const bat = entries.get("sharkdp/bat")!;
