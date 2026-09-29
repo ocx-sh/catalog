@@ -4,25 +4,14 @@
 // `sanitize.ts`'s header docblock) — DOMPurify silently drops content under
 // happy-dom (verified empirically: it drops the sanitized root element and
 // strips `<input>` outright), so this file opts into jsdom instead.
-import MarkdownIt from 'markdown-it'
-import hljs from 'highlight.js/lib/common'
 import { describe, expect, test, vi } from 'vitest'
+import { createReadmeMarkdown } from '../../../src/theme/utils/readmeMarkdown.js'
 import { SANITIZE_CONFIG, sanitizeReadmeHtml } from '../../../src/theme/utils/sanitize.js'
 
-// Mirrors `ReadmePane.vue`'s actual markdown-it + highlight.js wiring
-// exactly (see that file's `load()`) — the two real-pipeline preservation
-// cases below render through this instead of a hand-built fixture.
-const md = new MarkdownIt({
-  html: false,
-  highlight: (code: string, lang: string) => {
-    try {
-      if (lang && hljs.getLanguage(lang)) return hljs.highlight(code, { language: lang }).value
-      return hljs.highlightAuto(code).value
-    } catch {
-      return ''
-    }
-  },
-})
+// The real README pipeline (`ReadmePane.vue` builds it the same way) — the
+// two real-pipeline preservation cases below render through this instead of
+// a hand-built fixture.
+const md = createReadmeMarkdown()
 
 describe('SANITIZE_CONFIG', () => {
   test('uses the html profile and declares the GFM checkbox allowlist', () => {

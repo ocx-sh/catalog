@@ -22,6 +22,10 @@ const SOURCE = readFileSync(
   resolve(process.cwd(), "src/theme/components/detail/ReadmePane.vue"),
   "utf8",
 );
+const MARKDOWN_SOURCE = readFileSync(
+  resolve(process.cwd(), "src/theme/utils/readmeMarkdown.ts"),
+  "utf8",
+);
 
 describe("ReadmePane sanitizer wiring", () => {
   // C-606: the sanitizer (dompurify, ~29KB) moved from a static top-level
@@ -46,7 +50,19 @@ describe("ReadmePane sanitizer wiring", () => {
   });
 
   test("markdown-it stays configured with html:false (defence in depth, not replaced by the sanitizer)", () => {
-    expect(SOURCE).toMatch(/html:\s*false/);
+    expect(MARKDOWN_SOURCE).toMatch(/html:\s*false/);
+    expect(MARKDOWN_SOURCE).not.toMatch(/html:\s*true/);
+  });
+
+  // The markdown pipeline (markdown-it, highlight.js, markdown-it-emoji) is
+  // one lazy chunk behind `utils/readmeMarkdown`; a static import of it or
+  // of any of the three would pull them into the shared bundle (C-606), and
+  // bypassing it would drop comment stripping and emoji.
+  test("builds markdown through the lazily imported readmeMarkdown util, never statically", () => {
+    expect(SOURCE).toMatch(/import\(['"]\.\.\/\.\.\/utils\/readmeMarkdown['"]\)/);
+    expect(SOURCE).toMatch(/createReadmeMarkdown\(\)/);
+    expect(SOURCE).not.toMatch(/^\s*import\s.*from\s+['"](?:markdown-it|highlight\.js|markdown-it-emoji|\.\.\/\.\.\/utils\/readmeMarkdown)/m);
+    expect(SOURCE).not.toMatch(/new MarkdownIt/);
   });
 });
 
@@ -116,6 +132,26 @@ describe("C-608 ReadmePane XSS — mounted DOM assertion", () => {
     // drop the payload, it would drop the whole render or throw.
     expect(content.text()).toContain("before-marker");
     expect(content.text()).toContain("after-marker");
+
+    wrapper.unmount();
+  });
+
+  test("a README's HTML comments are dropped and emoji shortcodes render, end to end", async () => {
+    const digest = `sha256:${"b".repeat(64)}`;
+    const payload = "hello :rocket:\n\n<!-- hidden-marker -->\n\nworld";
+    globalThis.fetch = vi.fn(() =>
+      Promise.resolve({ ok: true, text: () => Promise.resolve(payload) }),
+    ) as unknown as typeof fetch;
+
+    const wrapper = mount(ReadmePane, { props: { bareName: "ns/pkg", digest } });
+    await vi.waitFor(() => expect(wrapper.find(".readme-content").exists()).toBe(true));
+    await flushPromises();
+
+    const text = wrapper.find(".readme-content").text();
+    expect(text).toContain("hello 🚀");
+    expect(text).toContain("world");
+    expect(text).not.toContain("hidden-marker");
+    expect(text).not.toContain("<!--");
 
     wrapper.unmount();
   });

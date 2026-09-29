@@ -41,36 +41,22 @@ async function load() {
     return
   }
   try {
-    // Dynamic imports — `markdown-it`, `highlight.js`, and the sanitizer
-    // (dompurify, ~29KB) only reach the browser as their own chunks, fetched
-    // the first time a README actually renders, instead of static imports
-    // pulling them into the shared every-page/grid-entry bundle (C-606).
-    // hljs `lib/common` = the ~35 mainstream grammars; fences without a
-    // language hint fall back to auto-detection.
-    const [resp, { default: MarkdownIt }, { default: hljs }, { sanitizeReadmeHtml }] = await Promise.all([
+    // Dynamic imports — the markdown pipeline (`markdown-it`, `highlight.js`,
+    // `markdown-it-emoji`, all behind `utils/readmeMarkdown`) and the
+    // sanitizer (dompurify, ~29KB) only reach the browser as their own
+    // chunks, fetched the first time a README actually renders, instead of
+    // static imports pulling them into the shared every-page/grid-entry
+    // bundle (C-606).
+    const [resp, { createReadmeMarkdown }, { sanitizeReadmeHtml }] = await Promise.all([
       fetch(url),
-      import('markdown-it'),
-      import('highlight.js/lib/common'),
+      import('../../utils/readmeMarkdown'),
       import('../../utils/sanitize'),
     ])
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
     const text = await resp.text()
-    // `html: false` is non-negotiable — README content is semi-trusted
-    // (bot-mirrored from a third-party registry's __ocx.desc, not authored
-    // here). hljs output is safe to inject: it escapes the source itself
-    // and only ever adds its own `hljs-*` spans; an empty-string return
-    // tells markdown-it to escape the block as plain text instead.
-    const md = new MarkdownIt({
-      html: false,
-      highlight: (code, lang) => {
-        try {
-          if (lang && hljs.getLanguage(lang)) return hljs.highlight(code, { language: lang }).value
-          return hljs.highlightAuto(code).value
-        } catch {
-          return ''
-        }
-      },
-    })
+    // `html: false` (README content is semi-trusted, see readmeMarkdown.ts)
+    // plus silent HTML-comment removal and emoji shortcodes live there.
+    const md = createReadmeMarkdown()
     // Second layer over `html: false`: the markdown is wire-sourced (a
     // third-party registry's __ocx.desc, mirrored by the bot), so it passes
     // through the sanitizer before ever reaching v-html — defence against a

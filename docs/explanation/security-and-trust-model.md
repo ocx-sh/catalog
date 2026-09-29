@@ -94,6 +94,20 @@ containing a raw newline could inject a new line — or, with two newlines, a
 whole new block — into `_headers`, a line-oriented format shared by every
 mirrored source.
 
+## How a README is rendered
+
+A package's README is Markdown from a third party, rendered in the visitor's
+browser with raw HTML **disabled**: an HTML tag in a README is shown as
+escaped text, never parsed, and the result passes through a sanitizer before
+it reaches the page. Two conveniences work without enabling raw HTML:
+
+- **HTML comments are dropped.** `<!-- … -->` (single- or multi-line, block
+  or inline) is removed silently, as GitHub does, instead of showing up as
+  visible text. A comment inside a code fence or inline code stays verbatim.
+- **Emoji shortcodes render.** `:rocket:` becomes 🚀, using the GitHub
+  shortcode set. Unknown shortcodes and anything inside code stay literal,
+  and text smileys such as `:)` are not converted.
+
 ## The `_headers` sandbox
 
 `renderHeaders()` (`src/sources/mirror.ts`) writes one Cloudflare
