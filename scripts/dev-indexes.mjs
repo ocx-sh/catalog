@@ -21,7 +21,7 @@
  * |---|---|
  * | `<index repo>/p` | volume — 124 roots across 100 namespaces, `bazelbuild/bazel` at 135 tags, the longest real package names |
  * | `<index repo>/demo/p` | a deprecated package, a yanked TAG, roots with no readme/logo |
- * | `test/fixtures/quality-index` | the only whole-package `status: yanked` anywhere, plus a `desc`-rich root |
+ * | `test/fixtures/quality-index` | the only whole-package `status: yanked` anywhere, plus a `desc`-rich root and the only platform-agnostic (`any/any`) package |
  *
  * Point `INDEX_REPO` elsewhere if the sibling checkout lives somewhere else.
  * Without it, this script is the one thing here that needs a second repo —
@@ -154,7 +154,7 @@ function source(brand, extra = {}) {
   return { path: `trees/${brand}`, ...extra };
 }
 
-async function writeConfig(name, sources, title) {
+async function writeConfig(name, sources, title, extra = {}) {
   await writeFile(
     join(OUT, `${name}.config.json`),
     `${JSON.stringify(
@@ -162,6 +162,7 @@ async function writeConfig(name, sources, title) {
         $schema: "../src/config/schema/catalog.config.schema.json",
         brand: { title },
         sources,
+        ...extra,
       },
       null,
       2,
@@ -267,6 +268,15 @@ async function main() {
     "multi-noroot-default",
     [source(ROOT), source(CORP, { default: true }), source(PARTNER)],
     "Aggregated, Default Without Root",
+  );
+  // `partner.dev` plays the development index: `excludeFromAll` keeps its
+  // packages out of the "all" tab (and its count) while its own tab lists them,
+  // and `ownerUrl` points every owner link at GitLab instead of GitHub.
+  await writeConfig(
+    "multi-root-dev-excluded",
+    [source(ROOT, { root: true }), source(CORP), source(PARTNER, { excludeFromAll: true })],
+    "Aggregated, Dev Index Excluded From All",
+    { ownerUrl: "https://gitlab.com/{login}" },
   );
   await writeConfig(
     "many",

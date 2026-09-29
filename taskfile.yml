@@ -118,7 +118,8 @@ tasks:
   dev:indexes:
     desc: >-
       Seed .dev-indexes/ — carved multi-index trees plus one config per case
-      (single-root, single-noroot, multi-root, multi-noroot, many, and the two
+      (single-root, single-noroot, multi-root, multi-noroot, multi-noroot-default,
+      multi-root-dev-excluded, many, and the two
       deliberately-invalid ones). Needs ../index checked out. `BULK=3000`
       clones the default index up to that many packages, for looking at the
       catalog at corporate size — then `task dev:catalog CASE=single-root`.
@@ -130,7 +131,7 @@ tasks:
       Serve one seeded case with a real `ocx-catalog dev` — `task dev:catalog
       CASE=multi-root`. Run `task dev:indexes` first. The invalid-* cases are
       expected to FAIL to build; that is what they are for.
-    # No default: CASE names which of seven quite different renders you get, and
+    # No default: CASE names which of nine quite different renders you get, and
     # silently picking one for you is how a review ends up looking at the wrong
     # case. `requires` makes task refuse and PRINT the accepted values, which is
     # the closest thing go-task has to a picker — `prompt:` is yes/no only, not
@@ -144,6 +145,8 @@ tasks:
             - single-noroot
             - multi-root
             - multi-noroot
+            - multi-noroot-default
+            - multi-root-dev-excluded
             - many
             - invalid-prefix
             - invalid-collision
