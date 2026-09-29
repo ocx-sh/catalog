@@ -26,6 +26,7 @@ const TOP_LEVEL_KEYS = [
   "publicDir",
   "ci",
   "siteUrl",
+  "ownerUrl",
   "description",
   "favicon",
 ] as const;
@@ -90,9 +91,9 @@ const ALLOWED_FORGES = new Set(["github", "gitlab"]);
 const ALLOWED_PACKAGE_MANAGERS = new Set(["npm", "bun"]);
 
 const SOURCE_ENTRY_KEYS: Record<"path" | "url" | "git", readonly string[]> = {
-  path: ["path", "label", "root", "default"],
-  url: ["url", "label", "root", "default"],
-  git: ["git", "ref", "dir", "label", "root", "default"],
+  path: ["path", "label", "root", "default", "excludeFromAll"],
+  url: ["url", "label", "root", "default", "excludeFromAll"],
+  git: ["git", "ref", "dir", "label", "root", "default", "excludeFromAll"],
 };
 
 /** Shared by every optional string field (label, docs, css, publicDir, brand.logo,
@@ -137,6 +138,26 @@ function assertPlausibleUrl(value: string, key: string, protocols: readonly stri
   }
   if (!protocols.includes(parsed.protocol)) {
     throw new ConfigError("INVALID_TYPE", `"${key}" must be ${expected} (got "${value}")`);
+  }
+}
+
+/** The one placeholder `ownerUrl` carries — the theme substitutes an owner's
+ * login for it (`src/theme/utils/ownerUrl.ts`). */
+const OWNER_URL_PLACEHOLDER = "{login}";
+
+/** `ownerUrl` is a URL TEMPLATE: a plausible absolute http(s) URL (a
+ * `javascript:` template would otherwise reach every owner link) that
+ * carries the placeholder exactly once — zero would link every owner to the
+ * same page, two is almost certainly a typo. `{login}` is legal anywhere the
+ * WHATWG URL parser accepts it — path, query, or a subdomain label. */
+function assertOwnerUrlTemplate(value: string): void {
+  assertPlausibleUrl(value, "ownerUrl", SITE_URL_PROTOCOLS, "an http(s) URL");
+  const occurrences = value.split(OWNER_URL_PLACEHOLDER).length - 1;
+  if (occurrences !== 1) {
+    throw new ConfigError(
+      "INVALID_TYPE",
+      `"ownerUrl" must contain "${OWNER_URL_PLACEHOLDER}" exactly once (found ${occurrences} in "${value}")`,
+    );
   }
 }
 
@@ -188,18 +209,30 @@ function buildSourceEntry(rawEntry: unknown, index: number): SourceEntry {
   // Spelled `isDefault` here only because `default` is a reserved word as a
   // BINDING name; the config key and the field it lands in are both `default`.
   const isDefault = raw.default === undefined ? undefined : expectBoolean(raw.default, `sources[${index}].default`);
+  const excludeFromAll =
+    raw.excludeFromAll === undefined
+      ? undefined
+      : expectBoolean(raw.excludeFromAll, `sources[${index}].excludeFromAll`);
 
   if (kind === "path") {
-    return { path: expectString(raw.path, `sources[${index}].path`), label, root, default: isDefault };
+    return { path: expectString(raw.path, `sources[${index}].path`), label, root, default: isDefault, excludeFromAll };
   }
   if (kind === "url") {
     const url = expectString(raw.url, `sources[${index}].url`);
     assertPlausibleUrl(url, `sources[${index}].url`, SOURCE_URL_PROTOCOLS, "an https URL");
-    return { url, label, root, default: isDefault };
+    return { url, label, root, default: isDefault, excludeFromAll };
   }
   const ref = optionalString(raw.ref, `sources[${index}].ref`);
   const dir = optionalString(raw.dir, `sources[${index}].dir`);
-  return { git: expectString(raw.git, `sources[${index}].git`), ref, dir, label, root, default: isDefault };
+  return {
+    git: expectString(raw.git, `sources[${index}].git`),
+    ref,
+    dir,
+    label,
+    root,
+    default: isDefault,
+    excludeFromAll,
+  };
 }
 
 /**
@@ -424,6 +457,10 @@ function buildCi(value: unknown): CiConfig {
  *   particular is a site-root-relative HREF, never a path this package
  *   reads, so it gets no `PATH_ESCAPE` containment check (the asset itself
  *   ships via `publicDir`, which does).
+ * - `ownerUrl`, when given, must be an absolute `http(s)` URL containing
+ *   `{login}` exactly once -> `INVALID_TYPE` otherwise. It is a template the
+ *   theme fills per owner, so the URL check runs on the template as written.
+ *   `sources[].excludeFromAll` is a plain optional boolean.
  * - Every `nav[].link` must be an absolute `http(s)` URL or a site-relative
  *   path starting with `/` (never `//`, protocol-relative) -> `INVALID_TYPE`
  *   otherwise (C-605) — see `assertSafeNavLink`'s own doc comment; a
@@ -548,10 +585,14 @@ export async function loadConfig(configPath: string): Promise<LoadedConfig> {
   const publicDir = optionalString(data.publicDir, "publicDir");
   const ci = data.ci === undefined ? undefined : buildCi(data.ci);
   const siteUrl = optionalString(data.siteUrl, "siteUrl");
+  const ownerUrl = optionalString(data.ownerUrl, "ownerUrl");
   const description = optionalString(data.description, "description");
   const favicon = optionalString(data.favicon, "favicon");
   if (siteUrl !== undefined) {
     assertPlausibleUrl(siteUrl, "siteUrl", SITE_URL_PROTOCOLS, "an http(s) URL");
+  }
+  if (ownerUrl !== undefined) {
+    assertOwnerUrlTemplate(ownerUrl);
   }
 
   if (docs !== undefined) {
@@ -580,6 +621,7 @@ export async function loadConfig(configPath: string): Promise<LoadedConfig> {
     publicDir,
     ci,
     siteUrl,
+    ownerUrl,
     description,
     favicon,
   };

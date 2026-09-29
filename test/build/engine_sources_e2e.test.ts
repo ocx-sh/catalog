@@ -83,6 +83,54 @@ async function writeFixture(configDir: string): Promise<string> {
   return configPath;
 }
 
+describe("buildCatalog — sources[].excludeFromAll reaches the emitted catalog.json", () => {
+  it(
+    "flags exactly the excluded index in indexes[], and keeps its packages listed and routed",
+    async () => {
+      await withTempDir("catalog-exclude-e2e-", async (configDir) => {
+        await writeFixture(configDir);
+        await mkdir(join(configDir, "dev", "p", "tools"), { recursive: true });
+        await writeFile(
+          join(configDir, "dev", "p", "tools", "probe.json"),
+          rootJsonBytes({ name: "dev.example/tools/probe", created: "2026-01-04" }),
+        );
+        const configPath = join(configDir, "catalog.config.json");
+        await writeFile(
+          configPath,
+          JSON.stringify({
+            sources: [
+              { path: "index", root: true, label: "ocx.sh" },
+              { path: "dev", label: "dev.example", excludeFromAll: true },
+            ],
+            brand: { title: BRAND_TITLE },
+          }),
+          "utf8",
+        );
+
+        await withTempDir("catalog-exclude-e2e-out-", async (outDir) => {
+          await buildCatalog({ configPath, outDir });
+
+          const catalog = JSON.parse(await readFile(join(outDir, "data", "catalog", "catalog.json"), "utf8")) as {
+            indexes: unknown[];
+            packages: { name: string }[];
+          };
+          expect(catalog.indexes).toEqual([
+            { name: "ocx.sh", root: true, default: true, excludeFromAll: false, count: 2 },
+            { name: "dev.example", root: false, default: false, excludeFromAll: true, count: 1 },
+          ]);
+          // Excluded from the "all" TAB only — the package is still in the
+          // catalog and still has its own qualified page.
+          expect(catalog.packages.map((entry) => entry.name)).toContain("dev.example/tools/probe");
+          expect(
+            await stat(join(outDir, "dev.example", "tools", "probe.html")).then((stats) => stats.isFile()),
+          ).toBe(true);
+        });
+      });
+    },
+    60_000,
+  );
+});
+
 describe("C-003/C-005/C-006 buildCatalog — a configured source reaches dist/ end to end", () => {
   it(
     "renders every package's page, the merged catalog, the mirror tree and _headers",
@@ -103,7 +151,7 @@ describe("C-003/C-005/C-006 buildCatalog — a configured source reaches dist/ e
           const files = await readPathSource({ path: "index" }, configDir);
           const expectedCatalog = serializeCatalog(
             catalogIndex([...extractPackages(files)].sort(compareQualifiedIds), [
-              { name: "ocx.sh", root: true, default: true, count: 2 },
+              { name: "ocx.sh", root: true, default: true, excludeFromAll: false, count: 2 },
             ]),
           );
           const writtenCatalog = await readFile(join(outDir, "data", "catalog", "catalog.json"), "utf8");

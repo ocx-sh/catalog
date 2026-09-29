@@ -23,6 +23,7 @@ every place they diverge.
 | `publicDir` | string | no | none (no public assets copied) | Static assets directory, resolved relative to the config file's directory; must stay inside it. Copied verbatim into VitePress's `publicDir`, served at the site root. |
 | `ci` | object | no | none | CI workflow rendering configuration for `ocx-catalog ci`. |
 | `siteUrl` | string | no | none (no sitemap, no `og:url`) | Deployment origin (e.g. `https://index.ocx.sh`); must be an absolute `http(s)` URL. |
+| `ownerUrl` | string | no | `https://github.com/{login}` | Owner-profile link template for the package page's `owners` row: an absolute `http(s)` URL containing `{login}` exactly once, e.g. `https://gitlab.com/{login}` (a self-hosted GitLab/Gitea works the same). The index does not say which forge its owner logins belong to, so this is deployment config. The login is URL-encoded into the template. |
 | `description` | string | no | none | Site-wide tagline/meta description, distinct from `brand.title`. |
 | `favicon` | string | no | none (no icon link) | Site-root-relative href for the browser-tab icon (e.g. `/favicon.svg`). Not a filesystem path — this package never reads it, only bakes it into rendered HTML. |
 
@@ -158,13 +159,14 @@ other object here, unknown keys inside it are ignored rather than rejected
 Every entry is discriminated by exactly one of `path` | `url` | `git`; the
 schema expresses this as a closed `oneOf` over three shapes, and the loader
 enforces the same rule at runtime (`SOURCE_DISCRIMINANT` on zero or more
-than one discriminant key present). Two fields are common to every variant:
+than one discriminant key present). Four fields are common to every variant:
 
 | Field | Type | Required | Meaning |
 |---|---|---|---|
 | `label` | string | no | The index's public name — shown by the catalog's index-scope tabs, and the first `/`-segment of every package name this source publishes. Must be unique across `sources[]` (`LABEL_CONFLICT`) and must match that segment (`LABEL_PREFIX_MISMATCH`): a label may restate the name an index gives itself, never rename it. When absent it is derived from the source's own data; `loadConfig` never invents a label itself. |
 | `root` | boolean | no | Marks this source as the catalog's self-mirror, served at the site root in addition to `index/<label>/`. Its packages keep bare `/<ns>/<pkg>` routes; every other index's are qualified with their own name. At most one entry across `sources[]` may set this — `MULTIPLE_ROOT` otherwise. |
 | `default` | boolean | no | Marks this source as the index the catalog view **opens on** — preselected on arrival, badged `default` in the scope tabs. Purely presentational: it moves no page's URL. At most one entry may set this — `MULTIPLE_DEFAULT` otherwise. When no entry sets it, the `root: true` source (if any) is the default; a catalog with **no** root source needs this key to name one at all. |
+| `excludeFromAll` | boolean | no | Keeps this source's packages out of the catalog's `all` tab — the grid, table, filters, keyword rail and the tab's own count — for a development or staging index. The index still gets its own tab, and its packages stay in the catalog and keep their pages and routes. The command palette (⌘K) is **not** affected: it searches every index. Absent or `false` includes the index. Independent of `root` and `default`. On a one-index catalog there is no `all` tab, so the flag has no effect there; if every index of an aggregating catalog sets it, `all` is simply empty. |
 
 === "path"
 
@@ -218,6 +220,12 @@ of scope for the loader; the source-reading layer that does read them
 independently re-verifies containment per file (see
 [Output layout](./output-layout.md)).
 
+`ownerUrl` sits between the two: the schema's `pattern` expresses "absolute
+`http(s)` URL with `{login}` exactly once", so a missing placeholder, a
+doubled one, a non-`http(s)` scheme and a relative template are rejected by
+schema and loader alike. The loader additionally requires the template to
+parse with `new URL()`.
+
 `siteUrl` and `nav[].link` follow a related but distinct pattern worth
 calling out explicitly: the JSON Schema declares only `minLength: 1` for
 `siteUrl` (its own `description` field says so — "src/config/load.ts
@@ -249,7 +257,7 @@ schema and loader.
   "sources": [
     { "path": "../index", "root": true },
     { "url": "https://mirror.example.com", "label": "mirror" },
-    { "git": "https://github.com/example/index.git", "ref": "main", "dir": "p", "label": "example" }
+    { "git": "https://github.com/example/index.git", "ref": "main", "dir": "p", "label": "example", "excludeFromAll": true }
   ],
   "brand": {
     "title": "OCX Index",
@@ -273,6 +281,7 @@ schema and loader.
     "verifyCi": true
   },
   "siteUrl": "https://index.ocx.sh",
+  "ownerUrl": "https://gitlab.com/{login}",
   "description": "The public OCX package index.",
   "favicon": "/favicon.svg"
 }
@@ -293,7 +302,7 @@ that loads a config (`build`, `dev`, `ci`) maps every one of them to exit
 | `MISSING_FILE` | Config file does not exist at the given path (`ENOENT`). |
 | `READ_ERROR` | Config path exists but couldn't be read — e.g. it names a directory, or a permission error. Distinct from `MISSING_FILE`, which is `ENOENT` only. |
 | `INVALID_JSON` | Config file exists but is not valid JSON. |
-| `INVALID_TYPE` | A field's JSON type doesn't match its expected type — includes an empty string on a field that requires non-empty, and an unparsable or wrong-protocol URL (`siteUrl`, `sources[].url`, `nav[].link`). |
+| `INVALID_TYPE` | A field's JSON type doesn't match its expected type — includes an empty string on a field that requires non-empty, and an unparsable or wrong-protocol URL (`siteUrl`, `sources[].url`, `nav[].link`, `ownerUrl`), and an `ownerUrl` without exactly one `{login}`. |
 | `UNKNOWN_KEY` | An unrecognized key at the top level, or inside a `sources[]` entry, `brand`, `footer`, or a `nav[]`/`footer.links[]`/`docsNav[]` entry. `ci`'s own keys are exempt. |
 | `UNSUPPORTED_VERSION` | `configVersion` names a version this loader doesn't support. |
 | `SOURCE_DISCRIMINANT` | A `sources[]` entry has zero, or more than one, of `path`/`url`/`git`. |

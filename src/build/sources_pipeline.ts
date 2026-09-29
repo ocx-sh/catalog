@@ -290,6 +290,7 @@ export async function resolveCatalog(
     name: result.resolved.label,
     root: result.resolved.root,
     default: i === defaultAt,
+    excludeFromAll: sources[i]?.entry.excludeFromAll === true,
     count: perLabel.get(result.resolved.label) ?? 0,
   }));
 

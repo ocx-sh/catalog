@@ -4,7 +4,12 @@
 // value carrying a leading `/` (or `//`, scheme-relative) must never reach
 // the DOM sink as a link; it degrades to plain text instead.
 import { mount } from '@vue/test-utils'
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test, vi } from 'vitest'
+import { ref } from 'vue'
+
+// MetaRail reads `themeConfig.ownerUrl` for its owner links.
+vi.mock('vitepress', () => ({ useData: () => ({ theme: ref({}) }) }))
+
 import DeprecationBanner from '../../../src/theme/components/detail/DeprecationBanner.vue'
 import MetaRail from '../../../src/theme/components/detail/MetaRail.vue'
 

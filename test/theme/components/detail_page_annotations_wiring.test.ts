@@ -25,6 +25,7 @@ vi.mock('vitepress', () => ({
   useData: () => ({
     page: ref({ relativePath: relativePath.value }),
     frontmatter: ref({ layout: 'detail', ...identityFromPath(relativePath.value) }),
+    theme: ref({}),
   }),
 }))
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { buildCatalog } from "../../src/build/engine.js";
 import { withTempDir } from "./helpers.js";
@@ -27,10 +27,11 @@ import { withTempDir } from "./helpers.js";
 const CONSUMER_ACCENT = "#123456";
 const THEME_ACCENT = "#ff6047"; // src/theme/styles/tokens/palette.css, --ocx-color-accent
 const SITE_URL = "https://e2e.example.test";
+const OWNER_URL = "https://gitlab.example.test/{login}";
 
 describe("C-005/C-002 buildCatalog — real config.css/siteUrl/docs reach dist/", () => {
   it(
-    "custom.css wins the cascade and sitemap.xml reflects siteUrl, via a real catalog.config.json",
+    "custom.css wins the cascade, sitemap.xml reflects siteUrl and ownerUrl reaches the site data, via a real catalog.config.json",
     async () => {
       await withTempDir("catalog-e2e-config-", async (configDir) => {
         await mkdir(join(configDir, "packages"), { recursive: true });
@@ -49,6 +50,7 @@ describe("C-005/C-002 buildCatalog — real config.css/siteUrl/docs reach dist/"
             brand: { title: "E2E Config Wiring Test" },
             css: "custom.css",
             siteUrl: SITE_URL,
+            ownerUrl: OWNER_URL,
             docs: "docs",
           }),
           "utf8",
@@ -65,6 +67,14 @@ describe("C-005/C-002 buildCatalog — real config.css/siteUrl/docs reach dist/"
           expect(sitemap).toContain(`${SITE_URL}/docs/guide`);
 
           const html = await readFile(join(outDir, "docs", "guide.html"), "utf8");
+          // `ownerUrl` rides `themeConfig` into VitePress's site data, which
+          // ships in a hashed JS chunk (where MetaRail's
+          // `useData().theme.ownerUrl` reads it) rather than inline in the HTML.
+          const assets = await readdir(join(outDir, "assets"), { recursive: true });
+          const scripts = await Promise.all(
+            assets.filter((file) => file.endsWith(".js")).map((file) => readFile(join(outDir, "assets", file), "utf8")),
+          );
+          expect(scripts.some((script) => script.includes(OWNER_URL))).toBe(true);
           const hrefs = [...html.matchAll(/<link[^>]*rel=["'][^"']*\bstylesheet\b[^"']*["'][^>]*href=["']([^"']+)["'][^>]*>/g)].map(
             (m) => m[1] as string,
           );

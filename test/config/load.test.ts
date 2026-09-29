@@ -43,6 +43,8 @@ describe("C-002 loadConfig happy paths", () => {
       expect(loaded.config.ci?.forge).toBe("github");
       expect(loaded.config.$schema).toBe(FULL_VALID.$schema);
       expect(loaded.config.siteUrl).toBe("https://example.test");
+      expect(loaded.config.ownerUrl).toBe("https://gitlab.com/{login}");
+      expect(loaded.sources[1]?.entry.excludeFromAll).toBe(true);
       expect(loaded.config.description).toBe("A test catalog.");
       expect(loaded.config.favicon).toBe("/favicon.svg");
       expect(loaded.sources).toHaveLength(3);

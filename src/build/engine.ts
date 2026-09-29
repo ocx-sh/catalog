@@ -110,6 +110,7 @@ export async function buildCatalog(options: BuildCatalogOptions): Promise<BuildC
       docsNav: loaded.config.docsNav,
       css: loaded.config.css !== undefined ? join(loaded.configDir, loaded.config.css) : undefined,
       siteUrl: loaded.config.siteUrl,
+      ownerUrl: loaded.config.ownerUrl,
       description: loaded.config.description,
       favicon: loaded.config.favicon,
       descLookup: catalog.descLookup,

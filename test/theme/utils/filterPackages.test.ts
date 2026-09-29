@@ -122,6 +122,39 @@ describe('filterPackages', () => {
     expect(filterPackages(packages, { yankedOnly: true }).map(p => p.name)).toEqual(['c'])
   })
 
+  // `excludeIndexes` is the "all" tab's exclusion (`indexes[].excludeFromAll`):
+  // an index is the first `/`-segment of a package's qualified name.
+  test('excludeIndexes drops every package of the named indexes, by first name segment', () => {
+    const packages = [
+      pkg({ name: 'ocx.sh/tools/a' }),
+      pkg({ name: 'dev.example/tools/b' }),
+      pkg({ name: 'staging.example/tools/c' }),
+      pkg({ name: 'ocx.sh/dev.example/d' }),
+    ]
+    expect(filterPackages(packages, { excludeIndexes: ['dev.example', 'staging.example'] }).map(p => p.name)).toEqual([
+      'ocx.sh/tools/a',
+      'ocx.sh/dev.example/d',
+    ])
+  })
+
+  test('excludeIndexes: [] and undefined exclude nothing', () => {
+    const packages = [pkg({ name: 'ocx.sh/tools/a' }), pkg({ name: 'dev.example/tools/b' })]
+    expect(filterPackages(packages, { excludeIndexes: [] })).toEqual(packages)
+    expect(filterPackages(packages, {})).toEqual(packages)
+  })
+
+  test('excludeIndexes composes with query and index by AND', () => {
+    const packages = [
+      pkg({ name: 'ocx.sh/tools/cmake', title: 'CMake' }),
+      pkg({ name: 'dev.example/tools/cmake', title: 'CMake' }),
+    ]
+    expect(filterPackages(packages, { query: 'cmake', excludeIndexes: ['dev.example'] }).map(p => p.name)).toEqual([
+      'ocx.sh/tools/cmake',
+    ])
+    // Scoped to the excluded index itself, the exclusion leaves nothing.
+    expect(filterPackages(packages, { index: 'dev.example', excludeIndexes: ['dev.example'] })).toEqual([])
+  })
+
   test('empty filter returns every package unchanged', () => {
     const packages = [pkg({ name: 'a' }), pkg({ name: 'b' })]
     expect(filterPackages(packages, {})).toEqual(packages)

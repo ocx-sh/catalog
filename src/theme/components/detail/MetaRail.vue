@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
+import { useData } from 'vitepress'
 import { useClipboard, useLocalStorage } from '@vueuse/core'
 import { useToast } from '../../composables/useToast'
 import { safeHref } from '../../utils/safeHref'
+import { ownerProfileUrl } from '../../utils/ownerUrl'
 import PlatformMatrix from './PlatformMatrix.vue'
 import CopyIcon from '../shared/CopyIcon.vue'
 import { SelectRoot, SelectTrigger, SelectPortal, SelectContent, SelectViewport, SelectItem, SelectItemText } from 'reka-ui'
@@ -209,23 +211,22 @@ async function copyRow(key: string, text: string) {
 
 const owners = computed(() => props.root.owners)
 
-// Owner profile links are a FIXED `https://github.com/<owner>` prefix
-// around wire-sourced username text, not a raw wire URL — low risk (the
-// scheme/host are never attacker-controlled), but routed through `safeHref`
-// anyway for consistency with every other wire-adjacent href on this page
-// (C-605) rather than being the one exception.
+// Owner profile links are `themeConfig.ownerUrl` (config `ownerUrl`, a
+// `{login}` template; absent -> `https://github.com/{login}`) around
+// wire-sourced username text. `utils/ownerUrl.ts` owns the substitution and
+// routes the result through `safeHref` (C-605), so this is not the one
+// wire-adjacent href on the page that skips it.
 //
 // The field is `login` since ocx-indexbot 0.5.0, falling back to the
 // pre-0.5.0 `github`; `ownerLogin` owns that choice so nothing here reads
 // either key directly.
 //
-// KNOWN GAP: the `github.com` host is hard-coded, and `owners[]` is
-// forge-neutral — on a GitLab-hosted index these are GitLab usernames and
-// this link points at a GitHub profile that need not exist. Closing it needs
-// the index's own forge in the view-model, which this component cannot see.
+// `owners[]` is forge-neutral and the index does not say which forge its
+// logins belong to, so that is deployment config (`ownerUrl`), not something
+// this component can infer.
+const { theme } = useData()
 function ownerHref(owner: Owner): string | null {
-  const login = ownerLogin(owner)
-  return login ? safeHref(`https://github.com/${login}`) : null
+  return ownerProfileUrl(theme.value.ownerUrl, ownerLogin(owner))
 }
 
 // `upstream.repository_url` is third-party metadata (wire-sourced, not

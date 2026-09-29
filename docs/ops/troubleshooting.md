@@ -21,7 +21,7 @@ invented.
 | `MISSING_FILE` | The config path doesn't exist (`ENOENT`) | Check `--config`/the default `catalog.config.json` path |
 | `READ_ERROR` | The config path exists but can't be read (e.g. it's a directory, or a permission error) | Fix the path or its permissions |
 | `INVALID_JSON` | The config file isn't valid JSON | Fix the JSON syntax |
-| `INVALID_TYPE` | A field's type doesn't match the schema (includes an empty string where a non-empty one is required, and a malformed `siteUrl`/`sources[].url`/`nav[].link`) | Fix the field named in the message |
+| `INVALID_TYPE` | A field's type doesn't match the schema (includes an empty string where a non-empty one is required, and a malformed `siteUrl`/`sources[].url`/`nav[].link`, or an `ownerUrl` without exactly one `{login}`) | Fix the field named in the message |
 | `UNKNOWN_KEY` | An unrecognized key at the top level, or inside a `sources[]` entry, `brand`, `footer`, or a `nav[]`/`footer.links[]`/`docsNav[]` entry (`ci`'s own keys are exempt) | Remove or rename the key |
 | `UNSUPPORTED_VERSION` | `configVersion` names a version this loader doesn't support | Use a supported `configVersion`, or upgrade `@ocx-sh/catalog` |
 | `SOURCE_DISCRIMINANT` | A `sources[]` entry has zero, or more than one, of `path`/`url`/`git` | Set exactly one of those three keys per entry |

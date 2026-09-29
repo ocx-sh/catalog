@@ -53,7 +53,7 @@ import type { Brand, FooterConfig, NavEntry } from "../config/types.js";
  * | `head` `<link rel="icon">` | Emitted from `GeneratedConfigOptions.favicon` (C-002's `CatalogConfig.favicon`) — a site-root-relative href the consumer serves out of its own `publicDir`; `brand.logo` is NOT a favicon source (it's the header logo) and this package ships no bundled default, so an absent `favicon` emits no link at all. |
  * | `head` `og:image`/`twitter:image` (C-301) | Site-wide, from the SAME resolved logo href `themeConfig.brand.logo` gets (see `logoHref`/`copyBrandLogo` below) — made absolute against `siteUrl` when set, else left site-root-relative (still correct against whatever origin actually serves the page). Absent logo -> neither meta emitted; never a build failure either way. |
  * | `transformHead` per-page `description` fallback | Fixed template `Install {name} from <brand.title>.`, `{name}` replaced with the page's `<ns>/<pkg>` key — never a hardcoded deployment identity (the index's own `ocx.sh/` prefix and "the OCX public package index" phrasing live in a *desc* per package root, not here). |
- * | `themeConfig.brand`/`.nav`/`.docsPresent`/`.siteUrl` | Baked static JSON — see "Injection channel" above. `docsPresent` is `true` iff `<scratchRoot>/<srcDir>/docs` exists on disk when this function runs (i.e., `synthesizePages()` was given a `docsSourceDir`). `brand` is a PROJECTION of C-002's `Brand`, not the raw value: `logo` is replaced by the site-root href of the copy this function makes (see `brandLogoSource`), since a config-relative filesystem path is meaningless to a browser. `wordmark` is passed through UNRESOLVED — `SiteHeader.vue` owns the `wordmark ?? title` fallback, so a hand-written `themeConfig` behaves the same as a generated one. **No `descLookup` key** (C-302, removed): it had zero runtime consumer — the theme never reads `useData().theme.descLookup` — and only bloated every page's metadata chunk; the module-level `DESC_LOOKUP` const below (`transformHead`/`transformPageData`'s own lookup table) is unaffected, since neither hook reads it through `themeConfig` at all. |
+ * | `themeConfig.brand`/`.nav`/`.docsPresent`/`.siteUrl`/`.ownerUrl` | Baked static JSON — see "Injection channel" above. `docsPresent` is `true` iff `<scratchRoot>/<srcDir>/docs` exists on disk when this function runs (i.e., `synthesizePages()` was given a `docsSourceDir`). `brand` is a PROJECTION of C-002's `Brand`, not the raw value: `logo` is replaced by the site-root href of the copy this function makes (see `brandLogoSource`), since a config-relative filesystem path is meaningless to a browser. `wordmark` is passed through UNRESOLVED — `SiteHeader.vue` owns the `wordmark ?? title` fallback, so a hand-written `themeConfig` behaves the same as a generated one. **No `descLookup` key** (C-302, removed): it had zero runtime consumer — the theme never reads `useData().theme.descLookup` — and only bloated every page's metadata chunk; the module-level `DESC_LOOKUP` const below (`transformHead`/`transformPageData`'s own lookup table) is unaffected, since neither hook reads it through `themeConfig` at all. |
  * | `themeConfig.footer`/`.docsNav` | Baked static JSON, forwarded verbatim (C-002's `CatalogConfig.footer`/`.docsNav`) — `undefined` when absent, same "no key survives `undefined` interpolating to the literal `undefined`" mechanism `siteUrlLiteral` already relies on. `SiteFooter.vue` reads `footer?.links`, falling back to no extra links; `SiteHeader.vue` reads `docsNav`, falling back to one auto entry labelled `docs` at `/docs/` when `docsPresent` is true and `docsNav` is absent — both fallbacks live in the THEME, not here, same reasoning as `brand.wordmark`'s `?? title` fallback above. |
  * | `themeConfig.search.provider: 'local'` | Carried verbatim — VitePress core reads this itself (independent of active theme) to decide whether to build the local-search virtual module at all. |
  * | `ignoreDeadLinks: [/^\/p\//]` | Carried verbatim — every synthesized page still links CAS paths the dead-link linter can't see until the mirror copy (C-006) exists. |
@@ -111,6 +111,11 @@ export interface GeneratedConfigOptions {
    * item" note above; absent degrades to no sitemap + no `og:url` meta,
    * never a build failure. */
   readonly siteUrl?: string;
+  /** `CatalogConfig.ownerUrl`, baked verbatim into `themeConfig.ownerUrl` —
+   * `MetaRail.vue` fills its `{login}` with each owner's login. Absent -> the
+   * theme's own GitHub default applies (that fallback lives in the THEME, same
+   * as `brand.wordmark`'s), so a hand-written `themeConfig` behaves alike. */
+  readonly ownerUrl?: string;
   /** Site-wide tagline (VitePress's own top-level `description` field —
    * `CatalogConfig.description`, C-002), distinct from `brand.title` and
    * from `descLookup`'s PER-PAGE result below. Absent -> the `description`
@@ -376,6 +381,7 @@ export default defineConfig({
     docsNav: ${JSON.stringify(options.docsNav, null, 2)},
     docsPresent: ${JSON.stringify(docsPresent)},
     siteUrl: ${siteUrlLiteral},
+    ownerUrl: ${options.ownerUrl !== undefined ? JSON.stringify(options.ownerUrl) : "undefined"},
     search: { provider: 'local' },
   },
   // C-301: sets a detail page's OWN title (bare — VitePress's own

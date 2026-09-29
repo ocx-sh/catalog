@@ -58,14 +58,16 @@ packages it contributes after the merge:
 {
   "generated": "…",
   "indexes": [
-    { "name": "ocx.sh", "root": true, "default": true, "count": 46 },
-    { "name": "corp.example", "root": false, "default": false, "count": 13 }
+    { "name": "ocx.sh", "root": true, "default": true, "excludeFromAll": false, "count": 46 },
+    { "name": "corp.example", "root": false, "default": false, "excludeFromAll": false, "count": 13 }
   ],
   "packages": [ … ]
 }
 ```
 
-`root` and `default` answer different questions, and a config sets them
+`excludeFromAll` is the source's own flag, passed through: when `true`, the
+theme's `all` tab omits that index's packages (its own tab and routes are
+unaffected). `root` and `default` answer different questions, and a config sets them
 independently:
 
 | field | question | consequence |

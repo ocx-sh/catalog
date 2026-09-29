@@ -86,6 +86,25 @@ const indexes = computed(() => catalog.value.indexes)
 const hasScope = computed(() => (indexes.value?.length ?? 0) > 1)
 
 /**
+ * Indexes the "all" scope leaves out (`indexes[].excludeFromAll`), as the
+ * names `filterPackages` takes. Read by EVERY count and list below that
+ * describes the "all" view — the grid, `scopedTotal`, the tab's own count,
+ * the keyword vocabulary and the table's platform columns — so they cannot
+ * disagree with the grid. `[]` while an index is selected: choosing an
+ * excluded index's tab is how you get to its packages, and the vocabulary
+ * stays whole-catalog there, as it always was. If EVERY index of an
+ * aggregating catalog is excluded, "all" is empty — deliberately not
+ * special-cased, the config asked for it. A one-index catalog has no "all"
+ * tab (`hasScope`), so there is nothing to exclude from and its lone index
+ * always shows.
+ * The command palette does not read this: ⌘K spans every index.
+ */
+const excludedNames = computed(() =>
+  hasScope.value ? (indexes.value ?? []).filter(entry => entry.excludeFromAll).map(entry => entry.name) : [],
+)
+const excludedFromAll = computed(() => (activeIndex.value === null ? excludedNames.value : []))
+
+/**
  * Settles the scope against whatever the URL asked for and whatever indexes
  * the catalog turned out to have. Idempotent, and called from BOTH places
  * either input can arrive:
@@ -199,6 +218,7 @@ const filtered = computed(() =>
     deprecatedOnly: deprecatedOnly.value,
     yankedOnly: yankedOnly.value,
     index: activeIndex.value ?? undefined,
+    excludeIndexes: excludedFromAll.value,
   }),
 )
 
@@ -208,7 +228,14 @@ const filtered = computed(() =>
 // `activeFilterLabels` (a place you're in, not a filter chip) and so never
 // shows up in the filters line that would normally explain the gap.
 const scopedTotal = computed(() =>
-  filterPackages(catalog.value.packages, { index: activeIndex.value ?? undefined }).length,
+  filterPackages(catalog.value.packages, { index: activeIndex.value ?? undefined, excludeIndexes: excludedFromAll.value })
+    .length,
+)
+
+// The "all" tab's own count: what "all" would show, whichever tab is active
+// (the tab row stays put while you look at one index).
+const allTotal = computed(() =>
+  filterPackages(catalog.value.packages, { excludeIndexes: excludedNames.value }).length,
 )
 
 // Timestamp sorts are newest-first; `updated: null` (tagless) sinks to the
@@ -304,7 +331,7 @@ function onTableKeydown(event: KeyboardEvent) {
 // tracks down the table, a chip is a suggestion for the next cut.)
 const osColumns = computed(() => {
   const seen = new Set<string>()
-  for (const pkg of catalog.value.packages) {
+  for (const pkg of filterPackages(catalog.value.packages, { excludeIndexes: excludedFromAll.value })) {
     for (const platform of pkg.platforms) seen.add(platform.split('/')[0]!)
   }
   return [...seen].sort((a, b) => osRank(a) - osRank(b) || a.localeCompare(b))
@@ -316,7 +343,7 @@ const osColumns = computed(() => {
 // no longer reads it; see `railKeywords`.
 const keywordFrequency = computed(() => {
   const freq = new Map<string, number>()
-  for (const pkg of catalog.value.packages) {
+  for (const pkg of filterPackages(catalog.value.packages, { excludeIndexes: excludedFromAll.value })) {
     for (const kw of pkg.keywords) {
       freq.set(kw, (freq.get(kw) ?? 0) + 1)
     }
@@ -454,7 +481,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
         v-if="hasScope"
         :indexes="indexes"
         :active="activeIndex"
-        :total="catalog.packages.length"
+        :total="allTotal"
         @select="activeIndex = $event"
       />
       <div class="catalog-toolbar">
@@ -528,7 +555,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
         v-if="filtered.length === 0"
         variant="no-match"
         :query="query"
-        :total="catalog.packages.length"
+        :total="allTotal"
         :active-filter-labels="activeFilterLabels"
         @clear-search="query = ''"
         @clear-filters="clearFilters"

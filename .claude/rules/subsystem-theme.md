@@ -100,6 +100,21 @@ resolved ONCE, in `sources_pipeline.ts`, so `indexes[].default` reaches the
 theme as a settled fact rather than as a rule two components each re-derive.
 Never make a route ask `default`: a preselected tab must not move a URL.
 
+**`excludeFromAll` is a third per-index fact, and it only narrows the "all"
+tab.** `indexes[].excludeFromAll` (config `sources[].excludeFromAll`) is read
+in exactly one place, `CatalogPage.vue`'s `excludedFromAll`, and fed to
+`filterPackages`' `excludeIndexes` — an option rather than a pre-filtered
+array so `searchIndexFor`'s per-array MiniSearch index survives tab switches.
+Every count and list describing the "all" view reads it (grid, `scopedTotal`,
+the tab's count, `keywordFrequency`, `osColumns`), so they cannot disagree.
+It is `[]` on any named index and on a one-index catalog (`hasScope`). The ⌘K
+palette (`SearchModal.vue`) deliberately does not read it. Never make a route
+ask it: an excluded index's pages still exist.
+
+**Owner links are `themeConfig.ownerUrl`.** `MetaRail.vue` builds them through
+`utils/ownerUrl.ts` (`{login}` template, `split`/`join` + `encodeURIComponent`,
+then `safeHref`); the GitHub default lives in that util, never in a component.
+
 Scope selection lives in `IndexTabs.vue` above the toolbar, never as a fifth
 filter chip: platforms and keywords are attributes a package HAS, an index is
 where it comes FROM. It renders only under `hasScope`, and the selection is

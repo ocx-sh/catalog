@@ -118,6 +118,7 @@ Each entry needs `text` and `link`. `link` must be either an absolute `http(s)` 
 | `publicDir` | A directory (relative to the config file) copied verbatim into the site's public root — e.g. a `favicon.svg` inside it ends up served at `/favicon.svg`. Omit it and no extra public assets are copied |
 | `favicon` | A site-root-relative href (e.g. `/favicon.svg`) emitted as the page's `<link rel="icon">`, with `type` inferred from the extension (`.svg`/`.png`/`.ico`; anything else emits no `type`). This is not a filesystem path this package reads — shipping the actual file is `publicDir`'s job. Omit it and no icon link is emitted at all |
 | `description` | The site-wide tagline (VitePress's own `description` field), distinct from `brand.title`. Omit it and VitePress's own default applies |
+| `ownerUrl` | The owner-profile link template for a package page's `owners` row, e.g. `https://gitlab.com/{login}`. It must be an absolute `http(s)` URL containing `{login}` exactly once; the owner's login (from the index) is URL-encoded into it. Omit it and owners link to `https://github.com/<login>`, as before. Owner logins come from the index and it does not say which forge they belong to, so a deployment whose owners live on GitLab or a self-hosted forge sets this |
 | `siteUrl` | The deployment origin (e.g. `https://catalog.example.com`), feeding the sitemap and each page's `og:url`/canonical link. Omit it and the site still builds — it just skips the sitemap and those `og:url`/canonical tags |
 
 ## Docs mount

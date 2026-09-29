@@ -61,7 +61,7 @@ export const FULL_VALID = {
   configVersion: 1,
   sources: [
     { path: "packages", label: "ocx.sh", root: true },
-    { url: "https://example.com/index.json", label: "remote" },
+    { url: "https://example.com/index.json", label: "remote", excludeFromAll: true },
     { git: "https://example.com/repo.git", ref: "main", dir: "catalog" },
   ],
   brand: { title: "My Catalog", wordmark: "my.catalog.example", logo: "assets/logo.svg" },
@@ -73,6 +73,7 @@ export const FULL_VALID = {
   publicDir: "static",
   ci: { forge: "github", verifyCi: true, someUnknownKey: "ignored" },
   siteUrl: "https://example.test",
+  ownerUrl: "https://gitlab.com/{login}",
   description: "A test catalog.",
   favicon: "/favicon.svg",
 };

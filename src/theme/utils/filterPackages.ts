@@ -30,6 +30,12 @@ export interface PackageFilter {
    * its own. `undefined` is "all indexes" — scope is a place you are in, not
    * a chip, so there is no empty-array form meaning the same thing. */
   index?: string
+  /** Packages published by any of these indexes never match. The "all" tab's
+   * exclusion (`indexes[].excludeFromAll`) — an option here rather than a
+   * pre-filtered array so `searchIndexFor`'s per-array MiniSearch index is
+   * still shared across tab switches. Combines with `index` by AND, so it is
+   * moot for a scope that names one index. */
+  excludeIndexes?: readonly string[]
 }
 
 // One index per catalog array, built lazily on first query. WeakMap keyed
@@ -76,7 +82,9 @@ export function filterPackages(packages: CatalogPackage[], filter: PackageFilter
       if (!filter.keywords.every(kw => pkg.keywords.includes(kw))) return false
     }
 
-    if (filter.index !== undefined && pkg.name.split('/')[0] !== filter.index) return false
+    const pkgIndex = pkg.name.split('/')[0]
+    if (filter.index !== undefined && pkgIndex !== filter.index) return false
+    if (filter.excludeIndexes?.includes(pkgIndex)) return false
 
     if (filter.deprecatedOnly && pkg.status !== 'deprecated') return false
     if (filter.yankedOnly && pkg.status !== 'yanked') return false

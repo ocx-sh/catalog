@@ -166,6 +166,10 @@ export interface CatalogIndexInfo {
    * needs somewhere to land: nothing is served at the site root, every route
    * is qualified, and one of the indexes is still the one to open on. */
   readonly default: boolean;
+  /** This index's packages are left out of the "all" tab — its own tab and
+   * its package routes are unaffected. Straight from the source's
+   * `excludeFromAll`; `false` when unset. */
+  readonly excludeFromAll: boolean;
   /** Packages this index contributes to the MERGED catalog. */
   readonly count: number;
 }

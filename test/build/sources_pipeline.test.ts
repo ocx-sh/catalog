@@ -149,7 +149,7 @@ function ASSET_TREE(name: string): Readonly<Record<string, Uint8Array>> {
 
 function pathSource(
   entryPath: string,
-  extra: { root?: boolean; label?: string; default?: boolean } = {},
+  extra: { root?: boolean; label?: string; default?: boolean; excludeFromAll?: boolean } = {},
 ): ResolvedSource {
   const { root, label } = extra;
   return {
@@ -157,6 +157,7 @@ function pathSource(
       path: entryPath,
       ...(root !== undefined ? { root } : {}),
       ...(extra.default !== undefined ? { default: extra.default } : {}),
+      ...(extra.excludeFromAll !== undefined ? { excludeFromAll: extra.excludeFromAll } : {}),
     },
     label: label ?? null,
   };
@@ -206,7 +207,7 @@ describe("sources_pipeline resolveCatalog — path source", () => {
     const files = await readPathSource({ path: "index" }, dir);
     const expectedJson = serializeCatalog(
       catalogIndex([...extractPackages(files)].sort(compareQualifiedIds), [
-        { name: "ocx.sh", root: true, default: true, count: 2 },
+        { name: "ocx.sh", root: true, default: true, excludeFromAll: false, count: 2 },
       ]),
     );
     expect(catalog.catalogJson).toBe(expectedJson);
@@ -244,7 +245,7 @@ describe("sources_pipeline resolveCatalog — path source", () => {
     expect(catalog.routes.map((route) => route.segments[0])).toEqual(["ocx.sh", "ocx.sh"]);
 
     const parsed = JSON.parse(catalog.catalogJson) as { indexes?: { name: string; root: boolean }[] };
-    expect(parsed.indexes).toEqual([{ name: "ocx.sh", root: false, default: false, count: 2 }]);
+    expect(parsed.indexes).toEqual([{ name: "ocx.sh", root: false, default: false, excludeFromAll: false, count: 2 }]);
 
     // The two halves agree by construction: no entry is `root`, so no bare
     // route exists, and every route is qualified.
@@ -299,7 +300,7 @@ describe("sources_pipeline resolveCatalog — path source", () => {
 
     expect(catalog.routes.map((route) => route.segments[0])).toEqual(["acme", "acme"]);
     const parsed = JSON.parse(catalog.catalogJson) as { indexes?: { name: string; root: boolean }[] };
-    expect(parsed.indexes).toEqual([{ name: "ocx.sh", root: true, default: true, count: 2 }]);
+    expect(parsed.indexes).toEqual([{ name: "ocx.sh", root: true, default: true, excludeFromAll: false, count: 2 }]);
   });
 
   // The bug this pins: `wireBase` reached `routes` from the very first
@@ -370,8 +371,8 @@ describe("sources_pipeline resolveCatalog — path source", () => {
     };
     expect(parsed.packages).toHaveLength(3);
     expect(parsed.indexes).toEqual([
-      { name: "ocx.sh", root: true, default: true, count: 2 },
-      { name: "corp.example", root: false, default: false, count: 1 },
+      { name: "ocx.sh", root: true, default: true, excludeFromAll: false, count: 2 },
+      { name: "corp.example", root: false, default: false, excludeFromAll: false, count: 1 },
     ]);
   });
   // The `indexes` envelope answers two questions that used to be one boolean:
@@ -393,8 +394,8 @@ describe("sources_pipeline resolveCatalog — path source", () => {
       indexes: { name: string; root: boolean; default: boolean; count: number }[];
     };
     expect(parsed.indexes).toEqual([
-      { name: "ocx.sh", root: false, default: false, count: 2 },
-      { name: "corp.example", root: false, default: true, count: 1 },
+      { name: "ocx.sh", root: false, default: false, excludeFromAll: false, count: 2 },
+      { name: "corp.example", root: false, default: true, excludeFromAll: false, count: 1 },
     ]);
     // No source is root, so EVERY route stays qualified — the default index's
     // included. A preselected tab must never move a page's URL.
@@ -431,6 +432,42 @@ describe("sources_pipeline resolveCatalog — path source", () => {
       "acme",
       "corp.example",
     ]);
+  });
+
+  // `excludeFromAll` is the third per-source flag the envelope carries: it
+  // decides only whether the theme's "all" tab lists the index. Routes and
+  // counts must not move, and an unset flag is `false`, not absent.
+  it("excludeFromAll is emitted per index and touches neither routes nor counts", async () => {
+    const dir = await tempDir("catalog-pipeline-exclude-");
+    await writeTree(join(dir, "first"), WIRE_TREE);
+    await writeTree(join(dir, "second"), { "p/beta/thing.json": CORP_BETA_ROOT });
+
+    const catalog = await resolveCatalog(
+      [pathSource("first", { root: true }), pathSource("second", { excludeFromAll: true })],
+      dir,
+    );
+
+    const parsed = JSON.parse(catalog.catalogJson) as {
+      indexes: { name: string; excludeFromAll: boolean; count: number }[];
+      packages: unknown[];
+    };
+    expect(parsed.indexes.map((entry) => [entry.name, entry.excludeFromAll, entry.count])).toEqual([
+      ["ocx.sh", false, 2],
+      ["corp.example", true, 1],
+    ]);
+    // Still listed in the merged catalog, still routed at its own qualified page.
+    expect(parsed.packages).toHaveLength(3);
+    expect(catalog.routes.map((route) => route.segments[0])).toEqual(["acme", "acme", "corp.example"]);
+  });
+
+  it("excludeFromAll: false is the same as unset", async () => {
+    const dir = await tempDir("catalog-pipeline-exclude-false-");
+    await writeTree(join(dir, "first"), WIRE_TREE);
+
+    const catalog = await resolveCatalog([pathSource("first", { root: true, excludeFromAll: false })], dir);
+
+    const parsed = JSON.parse(catalog.catalogJson) as { indexes: { excludeFromAll: boolean }[] };
+    expect(parsed.indexes.map((entry) => entry.excludeFromAll)).toEqual([false]);
   });
 
   // Neither flag anywhere: no entry is default, and the theme opens on "all".

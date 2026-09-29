@@ -280,6 +280,23 @@ describe("C-005/C-008 generateConfig — themeConfig static-JSON injection", () 
     });
   });
 
+  it("bakes ownerUrl into themeConfig.ownerUrl, {login} placeholder intact", async () => {
+    await withScratch(async (scratchRoot) => {
+      await generateConfig(baseOptions(scratchRoot, { ownerUrl: "https://gitlab.com/{login}" }));
+      const { config } = await readGenerated(scratchRoot);
+      expect(config).toContain('ownerUrl: "https://gitlab.com/{login}",');
+    });
+  });
+
+  it("ownerUrl absent -> themeConfig.ownerUrl bakes to the literal undefined (MetaRail owns the GitHub default)", async () => {
+    await withScratch(async (scratchRoot) => {
+      await generateConfig(baseOptions(scratchRoot));
+      const { config } = await readGenerated(scratchRoot);
+      expect(config).toContain("ownerUrl: undefined,");
+      expect(config).not.toContain("github.com");
+    });
+  });
+
   it("brand.wordmark absent -> no wordmark key at all (SiteHeader.vue owns the `?? title` fallback)", async () => {
     await withScratch(async (scratchRoot) => {
       await generateConfig(baseOptions(scratchRoot));

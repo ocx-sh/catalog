@@ -82,6 +82,24 @@ The package grid and search merge entries from every configured source, and noth
     name stops building; drop the `label` and let it derive, or change the
     name upstream.
 
+## Keep a development index out of the "all" tab
+
+A staging or development index you want reachable but not mixed into the aggregate can opt out of the `all` tab with `excludeFromAll`:
+
+```json
+{
+  "sources": [
+    { "path": "./index", "root": true },
+    { "url": "https://dev.example.com", "label": "dev.example", "excludeFromAll": true }
+  ],
+  "brand": { "title": "My Catalog" }
+}
+```
+
+The `dev.example` index keeps its own tab (with its own count), and its packages stay in the catalog with their qualified detail pages. Only the `all` tab omits them: its grid, table, filters, keyword rail and count all read the same reduced set. `?index=dev.example` links to the excluded index's tab as usual.
+
+Two edges. The ⌘K command palette is unchanged and still searches **every** index, excluded ones included. And there is nothing to exclude from on a one-index catalog (no tab row), while an aggregating catalog whose every source sets the flag shows an empty `all` tab — the config is followed literally.
+
 ## Self-host your own index
 
 To ship a catalog with no dependency on a public index at build time, use exactly one `path` or `git` source, with `root: true`, and no `url` entry:

@@ -53,6 +53,10 @@ export interface CatalogIndexInfo {
    * here. No entry has it when a config names neither, and the catalog then
    * opens on "all". */
   default: boolean
+  /** Left out of the "all" tab (grid, table, filters, keyword rail, the tab's
+   * count). The index keeps its own tab and its routes; the command palette
+   * still spans it. Absent in a catalog.json this renderer did not write. */
+  excludeFromAll?: boolean
   /** Packages this index contributes to the merged catalog. */
   count: number
 }

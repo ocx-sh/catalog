@@ -34,6 +34,16 @@ interface SourceEntryCommon {
    * is still one index an arriving visitor should land on.
    */
   default?: boolean;
+  /**
+   * Keeps this source's packages out of the catalog's "all" tab (grid, table,
+   * filters, keyword rail and the tab's own count) — for a development or
+   * staging index that should stay reachable without cluttering the
+   * aggregate. The index still gets its own tab and its package pages still
+   * exist and route; only the merged "all" view omits it. The command palette
+   * (⌘K) is NOT affected and still searches every index. Absent/`false`:
+   * included, as before this key existed.
+   */
+  excludeFromAll?: boolean;
 }
 
 /** A source read from a local directory, relative to the config file. */
@@ -178,6 +188,13 @@ export interface CatalogConfig {
    * meta, never a build failure. Must be an absolute `http(s)` URL —
    * `loadConfig` validates this, not just non-empty. */
   siteUrl?: string;
+  /** Owner-profile link template for the package detail page's `owners`
+   * row: an absolute `http(s)` URL containing `{login}` exactly once, e.g.
+   * `https://gitlab.com/{login}`. Absent -> `https://github.com/{login}`,
+   * the behaviour before this key existed. `owners[]` on the wire is
+   * forge-neutral, so the forge a login belongs to is deployment config,
+   * not something the theme can infer. */
+  ownerUrl?: string;
   /** Site-wide tagline/meta description (VitePress's own `description`
    * field) — distinct from `brand.title`. Free text, no shape check beyond
    * non-empty. */

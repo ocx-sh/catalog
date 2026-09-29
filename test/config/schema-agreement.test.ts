@@ -235,6 +235,67 @@ const FIXTURES: readonly Fixture[] = [
     schemaValid: true,
   },
   {
+    name: "ownerUrl: a GitLab template is accepted by both",
+    config: { ...MINIMAL_VALID, ownerUrl: "https://gitlab.com/{login}" },
+    loader: "valid",
+    schemaValid: true,
+  },
+  {
+    name: "ownerUrl: {login} in a query string is accepted by both",
+    config: { ...MINIMAL_VALID, ownerUrl: "http://forge.internal/u?name={login}" },
+    loader: "valid",
+    schemaValid: true,
+  },
+  {
+    name: "ownerUrl: no {login} is rejected by schema AND loader",
+    config: { ...MINIMAL_VALID, ownerUrl: "https://gitlab.com/people" },
+    loader: "INVALID_TYPE",
+    schemaValid: false,
+  },
+  {
+    name: "ownerUrl: two {login} is rejected by schema AND loader",
+    config: { ...MINIMAL_VALID, ownerUrl: "https://gitlab.com/{login}/{login}" },
+    loader: "INVALID_TYPE",
+    schemaValid: false,
+  },
+  {
+    name: "ownerUrl: a non-http scheme is rejected by schema AND loader",
+    config: { ...MINIMAL_VALID, ownerUrl: "ftp://gitlab.com/{login}" },
+    loader: "INVALID_TYPE",
+    schemaValid: false,
+  },
+  {
+    name: "ownerUrl: a relative template is rejected by schema AND loader",
+    config: { ...MINIMAL_VALID, ownerUrl: "/people/{login}" },
+    loader: "INVALID_TYPE",
+    schemaValid: false,
+  },
+  {
+    name: "ownerUrl: {login} as a subdomain is accepted by both",
+    config: { ...MINIMAL_VALID, ownerUrl: "https://{login}.example.test/" },
+    loader: "valid",
+    schemaValid: true,
+  },
+  {
+    name: "sources[].excludeFromAll boolean is accepted by both, on every variant",
+    config: {
+      sources: [
+        { path: "a", excludeFromAll: true },
+        { url: "https://index.ocx.sh", excludeFromAll: false },
+        { git: "https://example.com/repo.git", excludeFromAll: true },
+      ],
+      brand: { title: "x" },
+    },
+    loader: "valid",
+    schemaValid: true,
+  },
+  {
+    name: "sources[].excludeFromAll that is not a boolean is rejected by both",
+    config: { sources: [{ path: "a", excludeFromAll: "yes" }], brand: { title: "x" } },
+    loader: "INVALID_TYPE",
+    schemaValid: false,
+  },
+  {
     name: "footer.links[] valid, accepted by both",
     config: { ...MINIMAL_VALID, footer: { links: [{ text: "Status", link: "/status" }] } },
     loader: "valid",

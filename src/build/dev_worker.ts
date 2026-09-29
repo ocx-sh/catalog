@@ -50,6 +50,7 @@ interface DevInputs {
   readonly nav: NavEntry[];
   readonly css: string | undefined;
   readonly siteUrl: string | undefined;
+  readonly ownerUrl: string | undefined;
   readonly description: string | undefined;
   readonly favicon: string | undefined;
   readonly docsSourceDir: string | undefined;
@@ -77,6 +78,7 @@ async function resolveDevInputs(configPath: string | undefined, sourcePath: stri
       nav: [],
       css: undefined,
       siteUrl: undefined,
+      ownerUrl: undefined,
       description: undefined,
       favicon: undefined,
       docsSourceDir: undefined,
@@ -91,6 +93,7 @@ async function resolveDevInputs(configPath: string | undefined, sourcePath: stri
     nav: loaded.config.nav ?? [],
     css: loaded.config.css !== undefined ? join(loaded.configDir, loaded.config.css) : undefined,
     siteUrl: loaded.config.siteUrl,
+    ownerUrl: loaded.config.ownerUrl,
     description: loaded.config.description,
     favicon: loaded.config.favicon,
     docsSourceDir: loaded.config.docs !== undefined ? join(loaded.configDir, loaded.config.docs) : undefined,
@@ -109,7 +112,7 @@ async function boot(
   sourcePath: string | undefined,
   port: number | undefined,
 ): Promise<Booted> {
-  const { brand, nav, css, siteUrl, description, favicon, docsSourceDir, sources, configDir, fallbackLabel } =
+  const { brand, nav, css, siteUrl, ownerUrl, description, favicon, docsSourceDir, sources, configDir, fallbackLabel } =
     await resolveDevInputs(configPath, sourcePath);
   const catalog = await resolveCatalog(sources, configDir, fallbackLabel);
   const scratchRoot = await createScratchRoot();
@@ -132,6 +135,7 @@ async function boot(
     nav,
     css,
     siteUrl,
+    ownerUrl,
     description,
     favicon,
     descLookup: catalog.descLookup,
