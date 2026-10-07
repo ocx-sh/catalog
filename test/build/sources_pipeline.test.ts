@@ -470,6 +470,29 @@ describe("sources_pipeline resolveCatalog — path source", () => {
     expect(parsed.indexes.map((entry) => entry.excludeFromAll)).toEqual([false]);
   });
 
+  // A source's own ownerUrl reaches ONLY that source's routes — the per-page
+  // frontmatter channel `MetaRail.vue` reads; the other source inherits the
+  // top-level template, so its routes carry nothing.
+  it("a source's ownerUrl rides only that source's routes", async () => {
+    const dir = await tempDir("catalog-pipeline-owner-url-");
+    await writeTree(join(dir, "first"), WIRE_TREE);
+    await writeTree(join(dir, "second"), { "p/beta/thing.json": CORP_BETA_ROOT });
+
+    const catalog = await resolveCatalog(
+      [
+        pathSource("first", { root: true }),
+        { entry: { path: "second", ownerUrl: "https://gitlab.corp.example/{login}" }, label: null },
+      ],
+      dir,
+    );
+
+    expect(catalog.routes.map((route) => [route.segments[0], route.ownerUrl])).toEqual([
+      ["acme", undefined],
+      ["acme", undefined],
+      ["corp.example", "https://gitlab.corp.example/{login}"],
+    ]);
+  });
+
   // Neither flag anywhere: no entry is default, and the theme opens on "all".
   it("with neither root nor default configured, no index is the default", async () => {
     const dir = await tempDir("catalog-pipeline-no-default-");
