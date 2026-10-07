@@ -152,6 +152,7 @@ interface MergedPackage {
   readonly wireBase: string;
   readonly label: string;
   readonly root: boolean;
+  readonly ownerUrl: string | undefined;
 }
 
 interface SourceResult {
@@ -256,9 +257,17 @@ export async function resolveCatalog(
   }
 
   const merged: MergedPackage[] = [];
-  for (const result of results) {
+  for (const [i, result] of results.entries()) {
+    // `sources` and `results` are index-parallel (see `defaultAt` below).
+    const source = sources[i];
     for (const pkg of result.packages) {
-      merged.push({ pkg, wireBase: result.wireBase, label: result.resolved.label, root: result.resolved.root });
+      merged.push({
+        pkg,
+        wireBase: result.wireBase,
+        label: result.resolved.label,
+        root: result.resolved.root,
+        ownerUrl: source.entry.ownerUrl,
+      });
     }
   }
   // No dedupe by `<namespace>/<package>`: routes are index-qualified for
@@ -296,7 +305,7 @@ export async function resolveCatalog(
 
   const routes: PackageRoute[] = [];
   const descTable = new Map<string, { title: string; description: string }>();
-  for (const { pkg, wireBase, label } of merged) {
+  for (const { pkg, wireBase, label, ownerUrl } of merged) {
     // `viewmodel/route.ts` owns the rule; this asks it rather than restating
     // it, and asks it against `indexes` — the same array the theme resolves
     // links from and the same one this function is about to publish. The
@@ -309,6 +318,7 @@ export async function resolveCatalog(
       namespace: pkg.packageId.namespace,
       package: pkg.packageId.package,
       wireBase,
+      ownerUrl,
     });
     const desc = pkg.root.desc;
     if (desc !== null) {
