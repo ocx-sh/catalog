@@ -20,6 +20,7 @@ rule nobody finds before a glob happens to fire.
 | Rendering other repositories' CI workflows | [subsystem-ci-renderer.md](./rules/subsystem-ci-renderer.md) |
 | The test gate and its non-negotiables | [subsystem-tests.md](./rules/subsystem-tests.md) |
 | Maintaining `AGENTS.md`, rules, skills, agents | [meta-ai-config.md](./rules/meta-ai-config.md) |
+| Documentation pages — prose, examples, navigation, page types (grim-installed, `docs-essentials`) | [docs-quality.md](./rules/docs-quality.md) |
 
 ## By auto-load path
 
@@ -34,6 +35,7 @@ rule nobody finds before a glob happens to fire.
 | `src/ci/**`, `templates/**` | [subsystem-ci-renderer.md](./rules/subsystem-ci-renderer.md) |
 | `test/**`, `vitest.config.ts` | [subsystem-tests.md](./rules/subsystem-tests.md) |
 | `.claude/**`, `AGENTS.md`, `CLAUDE.md` | [meta-ai-config.md](./rules/meta-ai-config.md) |
+| `**/*.md`, `**/*.mdx`, `**/*.rst`, `**/*.adoc`, `**/mkdocs.yml`, docs-generator configs | [docs-quality.md](./rules/docs-quality.md) |
 
 Globals (no `paths:` — always loaded):
 [quality-core.md](./rules/quality-core.md),
@@ -47,6 +49,9 @@ Globals (no `paths:` — always loaded):
 | Designing or writing Vitest suites, closing a coverage gap | `qa-engineer` |
 | Auditing `subsystem-*.md` freshness against the code | `meta-validate-context` |
 | Creating or editing anything under `.claude/` | `meta-maintain-config` |
+| Docs plan / IA, page inventory, tiers (grim-installed) | `docs-plan` |
+| Wiring docs checks or a docs CI gate (grim-installed) | `docs-instrument` |
+| Grading doc pages against docs-quality (grim-installed) | `docs-review` |
 
 ## Agents
 
@@ -67,3 +72,7 @@ orchestrators inline. Both exist; neither replaces the other.
 The `hex-*` planning/execution/review family (`/hex-plan`, `/hex-execute`,
 `/hex-review`, `/hex-architect`, `/hex-init`) is installed **globally**, not
 here — never shadow it with a local copy.
+
+`docs-quality` and the `docs-*` skills are installed by grim from the
+`docs-essentials` bundle (`grimoire.toml`/`grimoire.lock`). Update them with
+`grim update`, never by hand — a local edit is overwritten on the next install.
