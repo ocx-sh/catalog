@@ -1,0 +1,1 @@
+{"schemaVersion":2,"mediaType":"application/vnd.oci.image.index.v1+json","manifests":[],"artifactType":"application/vnd.sh.ocx.package.v1","annotations":{"org.opencontainers.image.licenses":"MIT","org.opencontainers.image.source":"https://github.com/ocx-contrib/cloud-terraform-lite","org.opencontainers.image.revision":"16413e4a41780fddc43d8a8cb2b9ae0c466a9cfb"}}

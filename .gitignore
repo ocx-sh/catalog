@@ -1,11 +1,14 @@
 .agents/worktrees/
 .claude/state/
 node_modules/
+# TEMPORARY (plan step I.1): CI checks the ocx theme source out here
+.ocx-theme-src/
 dist/
 coverage/
 .lhci-site/
 .lhci-bulk/
 .lhci-bulk-src/
+.lhci-budget/
 .lighthouseci/
 .lighthouseci-bulk/
 

@@ -1,0 +1,1 @@
+{"schemaVersion":2,"mediaType":"application/vnd.oci.image.index.v1+json","manifests":[],"artifactType":"application/vnd.sh.ocx.package.v1","annotations":{"org.opencontainers.image.licenses":"MIT","org.opencontainers.image.source":"https://github.com/ocx-contrib/cloud-helm-lite","org.opencontainers.image.revision":"b753922f0a50c57cbedb3f1927d72e26de87f320"}}

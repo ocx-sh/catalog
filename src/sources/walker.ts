@@ -37,7 +37,7 @@ const MAX_CONCURRENCY = 16;
 const MAX_RESPONSE_BYTES = 8 * 1024 * 1024;
 
 /** Mirrors `src/site/lib/cas.ts`'s `LOGO_EXT_CANDIDATES` order (not a
- * live import — that file is browser/VitePress-theme source, excluded from
+ * live import — that file is browser-side site source, excluded from
  * this package's Node build; same value, cited by name for provenance). */
 const LOGO_EXT_CANDIDATES = ["svg", "png"] as const;
 /** `desc.readme` is schema-pinned to Markdown — no trial-and-error needed. */

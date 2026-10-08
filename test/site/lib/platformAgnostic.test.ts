@@ -1,6 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { AGNOSTIC_OS, concreteOses, isPlatformAgnostic, osOf } from '../../../src/site/lib/platformAgnostic.js'
-import { OS_GLYPHS, osRank } from '../../../src/site/lib/osGlyphs.js'
+import { AGNOSTIC_OS, concreteOses, displayOses, isPlatformAgnostic, OS_ORDER, osOf, osRank } from '../../../src/site/lib/platformAgnostic.js'
 
 describe('osOf', () => {
   test('takes the OS half of an os/arch string', () => {
@@ -39,14 +38,35 @@ describe('concreteOses', () => {
   })
 })
 
-describe('the any glyph', () => {
-  test('has a drawable, labelled entry in OS_GLYPHS', () => {
-    const glyph = OS_GLYPHS[AGNOSTIC_OS]!
-    expect(glyph.label).toBe('Any platform')
-    expect((glyph.paths?.length ?? 0) + (glyph.rects?.length ?? 0)).toBeGreaterThan(0)
+describe('osRank', () => {
+  test('ranks linux, darwin, windows in OS_ORDER position', () => {
+    expect(osRank('linux')).toBe(0)
+    expect(osRank('darwin')).toBe(1)
+    expect(osRank('windows')).toBe(2)
   })
 
-  test('ranks ahead of every real OS', () => {
+  test('ranks an unknown OS after every known one', () => {
+    expect(osRank('freebsd')).toBe(OS_ORDER.length)
+  })
+
+  test('ranks the platform-agnostic entry ahead of every real OS', () => {
     expect(osRank(AGNOSTIC_OS)).toBeLessThan(osRank('linux'))
+  })
+})
+
+describe('displayOses', () => {
+  test('lists the glyphed OSes a package ships in canonical order, once each', () => {
+    expect(displayOses(['windows/amd64', 'linux/arm64', 'linux/amd64'])).toEqual(['linux', 'windows'])
+    expect(OS_ORDER).toEqual(['linux', 'darwin', 'windows'])
+  })
+
+  test('draws the globe alone for a platform-agnostic package, any real OS beside it subsumed', () => {
+    expect(displayOses(['any/any'])).toEqual(['any'])
+    expect(displayOses(['linux/amd64', 'any/any'])).toEqual(['any'])
+  })
+
+  test('an OS with no glyph draws nothing; a package without platforms draws nothing', () => {
+    expect(displayOses(['freebsd/amd64'])).toEqual([])
+    expect(displayOses([])).toEqual([])
   })
 })

@@ -7,19 +7,18 @@ export interface CopyAction {
 }
 
 /**
- * SINGLE source of truth for EVERY copy context menu — detail-page tag
- * badges (`TagBadge.vue`, `VersionTree.vue` alias-chain segments), the
- * detail install grid (`MetaRail.vue`), the catalog card (`PackageCard.vue`)
- * and the catalog table (`PackageTable.vue`). Do NOT hand-roll an action
- * list in a consumer: that is exactly how the catalog menu silently missed a
- * later-added action.
+ * SINGLE source of truth for EVERY copy context menu — the version list's tag
+ * menu (`client/versions.ts`), the install card (`InstallCard.astro`) and the
+ * catalog card and row (`PackageCard.astro`, `PackageRow.astro`). Do NOT
+ * hand-roll an action list in a consumer: that is exactly how the catalog
+ * menu silently missed a later-added action.
  *
  * The menu is the three copy actions plus ONE item per install flavor
- * (`useInstallFlavors`), so `DEFAULT_INSTALL_FLAVORS` reaches the
- * right-click menu and the install grid from the same list. It used to carry
- * its own hardcoded five-command block, which is why an `ocx package inspect`
- * item existed here and nowhere else; folding both onto one list is what
- * makes that shared flavor list cover every CLI string the theme renders.
+ * (`DEFAULT_INSTALL_FLAVORS`), so the right-click menu and the install card
+ * read the same list. It used to carry its own hardcoded five-command block,
+ * which is why an `inspect` item existed here and nowhere else; folding both
+ * onto one list is what makes that shared flavor list cover every CLI string
+ * the site renders.
  *
  * `tag` may be `null` — a catalog card may know no tag, in which case the
  * identifier is the bare qualified name and the tag-only action is omitted.

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -7,6 +8,8 @@ import { fileURLToPath } from "node:url";
 import { Command } from "commander";
 import { main } from "../src/cli/main.js";
 import { OK, FAIL, USAGE, DATA, UNAVAILABLE } from "../src/cli/exit.js";
+import { runCli } from "./acceptance/cli.js";
+import { createProject, plantedFailure } from "./acceptance/helpers.js";
 import { withTempDir, writeConfig } from "./config/helpers.js";
 
 const repoRoot = fileURLToPath(new URL("..", import.meta.url));
@@ -227,6 +230,85 @@ describe("C-007 ci command wiring", () => {
         process.exitCode = undefined;
       }
     });
+  });
+});
+
+/** Every `child_process` launch a real CLI run made, via `test/helpers/spawn_spy.cjs`. */
+const SPAWN_SPY = join(repoRoot, "test/helpers/spawn_spy.cjs");
+
+/** `RunCliOptions.env` that loads the spawn spy into the CLI and every process it starts. */
+const spawnSpy = (logPath: string): Record<string, string> => ({
+  NODE_OPTIONS: `${process.env.NODE_OPTIONS ?? ""} --require ${SPAWN_SPY}`.trim(),
+  OCX_SPAWN_LOG: logPath,
+});
+
+interface Launch {
+  readonly pid: number;
+  readonly fn: string;
+  readonly argv: string[];
+}
+
+const readLaunches = async (logPath: string): Promise<Launch[]> =>
+  (await readFile(logPath, "utf8"))
+    .split("\n")
+    .filter((line) => line !== "")
+    .map((line) => JSON.parse(line) as Launch);
+
+/** The `astro` launches among `launches`: any launch whose argv names the astro package's bin. */
+const astroLaunches = (launches: Launch[]): Launch[] =>
+  launches.filter((launch) => launch.argv.some((arg) => arg.split("\\").join("/").includes("/node_modules/astro/")));
+
+const sha256 = (bytes: Buffer): string => createHash("sha256").update(bytes).digest("hex");
+
+describe("C-025 / S-013 ci through the real CLI process spawns no astro", () => {
+  const CI_CONFIG = { sources: [{ path: "packages" }], brand: { title: "T" }, ci: { forge: "github" } };
+  const WORKFLOW = ".github/workflows/catalog-ci.yml";
+
+  it("`ci` then `ci --check` render and verify byte-identically; drift is still detected; no launch is astro", async () => {
+    await withTempDir(async (dir) => {
+      await writeConfig(dir, CI_CONFIG);
+      const logPath = join(dir, "spawn.log");
+      const run = (...args: string[]) => runCli(args, { cwd: dir, env: spawnSpy(logPath) });
+
+      const render = await run("ci");
+      expect(render.code).toBe(OK);
+      expect(render.stdout + render.stderr).toBe("");
+      const rendered = await readFile(join(dir, WORKFLOW));
+
+      const check = await run("ci", "--check");
+      expect(check.code).toBe(OK);
+      expect(check.stdout + check.stderr).toBe("");
+      expect(sha256(await readFile(join(dir, WORKFLOW)))).toBe(sha256(rendered));
+
+      await writeFile(join(dir, WORKFLOW), `${rendered.toString("utf8")}# drift\n`);
+      const drift = await run("ci", "--check");
+      expect(drift.code).toBe(DATA);
+      expect(drift.stderr).toContain(WORKFLOW);
+      expect((await readFile(join(dir, WORKFLOW), "utf8")).endsWith("# drift\n")).toBe(true);
+
+      const launches = await readLaunches(logPath);
+      expect(astroLaunches(launches)).toEqual([]);
+      // The spy loaded in all three runs and nothing else started, so the empty list above is a real negative.
+      expect(launches.map((launch) => launch.fn)).toEqual(["loaded", "loaded", "loaded"]);
+    });
+  });
+
+  it("positive control: the spy does see the astro launch of a `build` (so the ci negative can fail)", async () => {
+    const project = await createProject();
+    try {
+      const logPath = join(project.root, "spawn.log");
+      const planted = plantedFailure("render", project.out);
+      const env = { ...planted, ...spawnSpy(logPath), NODE_OPTIONS: `${planted.NODE_OPTIONS} --require ${SPAWN_SPY}` };
+
+      const result = await runCli(["build", "--config", project.config, "--out", project.out], { env });
+
+      expect(result.code).toBe(FAIL);
+      const astro = astroLaunches(await readLaunches(logPath));
+      expect(astro).toHaveLength(1);
+      expect(astro[0]?.argv).toContain("build");
+    } finally {
+      await project.dispose();
+    }
   });
 });
 

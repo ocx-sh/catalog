@@ -1,0 +1,1 @@
+{"schemaVersion":2,"mediaType":"application/vnd.oci.image.index.v1+json","manifests":[],"artifactType":"application/vnd.sh.ocx.package.v1","annotations":{"org.opencontainers.image.licenses":"MIT","org.opencontainers.image.source":"https://github.com/ocx-contrib/db-pgcli-lite","org.opencontainers.image.revision":"675b5d1a3baae357ab5f5200997f5ea4f1348a44"}}

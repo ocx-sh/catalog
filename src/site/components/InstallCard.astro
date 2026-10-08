@@ -1,0 +1,75 @@
+---
+// The rail's install card. Every command comes from the model (`DetailView.install`, built from
+// `DEFAULT_INSTALL_FLAVORS`) and names the package bare, so it installs `latest` on every visit.
+// Zero client JS of its own: `CopyButton` loads its clipboard machine on first interaction.
+import CopyButton from "@ocx-sh/theme/components/CopyButton.astro";
+import Icon from "@ocx-sh/theme/components/ui/Icon.astro";
+import { INSTALL_ICON_NAMES } from "../lib/installIcons.js";
+import type { DetailView } from "../model/detail.js";
+
+interface Props {
+  view: DetailView;
+}
+const { view } = Astro.props;
+---
+
+<section class="rail-block" aria-labelledby="install-heading" data-install>
+  <h2 id="install-heading" class="rail-heading">Install</h2>
+  <div class="rail-card">
+    {
+      view.install.length === 0 ? (
+        <p class="rail-empty">No installable version.</p>
+      ) : (
+        <ul class="install-rows" data-deprecated={view.status === "deprecated" ? "" : undefined}>
+          {view.install.map((row) => (
+            <li class="install-row">
+              <Icon name={INSTALL_ICON_NAMES[row.icon]} class="install-icon" label={row.label} />
+              <code class="install-command">
+                <span aria-hidden="true">$</span> {row.command}
+              </code>
+              <CopyButton value={row.command} label={row.label} />
+            </li>
+          ))}
+        </ul>
+      )
+    }
+  </div>
+</section>
+
+<style>
+  .install-rows {
+    display: grid;
+    gap: var(--ocx-space-3);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .install-row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--ocx-space-3);
+  }
+  .install-icon {
+    color: var(--ocx-color-fg-subtle);
+  }
+  .install-command {
+    padding: var(--ocx-space-3) var(--ocx-space-4);
+    font-family: var(--ocx-font-mono);
+    font-size: var(--ocx-text-xs);
+    color: var(--ocx-color-fg);
+    background: var(--ocx-color-code-bg);
+    border: var(--ocx-border-width) solid var(--ocx-color-border);
+    border-radius: var(--ocx-radius-md);
+    overflow-wrap: anywhere;
+  }
+  .install-rows[data-deprecated] .install-command {
+    color: var(--ocx-color-fg-subtle);
+  }
+  .rail-empty {
+    margin: 0;
+    font-family: var(--ocx-font-mono);
+    font-size: var(--ocx-text-sm);
+    color: var(--ocx-color-fg-subtle);
+  }
+</style>

@@ -1,26 +1,9 @@
 // Package-tile monogram — pure, deterministic, SSR/CSR-hydration-safe (a
 // function of its string input only: no Date, Math.random, or env reads).
 //
-// This module carries NO colour. The hue arrays that used to live here were 16
-// hardcoded literals applied as inline styles, which a consumer stylesheet
-// could only beat with `!important` — so a corporate mirror could never
-// rebrand a monogram tile. `monogramHue()` still picks the rotation index; the
-// colours are `--ocx-color-monogram-{0..3}` in palette.css, applied by an
-// `.mg-<index>` class in MonogramTile.vue / IdentityBlock.vue.
-
-
-/**
- * Deterministic djb2-style string hash → hue index in `[0, 3]`. Pure
- * function of `key` (pass the bare `<ns>/<pkg>`) — must render identically
- * server- and client-side, so no source of entropy beyond the string itself.
- */
-export function monogramHue(key: string): number {
-  let hash = 5381
-  for (let i = 0; i < key.length; i++) {
-    hash = ((hash << 5) + hash + key.charCodeAt(i)) | 0
-  }
-  return Math.abs(hash) % 4
-}
+// This module carries NO colour: a tile's colour is a theme concern
+// (`--ocx-color-monogram-*` in `@ocx-sh/theme`), so a consumer stylesheet can
+// rebrand it. Only the initials come from here.
 
 /**
  * Up to two display initials for a package's tile, derived from the bare

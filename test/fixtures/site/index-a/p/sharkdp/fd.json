@@ -1,0 +1,57 @@
+{
+  "name": "index-a/sharkdp/fd",
+  "repository": "oci://ghcr.io/ocx-contrib/sharkdp/fd",
+  "owners": [
+    {
+      "login": "ocx-bot",
+      "github": "ocx-bot",
+      "id": 309019509,
+      "github_id": 309019509
+    }
+  ],
+  "status": "active",
+  "deprecated_message": null,
+  "created": "2026-01-02",
+  "upstream": {
+    "org": "sharkdp",
+    "repository_url": "https://github.com/sharkdp/fd",
+    "disclaimer": "Unaffiliated mirror of the upstream sharkdp/fd project."
+  },
+  "desc": {
+    "digest": "sha256:e7986efcb26d91b5d090b54f57709662b9acc36f72fac55c00af3847a045da77",
+    "title": "fd",
+    "description": "A simple, fast and user-friendly alternative to find.",
+    "keywords": [
+      "cli",
+      "find",
+      "files"
+    ],
+    "readme": "sha256:f58b0508207751eca6338ae3fa561a0b68492524776ad9d5118b884d75894dbe"
+  },
+  "tags": {
+    "1": {
+      "content": "sha256:016594ccc26211dd479155f24bf6e70395dc66d59ffd5ef5fb4aea33e0705fa4",
+      "observed": "2026-01-02T09:00:00Z"
+    },
+    "1.0.0": {
+      "content": "sha256:b636527541b8ee16de7acdf32c1c926ddcbe289d1391fab66aedd4d2b81d2ae5",
+      "observed": "2026-01-02T09:00:00Z"
+    },
+    "1.1.0": {
+      "content": "sha256:94c2e01cfae18b9ee50d3303bddc750a583e29eaf0bccfb727c51c6cf2ecfa4f",
+      "observed": "2026-01-02T09:00:00Z"
+    },
+    "1.3.0": {
+      "content": "sha256:016594ccc26211dd479155f24bf6e70395dc66d59ffd5ef5fb4aea33e0705fa4",
+      "observed": "2026-01-02T09:00:00Z"
+    },
+    "1.3": {
+      "content": "sha256:016594ccc26211dd479155f24bf6e70395dc66d59ffd5ef5fb4aea33e0705fa4",
+      "observed": "2026-01-02T09:00:00Z"
+    },
+    "latest": {
+      "content": "sha256:016594ccc26211dd479155f24bf6e70395dc66d59ffd5ef5fb4aea33e0705fa4",
+      "observed": "2026-01-02T09:00:00Z"
+    }
+  }
+}

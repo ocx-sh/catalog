@@ -1,11 +1,10 @@
 // A static file server for the browser-driven quality probes.
 //
-// Both probes need a real HTTP origin rather than `file://`: `@layer` and
-// `content-visibility` behave the same either way, but the theme fetches
-// `/data/catalog/catalog.json` at runtime and a `file://` page cannot.
-// Shared by `scripts/quality-css-cascade.mjs` and
-// `scripts/quality-view-switch.mjs`, so both probes serve the built site the
-// same way a static host would.
+// The probes need a real HTTP origin rather than `file://`: the grid island
+// fetches `/data/catalog/catalog.json` at runtime and a `file://` page cannot.
+// Shared by `scripts/quality-budget.mjs`, `scripts/quality-axe.mjs` and
+// `scripts/quality-view-switch.mjs`, so they all serve the built site the same
+// way a static host would.
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import { join, extname } from "node:path";

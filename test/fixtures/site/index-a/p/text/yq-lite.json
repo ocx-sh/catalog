@@ -1,0 +1,58 @@
+{
+  "name": "index-a/text/yq-lite",
+  "repository": "oci://ghcr.io/ocx-contrib/text/yq-lite",
+  "owners": [
+    {
+      "login": "ocx-bot",
+      "github": "ocx-bot",
+      "id": 309019509,
+      "github_id": 309019509
+    }
+  ],
+  "status": "active",
+  "deprecated_message": null,
+  "created": "2026-01-21",
+  "upstream": {
+    "org": "text",
+    "repository_url": "https://github.com/text/yq-lite",
+    "disclaimer": "Unaffiliated mirror of the upstream text/yq-lite project."
+  },
+  "desc": {
+    "digest": "sha256:fa6118157eb996449ddac7a23990f09beb010e09b6c8cfcfaa54d6523232dedb",
+    "title": "yq-lite",
+    "description": "A lightweight YAML processor.",
+    "keywords": [
+      "yaml",
+      "query",
+      "cli"
+    ],
+    "readme": "sha256:735a48aae7069f700dc88120e47404642013677de1bdf2e793b1c353d66a2173",
+    "logo": "sha256:576f32b2bd9fa0f2a41585fc241c7b0370e234f69496057c7948a59c6b2a348a"
+  },
+  "tags": {
+    "1": {
+      "content": "sha256:381cb6b2157f3a104e89191fc7d3242867694b82fbe3a73d7b8c4d35d7874231",
+      "observed": "2026-01-21T09:00:00Z"
+    },
+    "1.0.0": {
+      "content": "sha256:369d4629c9b3435b41d4b23f51877e1cceb615a435182914eaac0e19b9e5bf40",
+      "observed": "2026-01-21T09:00:00Z"
+    },
+    "1.1.0": {
+      "content": "sha256:7c038cb1b2ede7f0928178595d15d5474b63c3e311d8a5e8636d430932ad1f04",
+      "observed": "2026-01-21T09:00:00Z"
+    },
+    "1.4.0": {
+      "content": "sha256:381cb6b2157f3a104e89191fc7d3242867694b82fbe3a73d7b8c4d35d7874231",
+      "observed": "2026-01-21T09:00:00Z"
+    },
+    "1.4": {
+      "content": "sha256:381cb6b2157f3a104e89191fc7d3242867694b82fbe3a73d7b8c4d35d7874231",
+      "observed": "2026-01-21T09:00:00Z"
+    },
+    "latest": {
+      "content": "sha256:381cb6b2157f3a104e89191fc7d3242867694b82fbe3a73d7b8c4d35d7874231",
+      "observed": "2026-01-21T09:00:00Z"
+    }
+  }
+}

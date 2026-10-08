@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { dirname, relative, resolve, sep } from "node:path";
+import { joinBase } from "../viewmodel/url.js";
 import { ConfigError } from "./errors.js";
 import type { ConfigErrorCode } from "./errors.js";
 import type {
@@ -29,6 +30,8 @@ const TOP_LEVEL_KEYS = [
   "ownerUrl",
   "description",
   "favicon",
+  "base",
+  "chrome",
 ] as const;
 
 /** `typeof value`, but calls out `null` explicitly — `typeof null` is
@@ -110,6 +113,46 @@ function optionalString(value: unknown, key: string): string | undefined {
  * `SOURCE_URL_PROTOCOLS`' own note. */
 const SITE_URL_PROTOCOLS = ["http:", "https:"] as const;
 const SOURCE_URL_PROTOCOLS = ["https:"] as const;
+
+/** Canonical URL path prefix (C-003): leading and trailing `/`, segments of
+ * `[A-Za-z0-9._-]` only, and no `.`/`..` segment. The lookahead rejects a
+ * segment that is exactly `.` or `..` while still allowing `.well-known`-style
+ * names. No percent escapes, backslashes, empty segments or absolute URLs. */
+const BASE_PATTERN = /^\/(?:(?!\.{1,2}\/)[A-Za-z0-9._-]+\/)*$/;
+
+function assertBase(value: string, key: string): void {
+  if (!BASE_PATTERN.test(value)) {
+    throw new ConfigError(
+      "BASE_INVALID",
+      `"${key}" must be a URL path prefix like "/" or "/catalog/": leading and trailing "/", ` +
+        `segments of letters, digits, ".", "_" and "-", no "." or ".." segment (got "${value}")`,
+    );
+  }
+}
+
+/** The `base` a config resolves to (C-003). `siteUrl`'s path is the default;
+ * an explicit `base` must equal it when `siteUrl` carries a path
+ * (`BASE_SITEURL_MISMATCH`). An origin-only `siteUrl` constrains nothing, so
+ * any valid `base` is legal beside it. `siteUrl` is already a parsed-valid
+ * http(s) URL here, so `new URL` cannot throw. */
+function resolveBase(base: string | undefined, siteUrl: string | undefined): string {
+  if (base !== undefined) {
+    assertBase(base, "base");
+  }
+  const pathname = siteUrl === undefined ? "/" : new URL(siteUrl).pathname;
+  if (pathname === "/") {
+    return base ?? "/";
+  }
+  const sitePath = pathname.endsWith("/") ? pathname : `${pathname}/`;
+  assertBase(sitePath, "siteUrl path");
+  if (base !== undefined && base !== sitePath) {
+    throw new ConfigError(
+      "BASE_SITEURL_MISMATCH",
+      `"base" ("${base}") must equal the path of "siteUrl" ("${sitePath}") when both carry a path`,
+    );
+  }
+  return sitePath;
+}
 
 /** Both `siteUrl` and a `sources[].url` need a plausible absolute origin,
  * not just a non-empty string:
@@ -289,9 +332,22 @@ function staysOnSite(value: string): boolean {
   }
 }
 
+/** Can the renderer `joinBase` this site-relative path (no dot segment, backslash or control character)? */
+function isJoinable(value: string): boolean {
+  try {
+    joinBase("/", value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /**
- * `nav[].link` allowlist (C-605): an absolute `http:`/`https:` URL, or a
- * path that genuinely resolves back onto this site's own origin. Mirrors
+ * `nav[].link` (and `favicon`) allowlist (C-605): an absolute `http:`/`https:`
+ * URL, or a path that genuinely resolves back onto this site's own origin and
+ * that the renderer can `joinBase` onto `base` (a dot segment, `/a/../b`, parses
+ * as on-site but `joinBase` throws on it, which would fail the Astro child
+ * with exit 1 instead of a `ConfigError` here). Mirrors
  * `src/site/lib/safeHref.ts`'s runtime http(s)-only allowlist for the
  * absolute-URL half; the site-relative half is this loader's own addition,
  * since `safeHref` only ever sees wire-sourced ABSOLUTE URLs, never a
@@ -303,16 +359,34 @@ function staysOnSite(value: string): boolean {
  * this loader's output feeds a generated CI workflow for that consumer, so a
  * `javascript:` (or `data:`, `vbscript:`, ...) value must fail the build
  * outright rather than surviving to become a rendered `<a href>`. There is no
- * render-time second line of defence: `SiteHeader.vue`, `SiteFooter.vue` and
- * `EmptyState.vue` all bind this value straight to `:href`, and `dom.ts`'s
- * `isExternalLink` would classify an escaping value as internal — so it would
- * render without even `rel="noopener"`, looking like same-site navigation.
+ * render-time second line of defence: the page chrome (the header and footer
+ * links of the theme's `Shell`) binds this value straight to `href`, so a value
+ * that escaped the site would render as a live link looking like same-site
+ * navigation.
  */
 function assertSafeNavLink(value: string, key: string): void {
-  if (value.startsWith("/") && staysOnSite(value)) {
+  if (value.startsWith("/") && staysOnSite(value) && isJoinable(value)) {
     return;
   }
   assertPlausibleUrl(value, key, SITE_URL_PROTOCOLS, 'an http(s) URL or a site-relative path starting with "/"');
+}
+
+function buildBrand(value: unknown): Brand {
+  const raw = expectObject(value, "brand");
+  expectExactKeys(raw, ["title", "wordmark", "logo"], "brand");
+  return {
+    title: expectString(raw.title, "brand.title"),
+    wordmark: optionalString(raw.wordmark, "brand.wordmark"),
+    logo: optionalString(raw.logo, "brand.logo"),
+  };
+}
+
+function parseChrome(value: unknown): "neutral" | "ocx" | undefined {
+  const chrome = optionalString(value, "chrome");
+  if (chrome !== undefined && chrome !== "neutral" && chrome !== "ocx") {
+    throw new ConfigError("INVALID_TYPE", `"chrome" must be "neutral" or "ocx", got "${chrome}"`);
+  }
+  return chrome;
 }
 
 /**
@@ -457,11 +531,12 @@ function buildCi(value: unknown): CiConfig {
  *   `https:`) -> `INVALID_TYPE` otherwise — it feeds `sitemap.hostname`/
  *   `og:url` verbatim (`src/build/config_gen.ts`), so a typo'd value would
  *   silently bake a broken URL into every rendered page. `brand.wordmark`,
- *   `description` and `favicon` are free text — same non-empty-string check
- *   as every other optional string field, nothing more. `favicon` in
- *   particular is a site-root-relative HREF, never a path this package
- *   reads, so it gets no `PATH_ESCAPE` containment check (the asset itself
- *   ships via `publicDir`, which does).
+ *   `description` is free text — the same non-empty-string check as every
+ *   other optional string field, nothing more. `favicon` is a HREF, never a
+ *   path this package reads (no `PATH_ESCAPE` containment check; the asset
+ *   itself ships via `publicDir`, which does), and gets the `nav[].link`
+ *   allowlist: an absolute `http(s)` URL or a joinable site-root path ->
+ *   `INVALID_TYPE` otherwise.
  * - `ownerUrl`, when given, must be an absolute `http(s)` URL containing
  *   `{login}` exactly once -> `INVALID_TYPE` otherwise. It is a template the
  *   theme fills per owner, so the URL check runs on the template as written.
@@ -474,6 +549,16 @@ function buildCi(value: unknown): CiConfig {
  *   rendered `<a href>` in a generated CI/site consumer. `footer.links[]`
  *   entries go through the SAME `assertSafeNavLink` check (`buildNavEntry`
  *   is shared, not duplicated).
+ * - `base` must be a canonical URL path prefix (`^/(?:(?!\.{1,2}/)[A-Za-z0-9._-]+/)*$`)
+ *   -> `BASE_INVALID` otherwise, dot segments included. Absent, it defaults to
+ *   the path of `siteUrl` (a trailing `/` is added), else `/`; the resolved
+ *   value is always set on `LoadedConfig.config.base`. When `siteUrl` carries
+ *   a path and `base` is also written, they must be equal ->
+ *   `BASE_SITEURL_MISMATCH`; an origin-only `siteUrl` accepts any valid `base`.
+ * - `chrome` is `"neutral"` or `"ocx"` -> `INVALID_TYPE` otherwise. Under
+ *   `"ocx"` the shell owns the header and footer, so `brand`, `nav` or
+ *   `footer` or `docsNav` -> `CHROME_OCX_CONFLICT` and `brand` is no longer required
+ *   (it still is under `"neutral"` or an absent `chrome`).
  * - Every `docsNav[].link` must additionally be `/docs/` or start with it ->
  *   `INVALID_TYPE` otherwise — anything else is a `nav[]` entry with extra
  *   steps, not a label for the docs mount. `docsNav` present without `docs`
@@ -538,12 +623,18 @@ export async function loadConfig(configPath: string): Promise<LoadedConfig> {
     throw new ConfigError("EMPTY_SOURCES", `"sources" must not be empty`);
   }
 
-  const brandRaw = expectObject(data.brand, "brand");
-  expectExactKeys(brandRaw, ["title", "wordmark", "logo"], "brand");
-  const title = expectString(brandRaw.title, "brand.title");
-  const wordmark = optionalString(brandRaw.wordmark, "brand.wordmark");
-  const logo = optionalString(brandRaw.logo, "brand.logo");
-  const brand: Brand = { title, wordmark, logo };
+  const chrome = parseChrome(data.chrome);
+  // Under `chrome: "ocx"` the ocx.sh shell owns brand, nav and footer, so
+  // naming any of them is a conflict (C-003) and `brand` stops being
+  // required. Neutral (and absent) chrome keeps the 0.5.x contract.
+  if (chrome === "ocx") {
+    for (const key of ["brand", "nav", "footer", "docsNav"] as const) {
+      if (data[key] !== undefined) {
+        throw new ConfigError("CHROME_OCX_CONFLICT", `"${key}" cannot be combined with "chrome": "ocx"`);
+      }
+    }
+  }
+  const brand = chrome === "ocx" ? undefined : buildBrand(data.brand);
 
   const entries: SourceEntry[] = sourcesRaw.map((rawEntry, index) => buildSourceEntry(rawEntry, index));
 
@@ -594,6 +685,10 @@ export async function loadConfig(configPath: string): Promise<LoadedConfig> {
   const ownerUrl = optionalString(data.ownerUrl, "ownerUrl");
   const description = optionalString(data.description, "description");
   const favicon = optionalString(data.favicon, "favicon");
+  if (favicon !== undefined) {
+    assertSafeNavLink(favicon, "favicon");
+  }
+  const baseRaw = optionalString(data.base, "base");
   if (siteUrl !== undefined) {
     assertPlausibleUrl(siteUrl, "siteUrl", SITE_URL_PROTOCOLS, "an http(s) URL");
   }
@@ -610,9 +705,10 @@ export async function loadConfig(configPath: string): Promise<LoadedConfig> {
   if (publicDir !== undefined) {
     assertPathContained(configDir, publicDir, "publicDir");
   }
-  if (brand.logo !== undefined) {
+  if (brand?.logo !== undefined) {
     assertPathContained(configDir, brand.logo, "brand.logo");
   }
+  const base = resolveBase(baseRaw, siteUrl);
 
   const config: CatalogConfig = {
     $schema: schemaField,
@@ -630,6 +726,8 @@ export async function loadConfig(configPath: string): Promise<LoadedConfig> {
     ownerUrl,
     description,
     favicon,
+    base,
+    chrome,
   };
 
   const sources: ResolvedSource[] = entries.map((entry) => ({ entry, label: entry.label ?? null }));

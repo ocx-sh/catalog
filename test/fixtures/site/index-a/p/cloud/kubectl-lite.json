@@ -1,0 +1,58 @@
+{
+  "name": "index-a/cloud/kubectl-lite",
+  "repository": "oci://ghcr.io/ocx-contrib/cloud/kubectl-lite",
+  "owners": [
+    {
+      "login": "ocx-bot",
+      "github": "ocx-bot",
+      "id": 309019509,
+      "github_id": 309019509
+    }
+  ],
+  "status": "active",
+  "deprecated_message": null,
+  "created": "2026-01-07",
+  "upstream": {
+    "org": "cloud",
+    "repository_url": "https://github.com/cloud/kubectl-lite",
+    "disclaimer": "Unaffiliated mirror of the upstream cloud/kubectl-lite project."
+  },
+  "desc": {
+    "digest": "sha256:2302d0836166443b6209d8bc94d9addaaa52425a8b2f47338258582ae89ef266",
+    "title": "kubectl-lite",
+    "description": "A trimmed Kubernetes command-line client.",
+    "keywords": [
+      "kubernetes",
+      "cluster",
+      "cli"
+    ],
+    "readme": "sha256:dc9994eb014c05307cf04e7ef0abbb3b3efd4ae26ede49a0aa3cc7772a529a46",
+    "logo": "sha256:3ef63a603351b2cb9eec86c977754081837763a816eef3fb096cfd24e45901ca"
+  },
+  "tags": {
+    "1": {
+      "content": "sha256:6e7859959b2d8259b46ad230b1d7287449403a9b3f3ac49eb16878022fe62cb2",
+      "observed": "2026-01-07T09:00:00Z"
+    },
+    "1.0.0": {
+      "content": "sha256:9432079094a5a120c7f2f99fabc29f0846819362c49c8f18e06ebcfb8c68c795",
+      "observed": "2026-01-07T09:00:00Z"
+    },
+    "1.1.0": {
+      "content": "sha256:e90875a350d7bd36de3044080a34aade9f9253302a50232f60f67045336f5cb8",
+      "observed": "2026-01-07T09:00:00Z"
+    },
+    "1.2.0": {
+      "content": "sha256:6e7859959b2d8259b46ad230b1d7287449403a9b3f3ac49eb16878022fe62cb2",
+      "observed": "2026-01-07T09:00:00Z"
+    },
+    "1.2": {
+      "content": "sha256:6e7859959b2d8259b46ad230b1d7287449403a9b3f3ac49eb16878022fe62cb2",
+      "observed": "2026-01-07T09:00:00Z"
+    },
+    "latest": {
+      "content": "sha256:6e7859959b2d8259b46ad230b1d7287449403a9b3f3ac49eb16878022fe62cb2",
+      "observed": "2026-01-07T09:00:00Z"
+    }
+  }
+}

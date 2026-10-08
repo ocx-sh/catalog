@@ -1,0 +1,48 @@
+{
+  "name": "index-a/legacy/husk",
+  "repository": "oci://ghcr.io/ocx-contrib/legacy/husk",
+  "owners": [
+    {
+      "login": "ocx-bot",
+      "github": "ocx-bot",
+      "id": 309019509,
+      "github_id": 309019509
+    }
+  ],
+  "status": "yanked",
+  "deprecated_message": "All builds withdrawn after a packaging defect dropped shared libraries.",
+  "created": "2026-01-25",
+  "upstream": {
+    "org": "legacy",
+    "repository_url": "https://github.com/legacy/husk",
+    "disclaimer": "Unaffiliated mirror of the upstream legacy/husk project."
+  },
+  "desc": {
+    "digest": "sha256:6806e6590be9b42cc57eed20e41519f26b33ff58d0b2fd0867351785403afbdc",
+    "title": "husk",
+    "description": "Withdrawn: every published build shipped a broken artifact.",
+    "keywords": [
+      "cli",
+      "yanked"
+    ],
+    "readme": "sha256:e808c20b265e8120aecb20f966a20eb323df02a6e554c70185d0c566e8163c7b"
+  },
+  "tags": {
+    "0.2.0": {
+      "content": "sha256:81101741ea7e3860b7f6ff4579e6220110252a173374a6cdcae98e9f91f45f39",
+      "observed": "2026-01-25T09:00:00Z",
+      "yanked": {
+        "reason": "Missing shared libraries on musl targets.",
+        "at": "2026-02-24"
+      }
+    },
+    "latest": {
+      "content": "sha256:81101741ea7e3860b7f6ff4579e6220110252a173374a6cdcae98e9f91f45f39",
+      "observed": "2026-01-25T09:00:00Z",
+      "yanked": {
+        "reason": "Missing shared libraries on musl targets.",
+        "at": "2026-02-24"
+      }
+    }
+  }
+}

@@ -5,10 +5,11 @@
  * reads config or fetches anything itself.
  */
 
-import { mkdir, writeFile } from "node:fs/promises";
+import { lstat, mkdir, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { catalogIndex, serializeCatalog } from "../viewmodel/catalog.js";
-import { extractPackages, packageRootAliasPath, type ResolvedSourceFiles, type SourceWarning, type WirePath } from "./types.js";
+import { joinBase } from "../viewmodel/url.js";
+import { extractPackages, packageRootAliasPath, SourceError, type ResolvedSourceFiles, type SourceWarning, type WirePath } from "./types.js";
 import { Semaphore } from "./walker.js";
 
 /** In-flight write cap for the mirror copy, matching `walker.ts`'s fetch cap
@@ -30,7 +31,7 @@ const MAX_WRITE_CONCURRENCY = 16;
  * `path`/`git` sources, which read straight off disk with no fetch cap.
  * ponytail: one flat ceiling for both readme and logo; split it only if a
  * real readme ever legitimately needs more than a logo. */
-const MAX_CAS_ASSET_BYTES = 1024 * 1024;
+export const MAX_CAS_ASSET_BYTES = 1024 * 1024;
 
 /** True for a CAS content blob (`p/.../o/sha256/<hex>.<ext>`, `ext` not
  * `json`) — the paths `MAX_CAS_ASSET_BYTES` applies to. */
@@ -43,6 +44,29 @@ function isCasContentAsset(wirePath: WirePath): boolean {
  * skip is surfaced even when the caller passes no `warn` (its default). */
 function warnToStderr(message: string): void {
   process.stderr.write(`ocx-catalog: ${message}\n`);
+}
+
+/** The one path the mirror may overwrite: the root source's own
+ * `catalog.json`, which `sources_pipeline.ts`'s `emitCatalogTree` replaces with
+ * the merged multi-source catalog straight afterwards (a consumer's own file
+ * here must never shadow the real catalog). Every other path is write-once. */
+const ROOT_CATALOG_PATH = "data/catalog/catalog.json";
+
+/** C-027: the mirror never overwrites. `distDir` may already hold the
+ * consumer's `publicDir`, the brand logo and generated files, and a mirrored
+ * path landing on one of them would silently replace it (a consumer `_headers`
+ * lost to ours, a `p/` tree merged into theirs). */
+async function assertAbsent(full: string, relPath: string): Promise<void> {
+  try {
+    await lstat(full);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return;
+    throw err;
+  }
+  throw new SourceError(
+    "OUTPUT_COLLISION",
+    `refusing to overwrite "${relPath}": the output already contains it (remove it from publicDir, or rename the file)`,
+  );
 }
 
 /** Writes `bytes` at `<distDir>/<relPath>`, creating parent directories, and
@@ -64,6 +88,9 @@ async function writeDistFile(distDir: string, relPath: string, bytes: Uint8Array
   const rel = relative(resolve(distDir), resolve(full));
   if (rel === ".." || rel.startsWith(`..${sep}`) || isAbsolute(rel)) {
     throw new Error(`refusing to write outside dist dir: "${relPath}" resolves outside "${distDir}"`);
+  }
+  if (relPath !== ROOT_CATALOG_PATH) {
+    await assertAbsent(full, relPath);
   }
   await mkdir(dirname(full), { recursive: true });
   await writeFile(full, bytes);
@@ -101,7 +128,12 @@ export interface MirrorResult {
  *    derived artifact, not part of any source's own wire tree (`types.ts`
  *    `SourceFiles`'s doc comment).
  *
- * Finally writes `<distDir>/_headers` via `renderHeaders(sources)` — once,
+ * C-027: nothing is written twice and nothing already in `distDir` is
+ * overwritten (`assertAbsent`), except the root `catalog.json` the merged
+ * catalog replaces. `base` is the site's URL prefix; it only shapes `_headers`
+ * patterns — files land at the same `distDir`-relative paths for every base.
+ *
+ * Finally writes `<distDir>/_headers` via `renderHeaders(sources, base)` — once,
  * covering every source's mirror prefix (and the root prefix, if any) in
  * one file, since Cloudflare Pages reads exactly one `_headers` at the
  * deploy root regardless of how many sources are mirrored under it.
@@ -141,13 +173,22 @@ export function compareQualifiedIds(
 export async function mirrorSources(
   sources: readonly ResolvedSourceFiles[],
   distDir: string,
+  base: string,
   warn: SourceWarning = warnToStderr,
 ): Promise<MirrorResult> {
   const written: string[] = [];
   const semaphore = new Semaphore(MAX_WRITE_CONCURRENCY);
   const writes: Promise<void>[] = [];
 
+  const claimed = new Set<string>();
   const enqueue = (relPath: string, bytes: Uint8Array | string): void => {
+    // C-027: no path is written twice in one run. A rejected promise rather
+    // than a throw, so writes already in flight are awaited, not orphaned.
+    if (claimed.has(relPath)) {
+      writes.push(Promise.reject(new SourceError("OUTPUT_COLLISION", `refusing to write "${relPath}" twice: two sources claim it`)));
+      return;
+    }
+    claimed.add(relPath);
     writes.push(
       (async () => {
         const release = await semaphore.acquire();
@@ -201,9 +242,15 @@ export async function mirrorSources(
     enqueue(catalogRelPath, catalog);
   }
 
-  enqueue("_headers", renderHeaders(sources));
+  enqueue("_headers", renderHeaders(sources, base));
 
-  await Promise.all(writes);
+  // Settle every write before reporting the first failure, so a refused path
+  // never leaves other writes landing in `distDir` after the caller has seen
+  // the error.
+  const failed = (await Promise.allSettled(writes)).find((outcome) => outcome.status === "rejected");
+  if (failed) {
+    throw failed.reason;
+  }
 
   return { written };
 }
@@ -228,7 +275,8 @@ export async function mirrorSources(
  *   Content-Security-Policy: sandbox
  *   X-Content-Type-Options: nosniff
  * ```
- * — one `/index/<label>/p/*` block per DISTINCT `source.label` in
+ * — every pattern prefixed by the site's `base` (`/catalog/p/*` under
+ * `/catalog/`) — one `/index/<label>/p/*` block per DISTINCT `source.label` in
  * `sources` (every source, root or not — every source's mirror copy is
  * untrusted verbatim wire content), and the leading `/p/*` block ONLY when
  * some `source.root === true` is present (otherwise `<distDir>/p/**`
@@ -250,14 +298,16 @@ function renderSandboxBlock(pattern: string): string {
   return `${pattern}\n  Content-Security-Policy: sandbox\n  X-Content-Type-Options: nosniff`;
 }
 
-export function renderHeaders(sources: readonly ResolvedSourceFiles[]): string {
+export function renderHeaders(sources: readonly ResolvedSourceFiles[], base: string): string {
+  // C-006: every pattern is the site-relative one joined onto `base`, so the
+  // sandbox covers exactly the paths the site serves under its prefix.
   const blocks: string[] = [];
 
   if (sources.some((source) => source.root)) {
-    blocks.push(renderSandboxBlock("/p/*"));
+    blocks.push(renderSandboxBlock(joinBase(base, "/p/*")));
   }
   for (const label of new Set(sources.map((source) => source.label))) {
-    blocks.push(renderSandboxBlock(`/index/${label}/p/*`));
+    blocks.push(renderSandboxBlock(joinBase(base, `/index/${label}/p/*`)));
   }
 
   return blocks.join("\n\n") + "\n";

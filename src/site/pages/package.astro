@@ -1,0 +1,200 @@
+---
+// The package detail page, one per route key. Every listed field is in the HTML (C-013, S-007);
+// the versions island is the only enhancement, started by the theme's lazy `mount` (T.6). Links go through `packageHref`/`joinBase`/`wireHref` only (C-009, C-042).
+import Breadcrumbs from "@ocx-sh/theme/components/ui/Breadcrumbs.astro";
+import CopyButton from "@ocx-sh/theme/components/CopyButton.astro";
+import site from "virtual:ocx-catalog/site";
+import { joinBase } from "../../viewmodel/url.js";
+import InstallCard from "../components/InstallCard.astro";
+import MetaRail from "../components/MetaRail.astro";
+import PlatformMatrix from "../components/PlatformMatrix.astro";
+import ReadmePane from "../components/ReadmePane.astro";
+import VersionList from "../components/VersionList.astro";
+import Page from "../layouts/Page.astro";
+import { monogramInitials } from "../lib/monogram.js";
+
+export function getStaticPaths() {
+  return site.routes.map((key) => ({ params: { pkg: key }, props: { routeKey: key } }));
+}
+
+interface Props {
+  routeKey: string;
+}
+const { routeKey: key } = Astro.props;
+const view = site.details[key];
+if (view === undefined) throw new Error(`package page: route ${key} has no detail view`);
+const { base } = site;
+const readmeFile = site.readme[key] ?? null;
+---
+
+<Page title={view.title} description={view.description}>
+  <article class="detail" data-package={view.name}>
+    <Breadcrumbs items={[{ label: "Packages", href: joinBase(base, "/") }, { label: view.name }]} />
+
+    {
+      view.status === "deprecated" && (
+        <aside class="banner" data-banner="deprecated">
+          <strong>Deprecated</strong>
+          {view.deprecatedMessage !== null && <span data-banner-message> — {view.deprecatedMessage}</span>}
+          {view.supersededBy !== null && (
+            <span data-superseded-by>
+              {" "}
+              Superseded by{" "}
+              {view.supersededByHref === null ? (
+                <span>{view.supersededBy}</span>
+              ) : (
+                <a href={joinBase("/", view.supersededByHref)}>{view.supersededBy}</a>
+              )}{"."}
+            </span>
+          )}
+        </aside>
+      )
+    }
+    {
+      view.status === "yanked" && (
+        <aside class="banner" data-banner="yanked">
+          <strong>Yanked</strong> — this package has been withdrawn by its maintainers. Existing installs may keep working,
+          but it should not be newly installed.
+        </aside>
+      )
+    }
+
+    <header class="identity">
+      {
+        view.logoUrl === null ? (
+          <div class="tile tile-monogram" aria-hidden="true">
+            {monogramInitials(view.package)}
+          </div>
+        ) : (
+          <img class="tile" src={joinBase("/", view.logoUrl)} width="56" height="56" alt={`${view.title} logo`} />
+        )
+      }
+      <div class="identity-text">
+        <h1>{view.title}</h1>
+        <div class="identity-name">
+          <code>{view.name}</code>
+          <CopyButton value={view.name} label="package name" />
+        </div>
+        {view.description !== "" && <p class="identity-description">{view.description}</p>}
+      </div>
+    </header>
+
+    <div class="columns">
+      <div class="main-col">
+        <VersionList view={view} />
+        <ReadmePane file={readmeFile} />
+      </div>
+      <div class="rail">
+        <InstallCard view={view} />
+        <PlatformMatrix view={view} />
+        <MetaRail view={view} />
+      </div>
+    </div>
+  </article>
+</Page>
+
+<style>
+  .detail {
+    display: grid;
+    gap: var(--ocx-space-5);
+    max-inline-size: var(--ocx-page-max);
+    margin-inline: auto;
+    padding: var(--ocx-space-5) var(--ocx-space-6) var(--ocx-space-8);
+  }
+  .banner {
+    padding: var(--ocx-space-4) var(--ocx-space-5);
+    font-size: var(--ocx-text-base);
+    color: var(--ocx-color-fg);
+    background: var(--ocx-color-warning-tint);
+    border: var(--ocx-border-width) solid var(--ocx-color-warning);
+    border-radius: var(--ocx-radius-lg);
+  }
+  .banner[data-banner="yanked"] {
+    background: var(--ocx-color-danger-tint);
+    border-color: var(--ocx-color-danger);
+  }
+  .banner a {
+    color: var(--ocx-color-accent-fg);
+  }
+  .identity {
+    display: flex;
+    gap: var(--ocx-space-5);
+    align-items: flex-start;
+  }
+  .tile {
+    flex: none;
+    inline-size: calc(var(--ocx-space-8) + var(--ocx-space-5));
+    block-size: calc(var(--ocx-space-8) + var(--ocx-space-5));
+    object-fit: contain;
+    background: var(--ocx-color-surface-subtle);
+    border: var(--ocx-border-width) solid var(--ocx-color-border);
+    border-radius: var(--ocx-radius-lg);
+  }
+  .tile-monogram {
+    display: grid;
+    place-items: center;
+    font-family: var(--ocx-font-mono);
+    font-size: var(--ocx-text-lg);
+    font-weight: var(--ocx-font-weight-semibold);
+    color: var(--ocx-color-fg-muted);
+  }
+  .identity-text h1 {
+    margin: 0;
+    font-size: var(--ocx-text-2xl);
+    line-height: var(--ocx-lh-heading);
+    color: var(--ocx-color-fg);
+  }
+  .identity-name {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--ocx-space-3);
+    margin: var(--ocx-space-2) 0 0;
+    font-family: var(--ocx-font-mono);
+    font-size: var(--ocx-text-sm);
+    color: var(--ocx-color-fg-muted);
+  }
+  .identity-description {
+    margin: var(--ocx-space-3) 0 0;
+    max-inline-size: var(--ocx-prose-width);
+    font-size: var(--ocx-text-md);
+    color: var(--ocx-color-fg-muted);
+  }
+  .columns {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) calc(var(--ocx-space-12) * 3);
+    gap: var(--ocx-space-5) var(--ocx-space-7);
+    align-items: start;
+  }
+  .main-col,
+  .rail {
+    display: grid;
+    gap: var(--ocx-space-5);
+    min-inline-size: 0;
+  }
+  /* Install first on narrow screens: the rail leads, then versions, then the README. */
+  @media (max-width: 75em) {
+    .columns {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .rail {
+      order: -1;
+    }
+  }
+  /* Shared by the rail and main-column components (their own markup, this page's frame). */
+  .detail :global(.rail-heading) {
+    margin: 0 0 var(--ocx-space-3);
+    font-family: var(--ocx-font-mono);
+    font-size: var(--ocx-text-xs);
+    font-weight: var(--ocx-font-weight-semibold);
+    letter-spacing: var(--ocx-tracking-caps);
+    text-transform: uppercase;
+    color: var(--ocx-color-fg-subtle);
+  }
+  .detail :global(.rail-card) {
+    padding: var(--ocx-card-pad);
+    background: var(--ocx-color-surface);
+    border: var(--ocx-border-width) solid var(--ocx-color-border);
+    border-radius: var(--ocx-radius-lg);
+  }
+</style>

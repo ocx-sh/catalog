@@ -407,6 +407,48 @@ describe("extractPackages — malformed root shape (schema-invalid, not just unp
     const message = throwsWith(utf8('{"name":"ocx.sh/acme/hello","desc":null,"tags":{"1.0.0":[]}}'));
     expect(message).toContain('tags["1.0.0"]');
   });
+
+  const withExtra = (extra: string): Uint8Array => utf8(`{"name":"ocx.sh/acme/hello","desc":null,"tags":{},${extra}}`);
+
+  it("owners that is a string, not an array", () => {
+    const message = throwsWith(withExtra('"owners":"x"'));
+    expect(message).toContain("malformed root at p/acme/hello.json");
+    expect(message).toContain('"owners"');
+  });
+
+  it.each([["null", "null"], ["a string", '"x"'], ["an array", "[]"]])("an owner entry that is %s", (_, json) => {
+    const message = throwsWith(withExtra(`"owners":[${json}]`));
+    expect(message).toContain("owners[0] must be an object");
+  });
+
+  it.each(["login", "github"])("an owner whose %s is not a string", (field) => {
+    const message = throwsWith(withExtra(`"owners":[{"login":"ok"},{"${field}":7}]`));
+    expect(message).toContain(`owners[1].${field}`);
+  });
+
+  it.each(["source", "superseded_by"])("%s that is not a string", (field) => {
+    const message = throwsWith(withExtra(`"${field}":42`));
+    expect(message).toContain(`"${field}" must be a string`);
+  });
+
+  it("accepts absent, null and well-typed owners, source and superseded_by", () => {
+    const files = new Map([
+      [
+        "p/acme/hello.json",
+        withExtra('"owners":[{"login":"a"},{"github":"b"},{}],"source":null,"superseded_by":"acme/next"'),
+      ],
+    ]);
+    const [pkg] = extractPackages(files);
+    expect(pkg?.root.owners).toEqual(["a", "b"]);
+    expect(pkg?.root.supersededBy).toBe("acme/next");
+  });
+
+  it("maps absent and null owners to an empty list", () => {
+    for (const extra of ['"x":1', '"owners":null']) {
+      const [pkg] = extractPackages(new Map([["p/acme/hello.json", withExtra(extra)]]));
+      expect(pkg?.root.owners).toEqual([]);
+    }
+  });
 });
 
 /** Security panel (2026-08-22, S2): tag names are remote data, and

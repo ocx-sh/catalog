@@ -1,10 +1,10 @@
 // Wire / view-model shapes the site renders, plus the one accessor (`ownerLogin`)
 // that reads across the owner spelling change. No dependency, so any consumer
-// (theme, tests) can import it.
+// (model, islands, tests) can import it.
 
 // Shape of `/data/catalog/catalog.json` per the plan's frozen "Site fetch
 // layer" contract — NOT the wire contract (that's `/config.json` +
-// `/p/**`, see `usePackageRoot`/`useImageIndex`). Render-pipeline-owned,
+// `/p/**`, see `packageRootFetch.ts`/`imageIndexFetch.ts`). Render-pipeline-owned,
 // camelCase, free to evolve between deploys.
 
 export interface CatalogPackage {

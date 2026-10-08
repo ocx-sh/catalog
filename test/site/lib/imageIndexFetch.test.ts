@@ -1,5 +1,5 @@
 import { describe, expect, test, vi } from "vitest";
-import { createImageIndexLoader, readImageIndexDetail } from "../../../src/site/lib/imageIndexFetch.js";
+import { createImageIndexLoader } from "../../../src/site/lib/imageIndexFetch.js";
 import type { FetchLike, ImageIndex } from "../../../src/site/lib/wireTypes.js";
 
 const HEX = "a".repeat(64);
@@ -90,33 +90,37 @@ describe("createImageIndexLoader", () => {
     expect(await load("ns", "pkg", DIGEST, "")).toEqual(INDEX);
   });
 
+  test.each([
+    ["null", null],
+    ["an array", []],
+    ["an object without manifests", { schemaVersion: 2 }],
+    ["manifests that is not an array", { manifests: "none" }],
+  ])("a body that is %s resolves null and is not cached", async (_label, body) => {
+    const fetchFn = respond({ ok: true, json: async () => body });
+    const load = createImageIndexLoader(fetchFn);
+
+    expect(await load("ns", "pkg", DIGEST, "")).toBeNull();
+    expect(await load("ns", "pkg", DIGEST, "")).toBeNull();
+    expect(fetchFn).toHaveBeenCalledTimes(2);
+  });
+
+  test("the URL is built by casUrl: a malformed digest or an escaping name never reaches fetch", async () => {
+    const fetchFn = respond({ ok: true, json: async () => INDEX });
+    const load = createImageIndexLoader(fetchFn);
+
+    expect(await load("ns", "pkg", `sha256:${"a".repeat(63)}/../x`, "")).toBeNull();
+    expect(await load("ns", "pkg", `sha256:${HEX}\n`, "")).toBeNull();
+    expect(await load("ns", "pkg", "../../etc/passwd", "")).toBeNull();
+    expect(await load("..", "pkg", DIGEST, "")).toBeNull();
+    expect(await load("ns", "../pkg", DIGEST, "")).toBeNull();
+    expect(await load("ns", "pkg", DIGEST, "")).toEqual(INDEX);
+    expect(fetchFn).toHaveBeenCalledExactlyOnceWith(URL);
+  });
+
   test("loaders keep separate caches", async () => {
     const fetchFn = respond({ ok: true, json: async () => INDEX });
     await createImageIndexLoader(fetchFn)("ns", "pkg", DIGEST, "");
     await createImageIndexLoader(fetchFn)("ns", "pkg", DIGEST, "");
     expect(fetchFn).toHaveBeenCalledTimes(2);
-  });
-});
-
-describe("readImageIndexDetail", () => {
-  test("reads license, source and revision off the index annotations", () => {
-    const index: ImageIndex = {
-      ...INDEX,
-      annotations: {
-        "org.opencontainers.image.licenses": "MIT",
-        "org.opencontainers.image.source": "https://github.com/ocx-sh/x",
-        "org.opencontainers.image.revision": "abc123",
-      },
-    };
-    expect(readImageIndexDetail(index, DIGEST)).toEqual({
-      license: "MIT",
-      sourceRepository: "https://github.com/ocx-sh/x",
-      revision: "abc123",
-    });
-  });
-
-  test("a malformed annotations value degrades to no detail instead of throwing", () => {
-    const index = { ...INDEX, annotations: "not-a-map" } as unknown as ImageIndex;
-    expect(readImageIndexDetail(index, DIGEST)).toEqual({});
   });
 });

@@ -1,0 +1,185 @@
+---
+// The catalog landing body (C-010): visually hidden <h1>, toolbar, the first
+// window of cards (a real <ul>, every card a link), and everything the grid
+// island (`client/grid.ts`) needs to take over on first interaction: item
+// templates, hidden state panels, a skeleton and a sentinel. `data-base` is
+// the island's only input; the script below registers it on the theme's lazy
+// `mount` (L.4): the filter code and `catalog.json` wait for the first
+// interaction, or load at once when the URL carries state. An empty catalog
+// renders the empty state alone.
+import Button from "@ocx-sh/theme/components/ui/Button.astro";
+import Skeleton from "@ocx-sh/theme/components/ui/Skeleton.astro";
+import Tag from "@ocx-sh/theme/components/ui/Tag.astro";
+import { ALL_SCOPE_VALUE } from "../lib/gridContract.js";
+import { AGNOSTIC_OS, OS_ORDER } from "../lib/platformAgnostic.js";
+import type { LandingCard, LandingView } from "../model/landing.js";
+import OsGlyph from "./OsGlyph.astro";
+import PackageCard from "./PackageCard.astro";
+import PackageRow from "./PackageRow.astro";
+import Toolbar from "./Toolbar.astro";
+
+interface Props {
+  view: LandingView;
+  base: string;
+  siteName: string;
+}
+const { view, base, siteName } = Astro.props;
+const placeholder: LandingCard = {
+  key: "",
+  href: "#",
+  name: "",
+  title: "",
+  description: "",
+  status: "active",
+  latestVersion: null,
+  platforms: [],
+  keywords: [],
+  tagCount: 0,
+  logoUrl: null,
+};
+const empty = view.total === 0 && view.scopes.length === 0;
+---
+
+<h1 class="visually-hidden">{siteName}</h1>
+{
+  empty ? (
+    <div class="panel" data-grid-empty="no-data">
+      <p class="panel-title">No packages published yet</p>
+      <p class="panel-copy">No packages in this catalog yet.</p>
+    </div>
+  ) : (
+    <div class="grid" data-grid data-base={base} data-scope={view.scope ?? ALL_SCOPE_VALUE}>
+      <Toolbar scopes={view.scopes} total={view.total} />
+      <div class="panel" data-grid-empty="no-match" hidden={view.cards.length > 0}>
+        <p class="panel-title" data-field="title">No packages in this view</p>
+        <p class="panel-copy" data-field="message"></p>
+        <Button variant="secondary" size="s" data-grid-clear hidden>Clear filters</Button>
+      </div>
+      <div class="panel" data-grid-empty="error" role="alert" hidden>
+        <p class="panel-title">Could not load the package list</p>
+        <p class="panel-copy" data-field="message"></p>
+        <Button variant="secondary" size="s" data-grid-retry>Retry</Button>
+      </div>
+      <div class="skeleton" data-grid-skeleton hidden>
+        <Skeleton variant="card" />
+        <Skeleton variant="card" />
+        <Skeleton variant="card" />
+      </div>
+      <ul class="cards" role="list" data-grid-cards>
+        {view.cards.map((card) => <li class="item"><PackageCard card={card} base={base} /></li>)}
+      </ul>
+      <ul class="table" role="list" data-grid-table hidden></ul>
+      <div class="sentinel" data-grid-sentinel aria-hidden="true" hidden></div>
+      <template data-grid-card><li class="item"><PackageCard card={placeholder} base={base} template /></li></template>
+      <template data-grid-row><li class="item"><PackageRow card={placeholder} base={base} /></li></template>
+      <template data-grid-card-keyword><Tag tone="keyword" data-slot="keyword"></Tag></template>
+      <template data-grid-chip>
+        <Tag as="button" variant="filter" aria-pressed="false" data-grid-chip>
+          <span data-field="keyword"></span><span data-field="count" hidden></span>
+        </Tag>
+      </template>
+      {[...OS_ORDER, AGNOSTIC_OS].map((os) => <template data-grid-os={os}><OsGlyph os={os} /></template>)}
+    </div>
+  )
+}
+
+<script>
+  import { mount as lazyMount } from "@ocx-sh/theme/lazy";
+  import { mount } from "../client/grid_entry.js";
+
+  const root = document.querySelector<HTMLElement>("[data-grid]");
+  if (root) mount(root, { lazy: { mount: lazyMount } });
+</script>
+
+<style is:global>
+  @layer ocx {
+    /* `hidden` must win over any display rule on chips, buttons and panels inside the grid, theme or scoped:
+       the doubled attribute outranks both at equal layer. */
+    [data-grid] [hidden][hidden] {
+      display: none;
+    }
+    .visually-hidden {
+      position: absolute;
+      inline-size: 1px;
+      block-size: 1px;
+      padding: 0;
+      margin: calc(-1 * var(--ocx-border-width));
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+    }
+  }
+</style>
+
+<style>
+  @layer ocx {
+    .grid {
+      display: flex;
+      flex-direction: column;
+      gap: var(--ocx-space-4);
+    }
+    /* `--reserve` is set by the island on a cold boot: the list region holds the server cards' height while the
+       skeleton, then the results or the no-match panel, replace them. */
+    .cards,
+    .table,
+    .skeleton,
+    .panel[data-grid-empty="no-match"] {
+      box-sizing: border-box;
+      min-block-size: var(--reserve, 0px);
+    }
+    .cards {
+      display: grid;
+      /* No track-width token fits a card: the panel body width (290px) is the closest, and a card never gets narrower. */
+      grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--ocx-panel-body)), 1fr));
+      gap: var(--ocx-space-4);
+      padding: 0;
+      margin: 0;
+      list-style: none;
+    }
+    .table {
+      display: grid;
+      /* tile | title | identifier | description | version | platforms | tag count */
+      grid-template-columns: auto minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 2fr) auto auto auto;
+      padding: 0;
+      margin: 0;
+      overflow: hidden;
+      list-style: none;
+      background: var(--ocx-color-surface);
+      border: var(--ocx-border-width) solid var(--ocx-color-border);
+      border-radius: var(--ocx-radius-lg);
+    }
+    /* An empty list (no match) is not a box at all: the no-match panel stands in for it, reserve included. */
+    .cards:not(:has(> *)),
+    .table:not(:has(> *)) {
+      display: none;
+    }
+    .item {
+      /* The <li> carries the list semantics only; its child is the grid item. */
+      display: contents;
+    }
+    .skeleton {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--ocx-panel-body)), 1fr));
+      gap: var(--ocx-space-4);
+    }
+    .panel {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--ocx-space-3);
+      padding: var(--ocx-space-9) var(--ocx-space-5);
+      text-align: center;
+      border: var(--ocx-border-width) dashed var(--ocx-color-border-strong);
+      border-radius: var(--ocx-radius-lg);
+    }
+    .panel-title {
+      margin: 0;
+      font-size: var(--ocx-text-lg);
+      font-weight: var(--ocx-font-weight-semibold);
+    }
+    .panel-copy {
+      margin: 0;
+      color: var(--ocx-color-fg-muted);
+    }
+  }
+</style>

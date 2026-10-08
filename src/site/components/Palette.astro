@@ -1,0 +1,60 @@
+---
+// The Mod+K command palette, server-rendered closed (S-009, C-019). Renders exactly the
+// DOM contract documented at the top of `client/palette.ts`; the island owns every behaviour.
+// No search index or catalog URL appears here (C-011): the island fetches `catalog.json`
+// when the dialog first opens. The script below registers the island on the theme's lazy
+// `mount` (K.2): the trigger and Mod+K are live at load, the filter code loads on first use.
+import Dialog from "@ocx-sh/theme/components/ui/Dialog.astro";
+import Icon from "@ocx-sh/theme/components/ui/Icon.astro";
+import Kbd from "@ocx-sh/theme/components/ui/Kbd.astro";
+import List from "@ocx-sh/theme/components/ui/List.astro";
+import SearchField from "@ocx-sh/theme/components/ui/SearchField.astro";
+import site from "virtual:ocx-catalog/site";
+
+const label = "Search packages";
+---
+
+<div class="ocx-palette" data-base={site.base}>
+  <button
+    type="button"
+    class="ocx-header__search"
+    data-palette-trigger
+    aria-haspopup="dialog"
+    aria-keyshortcuts="Control+K Meta+K"
+  >
+    <Icon name="search" />
+    <span class="ocx-header__search-label">{label}</span>
+    <Kbd keys="Mod+K" />
+  </button>
+  <Dialog title={label}>
+    <SearchField label={label} data-autofocus />
+    <List label="Results" items={[]} async empty="" />
+    <p class="ocx-palette__status" data-palette-status role="status" aria-live="polite"></p>
+  </Dialog>
+</div>
+
+<script>
+  import { mount } from "@ocx-sh/theme/lazy";
+  import { mountPalette } from "../client/palette.js";
+
+  const root = document.querySelector<HTMLElement>(".ocx-palette");
+  if (root) mountPalette(root, { mount });
+</script>
+
+<style>
+  @layer ocx {
+    /* One flex item in the header row: the closed dialog adds no sibling gap. */
+    .ocx-palette {
+      display: inline-flex;
+      align-items: center;
+    }
+    .ocx-palette__status {
+      margin: 0;
+      font-size: var(--ocx-text-sm);
+      color: var(--ocx-color-fg-muted);
+    }
+    .ocx-palette__status:empty {
+      display: none;
+    }
+  }
+</style>

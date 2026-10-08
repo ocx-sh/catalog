@@ -1,0 +1,53 @@
+{
+  "name": "index-a/tools/modern",
+  "repository": "oci://ghcr.io/ocx-contrib/tools/modern",
+  "owners": [
+    {
+      "login": "ocx-bot",
+      "github": "ocx-bot",
+      "id": 309019509,
+      "github_id": 309019509
+    }
+  ],
+  "status": "active",
+  "deprecated_message": null,
+  "created": "2026-01-23",
+  "upstream": {
+    "org": "tools",
+    "repository_url": "https://github.com/tools/modern",
+    "disclaimer": "Unaffiliated mirror of the upstream tools/modern project."
+  },
+  "desc": {
+    "digest": "sha256:4f263a3f1bcddf1b2c7d934ee2573a8bd886a7eb65d0f4d2d79bc9da87dae369",
+    "title": "modern",
+    "description": "The current successor of legacy/oldtool.",
+    "keywords": [
+      "cli",
+      "successor"
+    ],
+    "readme": "sha256:4092c81a1202b0e599303e1dd869f4fafcadd5bfd10e7b3263f14f9f3595a9bb",
+    "logo": "sha256:654ab3d0743d7f788d1509052e057fce9ff6f980b9491d6635eff51a06327b55"
+  },
+  "tags": {
+    "2": {
+      "content": "sha256:67350c052b319e4ea76ad504be117d8fe946dfcc4542dc82218dc00d7a83f1e8",
+      "observed": "2026-01-23T09:00:00Z"
+    },
+    "2.0.0": {
+      "content": "sha256:cd36c776c6171940089d1ea06aa5bf2e4d5d04c04294e6eb0229bc3b607a8775",
+      "observed": "2026-01-23T09:00:00Z"
+    },
+    "2.1.0": {
+      "content": "sha256:67350c052b319e4ea76ad504be117d8fe946dfcc4542dc82218dc00d7a83f1e8",
+      "observed": "2026-01-23T09:00:00Z"
+    },
+    "2.1": {
+      "content": "sha256:67350c052b319e4ea76ad504be117d8fe946dfcc4542dc82218dc00d7a83f1e8",
+      "observed": "2026-01-23T09:00:00Z"
+    },
+    "latest": {
+      "content": "sha256:67350c052b319e4ea76ad504be117d8fe946dfcc4542dc82218dc00d7a83f1e8",
+      "observed": "2026-01-23T09:00:00Z"
+    }
+  }
+}

@@ -1,0 +1,1 @@
+{"schemaVersion":2,"mediaType":"application/vnd.oci.image.index.v1+json","manifests":[],"artifactType":"application/vnd.sh.ocx.package.v1","annotations":{"org.opencontainers.image.licenses":"MIT","org.opencontainers.image.source":"https://github.com/ocx-contrib/tools-many-tags","org.opencontainers.image.revision":"9e012a4b0430bd0da509c4f43b2acdde008e5f52"}}

@@ -1,0 +1,1 @@
+{"schemaVersion":2,"mediaType":"application/vnd.oci.image.index.v1+json","manifests":[],"artifactType":"application/vnd.sh.ocx.package.v1","annotations":{"org.opencontainers.image.licenses":"MIT","org.opencontainers.image.source":"https://github.com/ocx-contrib/sharkdp-fd","org.opencontainers.image.revision":"299b6072fb2d49ca65d8be19943a0dbe05f3060b"}}

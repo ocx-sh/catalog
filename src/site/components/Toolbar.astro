@@ -1,0 +1,150 @@
+---
+// The catalog toolbar in its final server state (C-010): scope control, search,
+// platform / status chips, keyword rail slot, count, sort, view. The island
+// (`client/grid.ts`) listens to the theme's documented events and to the
+// `data-grid-*` hooks below; it owns no widget logic of its own. The keyword
+// rail needs the whole catalog, so its slot is empty until the island fills it
+// from `template[data-grid-chip]` (the chip row reserves its height).
+import Button from "@ocx-sh/theme/components/ui/Button.astro";
+import Icon from "@ocx-sh/theme/components/ui/Icon.astro";
+import Popover from "@ocx-sh/theme/components/ui/Popover.astro";
+import SearchField from "@ocx-sh/theme/components/ui/SearchField.astro";
+import Select from "@ocx-sh/theme/components/ui/Select.astro";
+import Tag from "@ocx-sh/theme/components/ui/Tag.astro";
+import ToggleButton from "@ocx-sh/theme/components/ui/ToggleButton.astro";
+import ToggleGroup from "@ocx-sh/theme/components/ToggleGroup.astro";
+import { OS_ORDER } from "../lib/platformAgnostic.js";
+import { ALL_SCOPE_VALUE, SCOPE_TABS_MAX, SORT_LABELS, VIEW_LABELS } from "../lib/gridContract.js";
+import type { ScopeTab } from "../model/landing.js";
+
+interface Props {
+  scopes: readonly ScopeTab[];
+  total: number;
+}
+const { scopes, total } = Astro.props;
+const scopeLabel = (tab: ScopeTab) => `${tab.index ?? "all"}${tab.default ? " · default" : ""}`;
+const scopeValue = (tab: ScopeTab) => tab.index ?? ALL_SCOPE_VALUE;
+const activeScope = scopes.find((tab) => tab.active);
+---
+
+<div class="toolbar" data-slot="toolbar">
+  {
+    scopes.length > 0 && (
+      <div class="scope" data-grid-scope>
+        {scopes.length <= SCOPE_TABS_MAX ? (
+          <ToggleGroup
+            label="Index"
+            value={activeScope && scopeValue(activeScope)}
+            items={scopes.map((tab) => ({ value: scopeValue(tab), label: `${scopeLabel(tab)} (${tab.count})` }))}
+          />
+        ) : (
+          <Select
+            label="Index"
+            value={activeScope && scopeValue(activeScope)}
+            options={scopes.map((tab) => ({ value: scopeValue(tab), label: scopeLabel(tab), meta: String(tab.count) }))}
+          />
+        )}
+      </div>
+    )
+  }
+  <SearchField label="Search packages" data-grid-search />
+  <div class="chips">
+    <div class="chip-group" role="group" aria-label="Filter by platform">
+      {
+        OS_ORDER.map((os) => (
+          <Tag as="button" variant="filter" aria-pressed="false" data-grid-platform={os}>
+            <Icon name={os === "darwin" ? "apple" : os === "windows" ? "windows" : "linux"} size="sm" />
+            {os}
+          </Tag>
+        ))
+      }
+    </div>
+    <div class="chip-group chip-rail" role="group" aria-label="Filter by keyword" data-grid-keywords></div>
+    <div data-grid-more hidden>
+      <Popover>
+        <Fragment slot="trigger">+<span data-grid-more-count>0</span> more</Fragment>
+        <SearchField label="Filter keywords" data-grid-more-filter />
+        <div class="chip-group more-list" role="group" aria-label="All keywords" data-grid-more-list></div>
+      </Popover>
+    </div>
+    <div class="chip-group" role="group" aria-label="Filter by status">
+      <Tag as="button" variant="filter" tone="warning" aria-pressed="false" data-grid-status="deprecated">deprecated</Tag>
+      <Tag as="button" variant="filter" tone="danger" aria-pressed="false" data-grid-status="yanked">yanked</Tag>
+    </div>
+  </div>
+  <div class="meta">
+    <p class="count" role="status" aria-atomic="true" data-grid-count>{total} packages</p>
+    <Button variant="ghost" size="s" data-grid-clear hidden>Clear filters</Button>
+    <div class="meta-controls">
+      <div data-grid-sort>
+        <Select
+          label="Sort by"
+          hideLabel
+          value="name"
+          options={Object.entries(SORT_LABELS).map(([value, label]) => ({ value, label }))}
+        />
+      </div>
+      <ToggleButton iconOnly size="s" aria-label="Invert sort order" data-grid-invert><Icon name="sort" /></ToggleButton>
+      <div data-grid-view>
+        <ToggleGroup
+          label="Catalog view"
+          value="cards"
+          items={Object.entries(VIEW_LABELS).map(([value, { label, icon }]) => ({ value, label, icon, iconOnly: true }))}
+        />
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  @layer ocx {
+    .toolbar {
+      display: flex;
+      flex-direction: column;
+      gap: var(--ocx-space-4);
+    }
+    .chips {
+      display: flex;
+      flex-wrap: nowrap;
+      align-items: center;
+      gap: var(--ocx-space-3);
+      /* Reserve the chip row at the height of its tallest member, the "+N more" button (a default-size Button): it and the keyword rail fill in later and must not move the grid. */
+      min-block-size: var(--ocx-control-2xl);
+    }
+    .chip-group {
+      display: flex;
+      flex-shrink: 0;
+      gap: var(--ocx-space-2);
+    }
+    .chip-group.chip-rail {
+      /* The rail never wraps: only it shrinks and scrolls, so the status chips stay on the row. */
+      flex: 1 1 0;
+      min-inline-size: 0;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .more-list {
+      flex-wrap: wrap;
+      max-block-size: var(--ocx-panel-body);
+      margin-block-start: var(--ocx-space-3);
+      overflow-y: auto;
+    }
+    .meta {
+      display: flex;
+      align-items: center;
+      gap: var(--ocx-space-3);
+    }
+    .count {
+      margin: 0;
+      font-family: var(--ocx-font-mono);
+      font-size: var(--ocx-text-xs);
+      color: var(--ocx-color-fg-muted);
+    }
+    .meta-controls {
+      display: flex;
+      align-items: center;
+      gap: var(--ocx-space-3);
+      margin-inline-start: auto;
+    }
+  }
+</style>

@@ -1,0 +1,57 @@
+{
+  "name": "index-a/oxidize/ripgrep",
+  "repository": "oci://ghcr.io/ocx-contrib/oxidize/ripgrep",
+  "owners": [
+    {
+      "login": "ocx-bot",
+      "github": "ocx-bot",
+      "id": 309019509,
+      "github_id": 309019509
+    }
+  ],
+  "status": "active",
+  "deprecated_message": null,
+  "created": "2026-01-04",
+  "upstream": {
+    "org": "oxidize",
+    "repository_url": "https://github.com/oxidize/ripgrep",
+    "disclaimer": "Unaffiliated mirror of the upstream oxidize/ripgrep project."
+  },
+  "desc": {
+    "digest": "sha256:fbc192aae1eb3fe368d4c1f51924bba70a8b747c07f4724480b7208e8502e790",
+    "title": "ripgrep",
+    "description": "Recursively search directories for a regex pattern.",
+    "keywords": [
+      "cli",
+      "search",
+      "grep"
+    ],
+    "readme": "sha256:3f95cb36ea776ed138be8d8522af0228791f5fb4a9707c683c5a2d6b4634a629"
+  },
+  "tags": {
+    "1": {
+      "content": "sha256:f26e62b825ce31626dc1e627edb4d683b1a56b25a9bb22f944e92d14e0f59543",
+      "observed": "2026-01-04T09:00:00Z"
+    },
+    "1.0.0": {
+      "content": "sha256:e4e01b1fc0f9e658cc8b235ee304e9b5984ad5fa96e0a0eabbdb6e3f14953c6f",
+      "observed": "2026-01-04T09:00:00Z"
+    },
+    "1.1.0": {
+      "content": "sha256:e12709db2ff30c52bfc2896048abf6b2f1d7b1e21d350ac5663864845f02d200",
+      "observed": "2026-01-04T09:00:00Z"
+    },
+    "1.2.0": {
+      "content": "sha256:f26e62b825ce31626dc1e627edb4d683b1a56b25a9bb22f944e92d14e0f59543",
+      "observed": "2026-01-04T09:00:00Z"
+    },
+    "1.2": {
+      "content": "sha256:f26e62b825ce31626dc1e627edb4d683b1a56b25a9bb22f944e92d14e0f59543",
+      "observed": "2026-01-04T09:00:00Z"
+    },
+    "latest": {
+      "content": "sha256:f26e62b825ce31626dc1e627edb4d683b1a56b25a9bb22f944e92d14e0f59543",
+      "observed": "2026-01-04T09:00:00Z"
+    }
+  }
+}

@@ -1,11 +1,21 @@
 import { describe, it, expect } from "vitest";
 import { spawnSync } from "node:child_process";
-import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { isCheckableBareSpecifier } from "../scripts/pack-smoke.mjs";
 
 const repoRoot = fileURLToPath(new URL("..", import.meta.url));
+
+describe("C-026 engines floor", () => {
+  it("declares engines.node >=22.13 (jsdom ^29 floor; Astro 7 floor is 22.12)", () => {
+    const manifest = JSON.parse(readFileSync(join(repoRoot, "package.json"), "utf8")) as {
+      engines: { node: string };
+    };
+    expect(manifest.engines.node).toBe(">=22.13");
+  });
+});
 
 describe("C-009/S-005 pack verification gate", () => {
   /**
@@ -33,9 +43,11 @@ describe("C-009/S-005 pack verification gate", () => {
   it(
     "node scripts/pack-smoke.mjs exits 0",
     () => {
+      // FORCE_COLOR reproduces CI, where publint colours its output.
       const result = spawnSync("node", ["scripts/pack-smoke.mjs"], {
         cwd: repoRoot,
         encoding: "utf8",
+        env: { ...process.env, FORCE_COLOR: "1" },
       });
       expect(result.status, `stderr: ${result.stderr}\nstdout: ${result.stdout}`).toBe(0);
     },
@@ -67,4 +79,59 @@ describe("C-009/S-005 pack verification gate", () => {
     },
     30_000,
   );
+});
+
+describe("pack-smoke dependency-completeness specifier rule", () => {
+  it("skips Astro framework virtual modules (astro:content) but nothing that merely starts with astro", () => {
+    expect(isCheckableBareSpecifier("astro:content")).toBe(false);
+    expect(isCheckableBareSpecifier("astro:assets")).toBe(false);
+    expect(isCheckableBareSpecifier("astro")).toBe(true);
+    expect(isCheckableBareSpecifier("astro/config")).toBe(true);
+    expect(isCheckableBareSpecifier("astro-evil")).toBe(true);
+    expect(isCheckableBareSpecifier("astro:Content")).toBe(true);
+    expect(isCheckableBareSpecifier("astro:content/../x")).toBe(true);
+  });
+
+  it("still checks real packages and skips relative, node: and own-name specifiers", () => {
+    expect(isCheckableBareSpecifier("jsdom")).toBe(true);
+    expect(isCheckableBareSpecifier("@ocx-sh/theme/lazy")).toBe(true);
+    expect(isCheckableBareSpecifier("./x.js")).toBe(false);
+    expect(isCheckableBareSpecifier("node:fs")).toBe(false);
+    expect(isCheckableBareSpecifier("@ocx-sh/catalog/x")).toBe(false);
+  });
+});
+
+describe("C-026 renovate: astro + @astrojs/* move as one gated PR", () => {
+  const renovate = JSON.parse(readFileSync(join(repoRoot, "renovate.json"), "utf8")) as {
+    packageRules: {
+      matchPackageNames?: string[];
+      excludePackageNames?: string[];
+      matchFileNames?: string[];
+      groupName?: string;
+      rangeStrategy?: string;
+      automerge?: boolean;
+      prBodyNotes?: string[];
+    }[];
+  };
+
+  it("groups root astro and @astrojs/* together, keeping each range as written", () => {
+    const rule = renovate.packageRules.find(
+      (r) => r.matchFileNames?.includes("package.json") && r.matchPackageNames?.includes("astro"),
+    );
+    expect(rule, "no astro grouping rule for the root package.json").toBeDefined();
+    expect(rule?.matchPackageNames).toContain("/^@astrojs\\//");
+    expect(rule?.groupName).toBe("astro + @astrojs/*");
+    expect(rule?.rangeStrategy).toBe("replace");
+    expect(rule?.automerge).toBe(false);
+    expect(rule?.prBodyNotes?.join(" ")).toContain("acceptance build");
+  });
+
+  it("keeps astro out of the routine minor/patch group so that rule can win", () => {
+    const routine = renovate.packageRules.find((r) => r.groupName === "npm minor/patch");
+    expect(routine?.excludePackageNames).toEqual(["astro", "/^@astrojs\\//"]);
+  });
+
+  it("mentions no removed VitePress/Vue dependency", () => {
+    expect(JSON.stringify(renovate)).not.toMatch(/vitepress|"vue"/);
+  });
 });

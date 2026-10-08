@@ -27,3 +27,24 @@ export function isPlatformAgnostic(platforms: readonly string[]): boolean {
 export function concreteOses(platforms: readonly string[]): string[] {
   return isPlatformAgnostic(platforms) ? [] : [...new Set(platforms.map(osOf))]
 }
+
+/** Canonical display order of the OSes with a glyph: linux, darwin, windows. */
+export const OS_ORDER = ['linux', 'darwin', 'windows']
+
+/**
+ * The glyphs a card draws, in canonical order: `any` alone for a
+ * platform-agnostic package (it subsumes every OS beside it), else the glyphed
+ * OSes it ships. An OS with no glyph draws nothing.
+ */
+export function displayOses(platforms: readonly string[]): string[] {
+  return isPlatformAgnostic(platforms) ? [AGNOSTIC_OS] : OS_ORDER.filter(os => platforms.some(p => osOf(p) === os))
+}
+
+/** Position of `os` in the canonical order: `any` leads wherever OSes are listed
+ * together (it is the widest claim, and `-1` keeps it clear of every real OS's
+ * rank), an OS with no glyph sorts after every glyphed one. */
+export function osRank(os: string): number {
+  if (os === AGNOSTIC_OS) return -1
+  const index = OS_ORDER.indexOf(os)
+  return index === -1 ? OS_ORDER.length : index
+}

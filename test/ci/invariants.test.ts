@@ -76,13 +76,22 @@ describe("C-901 generated-workflow security invariants can go RED", () => {
     });
   });
 
-  it("holds for the bun render too (setup-bun swapped in for setup-node)", async () => {
+  it("holds for the bun render too (setup-bun runs after setup-node)", async () => {
     await withTempDir(async (dir) => {
       const [file] = await renderCi({ forge: "github", packageManager: "bun" }, dir);
       const real = file?.content ?? "";
 
       expect(real).toContain("oven-sh/setup-bun@");
+      expect(real).toContain("actions/setup-node@");
       expect(() => assertGithubInvariants(real)).not.toThrow();
+
+      const persisted = real.replace("persist-credentials: false", "persist-credentials: true");
+      expect(persisted).not.toBe(real);
+      expect(() => assertGithubInvariants(persisted)).toThrow(/persist-credentials/);
+
+      const mutatedNode = real.replace(`@${shaOf(DEFAULT_PINS["actions/setup-node"])}`, "@v7");
+      expect(mutatedNode).not.toBe(real);
+      expect(() => assertGithubInvariants(mutatedNode)).toThrow(/not SHA-pinned/);
 
       const mutated = real.replace(`@${shaOf(DEFAULT_PINS["oven-sh/setup-bun"])}`, "@v2");
       expect(mutated).not.toBe(real);

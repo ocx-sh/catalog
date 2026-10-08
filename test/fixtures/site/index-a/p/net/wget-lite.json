@@ -1,0 +1,57 @@
+{
+  "name": "index-a/net/wget-lite",
+  "repository": "oci://ghcr.io/ocx-contrib/net/wget-lite",
+  "owners": [
+    {
+      "login": "ocx-bot",
+      "github": "ocx-bot",
+      "id": 309019509,
+      "github_id": 309019509
+    }
+  ],
+  "status": "active",
+  "deprecated_message": null,
+  "created": "2026-01-18",
+  "upstream": {
+    "org": "net",
+    "repository_url": "https://github.com/net/wget-lite",
+    "disclaimer": "Unaffiliated mirror of the upstream net/wget-lite project."
+  },
+  "desc": {
+    "digest": "sha256:049c3bc8e15a24c5f53093ce1878661bc8025b10a24420051a4bbca7ad60dc8a",
+    "title": "wget-lite",
+    "description": "Non-interactive network downloader.",
+    "keywords": [
+      "http",
+      "download",
+      "cli"
+    ],
+    "readme": "sha256:9ac74fa059586e72951d7f37c189b9c97429f648dd9f6c45d1dea08cbb20383f"
+  },
+  "tags": {
+    "1": {
+      "content": "sha256:17d97653b7f696137be1d25d699c1cbccf408fca34246b3a50f2bbba113727b5",
+      "observed": "2026-01-18T09:00:00Z"
+    },
+    "1.0.0": {
+      "content": "sha256:72ccf4d0815396728d52a80e5b277cce5d13dcf15ae6cecc402cd5148679cbf7",
+      "observed": "2026-01-18T09:00:00Z"
+    },
+    "1.1.0": {
+      "content": "sha256:024237caec081772ad4bda0dcdc2172ea175262871461542b6038f0aeb02c744",
+      "observed": "2026-01-18T09:00:00Z"
+    },
+    "1.4.0": {
+      "content": "sha256:17d97653b7f696137be1d25d699c1cbccf408fca34246b3a50f2bbba113727b5",
+      "observed": "2026-01-18T09:00:00Z"
+    },
+    "1.4": {
+      "content": "sha256:17d97653b7f696137be1d25d699c1cbccf408fca34246b3a50f2bbba113727b5",
+      "observed": "2026-01-18T09:00:00Z"
+    },
+    "latest": {
+      "content": "sha256:17d97653b7f696137be1d25d699c1cbccf408fca34246b3a50f2bbba113727b5",
+      "observed": "2026-01-18T09:00:00Z"
+    }
+  }
+}

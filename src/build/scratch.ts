@@ -4,30 +4,30 @@ import { join } from "node:path";
 import { cacheBaseDir } from "./cache_dir.js";
 
 /**
- * mkdtemp scratch-root lifecycle (C-005) — the per-invocation tree `engine.ts`
- * (`buildCatalog`) and `dev.ts` (`devServer`, inside its child process) write
- * synthesized pages, the generated `.vitepress/` config, and the theme shim
- * into.
+ * mkdtemp scratch-root lifecycle (C-005) — the per-invocation Astro root.
+ * `engine.ts` (`buildCatalog`) fills it with `astro.config.mjs`, `site.json`
+ * and `public/` (and `src/content.config.ts`, only when `docs` is set); it
+ * never holds `src/fetch.ts` or any other page source — the pages ship with
+ * this package and are injected as routes (C-045). `dev.ts` (`devServer`)
+ * fills the same root through the same `writeRenderTree` and runs `astro dev`
+ * against it.
  *
  * ## Location — NOT `os.tmpdir()` (Specify-spike correction)
  *
  * Every root is created under `<cwd>/node_modules/.cache/ocx-catalog/`
  * (falling back to `<cwd>/.ocx-catalog/` when the consumer project has no
  * `node_modules` of its own yet). A bare `mkdtemp` root under `os.tmpdir()`
- * — the original design — has no `node_modules` chain of its own: Node's
- * bare-specifier resolution for the generated config's `import ... from
- * "vitepress"` (and the theme shim's `import Theme from
- * "@ocx-sh/catalog/theme"`) walks up ANCESTORS OF THE IMPORTING FILE, which
- * never reaches this package's install from an unrelated `/tmp` tree — a
- * real `vitepress build()` against such a root fails outright with a
- * module-resolution error (Specify-phase spike, empirically confirmed).
- * Nesting the scratch root inside the CONSUMER's own `node_modules` fixes
- * this for free: walking up from `<cwd>/node_modules/.cache/ocx-catalog/
- * <unique>/.vitepress/config.mts` reaches `<cwd>/node_modules` itself as an
- * ancestor's own `node_modules` directory, so every bare import this
- * package's generated config or theme shim needs resolves through the
- * consumer's REAL install — no symlink, no `resolve.alias`, no extra
- * plumbing.
+ * has no `node_modules` chain of its own: Node's bare-specifier resolution
+ * walks up ANCESTORS OF THE IMPORTING FILE, which never reaches this
+ * package's install from an unrelated `/tmp` tree, so the Astro child cannot
+ * even find `astro` from its `--root` (verified: `Cannot resolve entry module
+ * astro/entrypoints/prerender`). Nesting the scratch root inside the
+ * CONSUMER's own `node_modules` fixes this for free: walking up from
+ * `<cwd>/node_modules/.cache/ocx-catalog/<unique>/` reaches
+ * `<cwd>/node_modules` itself as an ancestor's own `node_modules` directory —
+ * no symlink, no `resolve.alias`, no extra plumbing. The same ancestry keeps
+ * the injected route entrypoints (in this package's install) at a sane
+ * relative path from the root, which Astro turns into a page module id.
  *
  * Guarantees:
  * - **Per-pid.** The directory name is prefixed `ocx-catalog-<pid>-` before
@@ -39,16 +39,14 @@ import { cacheBaseDir } from "./cache_dir.js";
  *   once, idempotently, on first `createScratchRoot` call) removes every
  *   still-tracked root as a best-effort net. This is a BACKSTOP, not the
  *   primary path — callers are still expected to call `dispose()` explicitly
- *   (typically from a `finally`) once they're done. Node's OWN default
- *   disposition for `SIGINT`/`SIGTERM` (when no other code in the process
- *   installs its own listener for those signals — `cli/dev.ts` does, for its
- *   own graceful shutdown, but only in the PARENT process, which never calls
- *   `createScratchRoot` itself) still routes through this same `exit` event,
- *   so a plain Ctrl-C is covered without this module needing its own signal
- *   listeners — deliberately NOT added: installing a `SIGINT`/`SIGTERM`
- *   listener overrides Node's default termination behavior for every OTHER
- *   listener-free code path in the process, a correctness footgun this
- *   module has no way to reason about from inside a shared library.
+ *   (typically from a `finally`) once they're done. It does NOT cover a
+ *   default `SIGINT`/`SIGTERM`: with no listener installed Node ends the
+ *   process on the signal WITHOUT emitting `exit`, so the hook never runs.
+ *   That is why the callers (`buildCatalog`, `devServer`) each hold their own
+ *   `SIGINT`/`SIGTERM` handlers for the root's whole life and unwind through
+ *   `dispose()`; this module installs none itself, because a listener
+ *   overrides Node's default termination for the whole process, which a
+ *   shared helper cannot reason about.
  * - **Ceiling, stated plainly (not a silent gap):** `SIGKILL` or a
  *   `process.exit()` called from code this module doesn't control bypasses
  *   every Node exit hook, this one included — same ceiling every Node
@@ -111,8 +109,8 @@ export async function createScratchRoot(): Promise<ScratchRoot> {
       disposed = true;
       registry.delete(path);
       // `maxRetries`/`retryDelay` are load-bearing, not belt-and-braces:
-      // Vite's dep-optimizer cache lives INSIDE this root (`config_gen.ts`
-      // points `vite.cacheDir` here), and it keeps writing for a moment after
+      // Vite's dep-optimizer cache lives INSIDE this root (the generated config points
+      // `cacheDir` here), and it keeps writing for a moment after
       // `server.close()` resolves. A bare recursive `rm` walks the tree, then
       // fails `rmdir` with ENOTEMPTY because a file reappeared underneath it —
       // observed crashing `ocx-catalog dev` on Ctrl-C against a real index.

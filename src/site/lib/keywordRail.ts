@@ -76,3 +76,23 @@ export function selectRailKeywords(
 
   return picked
 }
+
+/** Whole-list keyword frequency, most common first (ties alphabetical). */
+export function keywordFrequency(items: readonly { keywords: readonly string[] }[]): KeywordChip[] {
+  const freq = new Map<string, number>()
+  for (const item of items) for (const kw of item.keywords) freq.set(kw, (freq.get(kw) ?? 0) + 1)
+  return [...freq.entries()]
+    .map(([keyword, count]) => ({ keyword, count }))
+    .sort((a, b) => b.count - a.count || a.keyword.localeCompare(b.keyword))
+}
+
+/**
+ * The keywords a card prints: at most `limit`, the globally most common first
+ * (`frequency` is `keywordFrequency`'s order), so card chips and the rail agree
+ * on what "common" means. The server-rendered card and the island's cloned one
+ * both call this, so a hydration never reorders a card's keywords.
+ */
+export function cardKeywords(keywords: readonly string[], frequency: readonly KeywordChip[], limit = 3): string[] {
+  const rank = new Map(frequency.map((entry, i) => [entry.keyword, i]))
+  return [...keywords].sort((a, b) => (rank.get(a) ?? Infinity) - (rank.get(b) ?? Infinity)).slice(0, limit)
+}

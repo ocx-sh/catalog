@@ -22,6 +22,7 @@ on:
       - "taskfile.yml"
       - "lychee.toml"
       - ".github/workflows/pages.yml"
+      - ".github/actions/install-ocx-theme/**"
   push:
     branches: [main]
     paths:
@@ -30,6 +31,7 @@ on:
       - "taskfile.yml"
       - "lychee.toml"
       - ".github/workflows/pages.yml"
+      - ".github/actions/install-ocx-theme/**"
   workflow_dispatch:
     inputs:
       handoff_done:
@@ -63,29 +65,12 @@ jobs:
       - uses: ocx-sh/setup-ocx@25fa771f8572572dc64528db89560de68a163a0e  # v1
 
       # TEMPORARY until @ocx-sh/theme 0.2.0 on npm — removed by plan step I.1.
-      # docs/package.json depends on the theme through a local `file:` path and
-      # npm cannot install a git subdirectory. So: check out ocx-sh/website at a
-      # pinned SHA, pack packages/theme, and install that tarball over the
-      # `file:` dependency. `npm pack --ignore-scripts` (not `pnpm pack`): the
-      # theme's `prepack` only generates .d.mts typings, needs the website's
-      # whole pnpm install (tsc, astro types) and none of it is read by
-      # an Astro build, so skipping it needs neither pnpm nor that install.
-      # The SHA is the website commit the local `file:` dependency was tested
-      # against; bump it deliberately.
-      - name: Check out the ocx theme source (TEMPORARY, plan step I.1)
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      # docs/package.json depends on the theme through a local `file:` path; the
+      # local action checks out ocx-sh/website at its one pinned SHA (shared
+      # with ci.yml), packs packages/theme and installs that tarball over it.
+      - uses: ./.github/actions/install-ocx-theme
         with:
-          repository: ocx-sh/website
-          ref: 96bdae24323b947b04c8d3fbc194751fd3c8e7d2
-          path: .ocx-theme-src
-          sparse-checkout: packages/theme
-          persist-credentials: false
-
-      - name: Install docs dependencies over the packed theme (TEMPORARY, plan step I.1)
-        run: |
-          tarball="$(npm pack ./.ocx-theme-src/packages/theme --ignore-scripts --pack-destination "$RUNNER_TEMP" | tail -n 1)"
-          npm --prefix docs pkg set "dependencies.@ocx-sh/theme=file:$RUNNER_TEMP/$tarball"
-          npm --prefix docs install
+          prefix: docs
 
       - name: Build docs
         run: task docs:build

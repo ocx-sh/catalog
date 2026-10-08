@@ -1,10 +1,10 @@
 /**
  * Install-command flavors: the SINGLE source of truth for every CLI command
- * string this theme renders — the detail page's install grid
- * (`MetaRail.vue`), the catalog card's install box (`InstallRow.vue`), and
- * the command half of every right-click copy menu
- * (`CopyContextMenu.vue`'s `buildTagCopyActions`). Every consumer of this
- * theme renders an OCX package index, so the CLI is `ocx` for all of them —
+ * string this site renders — the detail page's install card
+ * (`InstallCard.astro`), the catalog card's install line
+ * (`PackageCard.astro`), and the command half of every right-click copy menu
+ * (`copyActions.ts`'s `buildTagCopyActions`). Every consumer of this site
+ * renders an OCX package index, so the CLI is `ocx` for all of them —
  * `DEFAULT_INSTALL_FLAVORS` below is fixed, not configurable.
  */
 export type InstallIcon = 'project' | 'global' | 'exec' | 'install'

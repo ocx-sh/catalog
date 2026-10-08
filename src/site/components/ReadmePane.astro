@@ -1,0 +1,56 @@
+---
+// The README card. The sanitised HTML was rendered by the CLI parent (`src/build/readmes.ts`; jsdom
+// cannot run in this child) and is read here from its file; `file` is `null` when the package has no
+// README or it could not be rendered (C-037), which shows the "unavailable" pane. This is the one
+// HTML sink in the site (C-014): what reaches it is a `SanitizedHtml` or nothing.
+import "@ocx-sh/theme/prose-code.css";
+import { readSanitizedHtml, type SanitizedHtml } from "../lib/sanitizedHtml.js";
+
+interface Props {
+  file: string | null;
+}
+const { file } = Astro.props;
+const html: SanitizedHtml | null = file === null ? null : await readSanitizedHtml(file);
+---
+
+<section class="readme" aria-labelledby="readme-heading" data-readme>
+  <h2 id="readme-heading" class="rail-heading">README</h2>
+  <div class="rail-card">
+    {
+      html === null ? (
+        <p class="readme-empty" data-readme-unavailable>README unavailable.</p>
+      ) : (
+        <div class="ocx-prose readme-content" set:html={html} />
+      )
+    }
+  </div>
+</section>
+
+<style>
+  .readme-empty {
+    margin: 0;
+    font-family: var(--ocx-font-mono);
+    font-size: var(--ocx-text-sm);
+    color: var(--ocx-color-fg-subtle);
+  }
+  .readme-content {
+    overflow-wrap: anywhere;
+  }
+  .readme-content :global(pre) {
+    overflow-x: auto;
+    padding: var(--ocx-space-4) var(--ocx-space-5);
+  }
+  .readme-content :global(img) {
+    max-inline-size: 100%;
+    block-size: auto;
+  }
+  /* A remote image alone in its paragraph reserves a fixed box before it loads, so a late image
+     does not push the README down; inline images (badges) keep their natural size. */
+  .readme-content :global(p > img:only-child) {
+    display: block;
+    inline-size: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: contain;
+    background: var(--ocx-color-surface-subtle);
+  }
+</style>

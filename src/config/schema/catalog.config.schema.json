@@ -5,9 +5,19 @@
   "description": "catalog.config.json — configures an @ocx-sh/catalog deployment (data sources, branding, nav, CI). See src/config/load.ts for the runtime validation contract this schema documents; validation itself is hand-rolled, not ajv-driven.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["sources", "brand"],
+  "required": ["sources"],
   "dependentRequired": {
     "docsNav": ["docs"]
+  },
+  "if": {
+    "properties": { "chrome": { "const": "ocx" } },
+    "required": ["chrome"]
+  },
+  "then": {
+    "properties": { "brand": false, "nav": false, "footer": false, "docsNav": false }
+  },
+  "else": {
+    "required": ["brand"]
   },
   "properties": {
     "$schema": {
@@ -30,7 +40,7 @@
     },
     "brand": {
       "$ref": "#/$defs/brand",
-      "description": "Site branding: title (required), and optional wordmark/logo. Drives <title>, og:site_name, and the header."
+      "description": "Site branding: title (required), and optional wordmark/logo. Drives <title>, og:site_name, and the header. Required, except under chrome ocx, where it is rejected."
     },
     "nav": {
       "type": "array",
@@ -59,7 +69,7 @@
     "publicDir": {
       "type": "string",
       "minLength": 1,
-      "description": "Static assets directory, resolved relative to this file's directory. Copied verbatim into VitePress's publicDir, served at the site root."
+      "description": "Static assets directory, resolved relative to this file's directory. Copied verbatim into the site's public directory, served at the site root."
     },
     "ci": {
       "$ref": "#/$defs/ci",
@@ -81,8 +91,17 @@
     },
     "favicon": {
       "type": "string",
-      "minLength": 1,
-      "description": "Site-root-relative href for the browser-tab icon, e.g. /favicon.svg for a favicon.svg shipped via publicDir. Emitted as <link rel=\"icon\"> on every page, with type derived from the extension (.svg/.png/.ico). Omit for no icon link."
+      "pattern": "^(?:/(?!/)|https?://)",
+      "description": "Href for the browser-tab icon: a site-root-relative path, e.g. /favicon.svg for a favicon.svg shipped via publicDir (joined onto base), or an absolute http(s) URL (used as written). src/config/load.ts also rejects a path with a dot segment. Emitted as <link rel=\"icon\"> on every page, with type derived from the extension (.svg/.png/.ico). Omit for no icon link."
+    },
+    "base": {
+      "type": "string",
+      "pattern": "^/(?:(?!\\.{1,2}/)[A-Za-z0-9._-]+/)*$",
+      "description": "URL path prefix the site is served under: a leading and trailing /, segments of letters, digits, '.', '_' and '-', no '.' or '..' segment, e.g. /catalog/. Defaults to the path of siteUrl, else /. When siteUrl also carries a path the two must be equal (loader-only check: JSON Schema cannot compare them)."
+    },
+    "chrome": {
+      "enum": ["neutral", "ocx"],
+      "description": "EXPERIMENTAL. Page chrome: neutral (default) or the ocx.sh shell. ocx rejects brand, nav, footer and docsNav (the shell owns the header and footer) and makes brand optional."
     }
   },
   "$defs": {

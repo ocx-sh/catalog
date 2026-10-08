@@ -1,8 +1,8 @@
 // The README markdown pipeline: markdown-it + highlight.js + two README-only
-// behaviours. `ReadmePane.vue` loads this module with ONE dynamic `import()`,
-// so markdown-it, highlight.js and markdown-it-emoji all stay in the lazy
-// README chunk and never reach the shared every-page bundle (C-606) — never
-// import it statically from a component.
+// behaviours. `src/build/readmes.ts` renders every README with it in the
+// CLI process during assembly (`readmeRender.ts`); nothing here reaches the
+// browser, so markdown-it, highlight.js and markdown-it-emoji never enter an
+// island bundle.
 //
 // `html: false` is non-negotiable — README content is semi-trusted
 // (bot-mirrored from a third-party registry's __ocx.desc, not authored here),
@@ -47,10 +47,13 @@ function commentInline(state: StateInline): boolean {
   return true
 }
 
+// Labelled fences only: an unlabelled (or unknown-language) fence returns ''
+// and markdown-it renders it as plain escaped text. No `highlightAuto` — its
+// guesses cost the most CPU of anything in a README render, run once per
+// unlabelled fence across every package, and are often wrong.
 function highlight(code: string, lang: string): string {
   try {
-    if (lang && hljs.getLanguage(lang)) return hljs.highlight(code, { language: lang }).value
-    return hljs.highlightAuto(code).value
+    return lang && hljs.getLanguage(lang) ? hljs.highlight(code, { language: lang }).value : ''
   } catch {
     // An empty return tells markdown-it to escape the block as plain text.
     return ''

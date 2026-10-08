@@ -1,0 +1,73 @@
+---
+// The docs mount's sidebar: one labelled list per directory, in `DocsView`
+// order (C-020). Hand-composed from tokens — `@ocx-sh/theme` ships a
+// Starlight sidebar but no plain-Astro one. Plain links, no script; the
+// current page carries `aria-current="page"`. A theme sidebar for plain
+// Astro is deferred to https://github.com/ocx-sh/website/issues/12.
+import type { DocsGroup } from "../model/docs.js";
+
+interface Props {
+  groups: readonly DocsGroup[];
+  /** Slug of the page being rendered. */
+  current: string;
+}
+
+const { groups, current } = Astro.props;
+---
+
+<nav class="docs-sidebar" aria-label="Documentation">
+  {
+    groups.map((group) => (
+      <section class="docs-sidebar__group">
+        {group.label !== "" && <h2 class="docs-sidebar__label">{group.label}</h2>}
+        <ul class="docs-sidebar__list">
+          {group.pages.map((page) => (
+            <li>
+              <a class="docs-sidebar__link" href={page.href} aria-current={page.slug === current ? "page" : undefined}>
+                {page.title}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </section>
+    ))
+  }
+</nav>
+
+<style>
+  .docs-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ocx-space-4);
+    font-size: var(--ocx-text-sm);
+  }
+  .docs-sidebar__label {
+    margin: 0 0 var(--ocx-space-2);
+    font-size: var(--ocx-text-xs);
+    font-weight: var(--ocx-font-weight-semibold);
+    color: var(--ocx-color-fg-subtle);
+    text-transform: uppercase;
+  }
+  .docs-sidebar__list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .docs-sidebar__link {
+    display: flex;
+    align-items: center;
+    /* A link target of at least 24px (WCAG 2.5.8, axe `target-size`): the line box alone is 20px. */
+    min-block-size: var(--ocx-space-6);
+    padding: var(--ocx-space-1) var(--ocx-space-2);
+    border-radius: var(--ocx-radius-md);
+    color: var(--ocx-color-fg-muted);
+    text-decoration: none;
+  }
+  .docs-sidebar__link:hover {
+    color: var(--ocx-color-fg);
+  }
+  .docs-sidebar__link[aria-current="page"] {
+    color: var(--ocx-color-accent-fg);
+    background: var(--ocx-color-accent-tint);
+  }
+</style>

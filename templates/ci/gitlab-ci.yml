@@ -20,7 +20,7 @@ catalog:build:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
   script:
-    - {{installCmd}}
+{{installSteps}}
     - {{execPrefix}} ocx-catalog build
   artifacts:
     paths:

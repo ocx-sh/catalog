@@ -1,4 +1,4 @@
-import { wirePrefix } from './cas.js'
+import { isSafePackageName, wirePrefix } from './cas.js'
 import type { FetchLike, PackageRoot } from './wireTypes.js'
 
 /** `stale`: a newer request superseded this one mid-flight — write nothing. */
@@ -6,6 +6,11 @@ export type PackageRootResult =
   | { status: 'ok'; root: PackageRoot }
   | { status: 'not-found' }
   | { status: 'stale' }
+
+function isPackageRoot(root: unknown): root is PackageRoot {
+  const tags = typeof root === 'object' && root !== null ? (root as { tags?: unknown }).tags : undefined
+  return typeof tags === 'object' && tags !== null && !Array.isArray(tags)
+}
 
 /**
  * Fetches the wire package root — alias first, canonical second.
@@ -24,8 +29,10 @@ export type PackageRootResult =
  *
  * `isCurrent` (a `createRequestGate().begin()` result) is checked after every
  * await; once it turns false the call resolves `stale`. Non-404 failures
- * (HTTP error, network error, malformed JSON) throw — the caller owns the
- * stale check on that path too.
+ * (HTTP error, network error, malformed JSON, JSON that is not a package
+ * root) throw — the caller owns the
+ * stale check on that path too. A name that is not a plain `/`-separated one
+ * (the validator `casUrl` uses) resolves `not-found` without a request.
  */
 export async function fetchPackageRoot(
   fetchFn: FetchLike,
@@ -34,6 +41,7 @@ export async function fetchPackageRoot(
   wireBase: string,
   isCurrent: () => boolean,
 ): Promise<PackageRootResult> {
+  if (!isSafePackageName(`${ns}/${pkg}`)) return { status: 'not-found' }
   const base = wirePrefix(wireBase)
   let resp = await fetchFn(`${base}/p/${ns}/${pkg}/_root.json`)
   if (!isCurrent()) return { status: 'stale' }
@@ -43,7 +51,9 @@ export async function fetchPackageRoot(
   if (!isCurrent()) return { status: 'stale' }
   if (resp.status === 404) return { status: 'not-found' }
   if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
-  const root: PackageRoot = await resp.json()
+  const root: unknown = await resp.json()
   if (!isCurrent()) return { status: 'stale' }
+  // The mirrored tree is untrusted: check the one field every consumer reads.
+  if (!isPackageRoot(root)) throw new Error('package root has no tags')
   return { status: 'ok', root }
 }

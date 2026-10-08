@@ -1,0 +1,149 @@
+---
+// One package card, a link to its detail page (C-009, C-010). Rendered for the
+// server-side first window and, with `template`, once into the
+// `<template data-grid-card>` the grid island clones (`client/grid.ts` documents
+// the `data-field` contract). In template mode every optional part is present
+// and the island sets `hidden`; a server card renders only what it has.
+import Tag from "@ocx-sh/theme/components/ui/Tag.astro";
+import { installCommand, DEFAULT_INSTALL_FLAVORS } from "../lib/installFlavors.js";
+import { elideMiddle } from "../lib/elideMiddle.js";
+import { displayOses } from "../lib/platformAgnostic.js";
+import type { LandingCard } from "../model/landing.js";
+import LogoBox from "./LogoBox.astro";
+import OsGlyph from "./OsGlyph.astro";
+
+interface Props {
+  card: LandingCard;
+  base: string;
+  template?: boolean;
+}
+const { card, base, template = false } = Astro.props;
+/** ~268px of `--ocx-text-xs` mono: a character budget is the right unit for a monospaced line. */
+const NAME_BUDGET = 38;
+const leaf = card.name.split("/").slice(2).join("/");
+const oses = displayOses(card.platforms);
+---
+
+<a class="ocx-card pkg-card" data-slot="package-card" data-card data-key={card.name} href={card.href}>
+  <div class="pkg-head">
+    <LogoBox leaf={leaf} logoUrl={card.logoUrl} base={base} size={38} />
+    <div class="pkg-id">
+      <div class="pkg-title-row">
+        <span class="pkg-title" data-field="title" title={card.title}>{card.title}</span>
+        {(template || card.latestVersion !== null) && <span class="pkg-version" data-field="version">{card.latestVersion}</span>}
+        {(template || card.status === "deprecated") && <Tag variant="stamp" tone="warning" data-field="deprecated" hidden={template}>deprecated</Tag>}
+        {(template || card.status === "yanked") && <Tag variant="stamp" tone="danger" data-field="yanked" hidden={template}>yanked</Tag>}
+      </div>
+      <div class="pkg-name" data-field="name" title={card.name}>{elideMiddle(card.name, NAME_BUDGET)}</div>
+    </div>
+  </div>
+  <p class="pkg-desc" data-field="description">{card.description}</p>
+  <div class="pkg-meta">
+    <span class="pkg-keywords" data-field="keywords">
+      {card.keywords.map((keyword) => <Tag tone="keyword" data-slot="keyword">{keyword}</Tag>)}
+    </span>
+    <span class="pkg-platforms">
+      <span class="pkg-glyphs" data-field="platforms">{oses.map((os) => <OsGlyph os={os} />)}</span>
+      <span class="pkg-tags" data-field="tags">{card.tagCount} tags</span>
+    </span>
+  </div>
+  <code class="pkg-install" data-field="install">{installCommand(DEFAULT_INSTALL_FLAVORS[0]!.command, card.name)}</code>
+</a>
+
+<style>
+  @layer ocx {
+    .pkg-card {
+      /* The card is the grid item (its <li> is display: contents). Off-screen cards stay out of layout
+         and paint; `auto` remembers the real height once rendered. The first guess is the content box of a
+         card as it renders (head, two-line description, meta, install: 142px, 3.4 control heights); a larger
+         guess shrinks every card, and everything below it, when its first real layout lands. */
+      content-visibility: auto;
+      contain-intrinsic-size: auto calc(var(--ocx-control-3xl) * 3.4);
+      gap: var(--ocx-space-3);
+      min-inline-size: 0;
+    }
+    .pkg-head {
+      display: flex;
+      align-items: center;
+      gap: var(--ocx-space-3);
+    }
+    .pkg-id {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      gap: var(--ocx-space-1);
+      min-inline-size: 0;
+    }
+    .pkg-title-row {
+      display: flex;
+      align-items: baseline;
+      gap: var(--ocx-space-3);
+      min-inline-size: 0;
+    }
+    .pkg-title {
+      overflow: hidden;
+      font-size: var(--ocx-text-md);
+      font-weight: var(--ocx-font-weight-semibold);
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .pkg-version,
+    .pkg-name,
+    .pkg-tags,
+    .pkg-install {
+      font-family: var(--ocx-font-mono);
+      font-size: var(--ocx-text-xs);
+      color: var(--ocx-color-fg-muted);
+    }
+    .pkg-name {
+      overflow: hidden;
+      white-space: nowrap;
+    }
+    .pkg-desc {
+      /* Two lines, floored, so cards side by side stay one height. */
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+      line-clamp: 2;
+      overflow: hidden;
+      min-block-size: calc(2 * 1lh);
+      margin: 0;
+      font-size: var(--ocx-text-base);
+      color: var(--ocx-color-fg-muted);
+    }
+    .pkg-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--ocx-space-3);
+      min-inline-size: 0;
+    }
+    .pkg-keywords {
+      /* One clipped line: a longer keyword list never makes this card taller than its neighbour. */
+      display: flex;
+      gap: var(--ocx-space-2);
+      min-inline-size: 0;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+    .pkg-platforms {
+      display: flex;
+      flex-shrink: 0;
+      align-items: center;
+      gap: var(--ocx-space-3);
+    }
+    .pkg-glyphs {
+      display: inline-flex;
+      gap: var(--ocx-space-3);
+      color: var(--ocx-color-fg-muted);
+    }
+    .pkg-install {
+      padding: var(--ocx-space-2) var(--ocx-space-3);
+      overflow: hidden;
+      background: var(--ocx-color-surface-subtle);
+      border-radius: var(--ocx-radius-md);
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+</style>

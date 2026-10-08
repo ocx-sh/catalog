@@ -29,7 +29,7 @@ tasks:
       - npm run lint
 
   typecheck:
-    desc: Type-check the CLI/library and the theme (two tsconfig passes)
+    desc: Type-check the CLI/library and the site client code (tsc --noEmit)
     cmds:
       - npm run typecheck
 
@@ -129,6 +129,11 @@ tasks:
     cmds:
       - gitleaks detect --source . --redact
 
+  check:no-file-deps:
+    desc: "Fail when a package.json or lockfile (root or docs/) carries a local file or link dependency (C-026)"
+    cmds:
+      - node scripts/check-no-file-deps.mjs
+
   audit:signatures:
     desc: Verify every resolved dependency's npm registry signature
     cmds:
@@ -178,19 +183,56 @@ tasks:
       - npm run build
       - node dist/cli/index.js dev --config .dev-indexes/{{.CASE}}.config.json
 
-  # quality:web is STANDALONE — deliberately NOT part of `verify`. It builds the
-  # committed fixture index at test/fixtures/quality-index/ into .lhci-site/,
-  # which .lighthouserc.cjs points `staticDistDir` at, then asserts the measured
-  # a11y/best-practices/SEO/perf floors.
+  # quality:interaction runs the interaction gates in a real browser over the
+  # `root` and `catalog` fixture sites it builds itself (no catalog.json and no
+  # island chunk before the first interaction, a cold URL that boots without a
+  # shift, the palette, the "+N more" popover, no CSP violation). It is also the
+  # last step of quality:web, which is what CI runs; this task is the standalone
+  # entry for iterating on it.
+  quality:interaction:
+    desc: Run the first-interaction, cold-URL, palette, popover and CSP gates in Chrome
+    cmds:
+      - npm run build
+      - >-
+        CHROME_PATH="${CHROME_PATH:-$(ls -d "$HOME"/.cache/puppeteer/chrome/*/chrome-linux64/chrome 2>/dev/null | head -1)}"
+        node scripts/quality-interaction.mjs
+
+  # quality:web is STANDALONE — deliberately NOT part of `verify`. Four questions
+  # about the BUILT site, each answered in a real Chrome, none by a DOM emulator:
+  #
+  #   1. Lighthouse (lhci) over the committed fixture index at
+  #      test/fixtures/quality-index/, built into .lhci-site/: every page, the
+  #      four categories at the floors in .lighthouserc.cjs.
+  #   2. The same at corporate size: the fixture cloned to 250 packages in a
+  #      scratch copy (nothing is written back) and built into .lhci-bulk/, its
+  #      landing page audited for payload and for the work of BUILDING a card or
+  #      a row for every package. `BULK=3000` measures a larger catalog for
+  #      LOOKING at the numbers; the floors are set for 250.
+  #   3. Budgets (scripts/quality-budget.mjs, C-017): DOM nodes, gz HTML, gz JS
+  #      before input, CLS and images-blocked, heap and first-keystroke INP, over
+  #      the `root` fixture (landing N=24 and a detail page), the 250 landing and
+  #      a README-heavy detail page (reported, not gated: OQ1).
+  #   4. axe over the same pages in both colour schemes and with the palette
+  #      open, and the view-switch timings at 250 packages.
+  #   5. The interaction gates (scripts/quality-interaction.mjs; C-011, C-043,
+  #      S-006, S-021): lazy load, first interaction, cold URL, CSP. It builds
+  #      its own `root` and `catalog` sites, so it shares none of the above.
+  #
+  # Each gate that can go red has a `--red-demo` step beside it (the interaction
+  # script carries a control per assertion instead).
   #
   # `npx lhci` runs the PINNED @lhci/cli devDependency out of node_modules/.bin
   # (never `npx --yes @lhci/cli`, which would fetch an unpinned copy at run
-  # time). The two env vars below make a WSL shell behave like the Linux CI
-  # runner; both are inert on CI. See scripts/lhci-posix-tmpdir.cjs for why
+  # time). The env vars below make a WSL shell behave like the Linux CI runner;
+  # both are inert on CI. See scripts/lhci-posix-tmpdir.cjs for why
   # chrome-launcher's WSL branch otherwise writes Chrome profile directories
   # into the working tree.
+  #
+  # Run it from a checkout with its OWN node_modules (not a symlink to another
+  # checkout's): Astro resolves the theme through the real path, and a symlinked
+  # root builds pages that carry no stylesheet links at all.
   quality:web:
-    desc: Build the fixture catalog site and run Lighthouse CI (a11y/SEO/perf)
+    desc: Build the fixture sites and run Lighthouse CI, the budget probe, axe and the view-switch timings
     cmds:
       - npm run build
       - node dist/cli/index.js build --config test/fixtures/quality-index/catalog.config.json --out .lhci-site
@@ -201,25 +243,7 @@ tasks:
         CHROME_PATH="${CHROME_PATH:-$(ls -d "$HOME"/.cache/puppeteer/chrome/*/chrome-linux64/chrome 2>/dev/null | tail -1)}"
         NODE_OPTIONS="--require ./scripts/lhci-posix-tmpdir.cjs"
         npx lhci autorun
-      # Same Chrome, second question: Lighthouse audits the page, this audits
-      # the CONTRACT — that a consumer stylesheet can still override the theme.
-      # Needs a real browser; happy-dom drops @layer and jsdom never applies it,
-      # so a shim would pass whether or not the mechanism works.
-      - >-
-        node scripts/quality-css-cascade.mjs
-        "${CHROME_PATH:-$(ls -d "$HOME"/.cache/puppeteer/chrome/*/chrome-linux64/chrome 2>/dev/null | tail -1)}"
-      # Third question, and the one the six-package fixture cannot ask: what
-      # does the catalog cost at the size a corporate mirror reaches? The
-      # fixture is cloned to 250 packages in a scratch copy (nothing is written
-      # back) and built into .lhci-bulk/, then audited for payload and measured
-      # for the work of BUILDING a card or a row for every package — the half
-      # a category score does not isolate and no DOM emulator can see.
-      #
-      # `BULK=3000` measures a larger catalog instead. The budgets and the
-      # Lighthouse floors are set for 250, so a bigger run is for LOOKING at
-      # the numbers, not for passing — the probe prints them either way.
-      #
-      # The bin path rather than `npx lhci` here: npm 11's `npx` claims
+      # The bin path rather than `npx lhci` from here on: npm 11's `npx` claims
       # `--config` as its own flag and never hands it to lhci. Same pinned
       # binary, same node_modules/.bin, just not through npm's arg parser.
       - node scripts/quality-site.mjs --bulk {{.BULK | default "250"}}
@@ -227,9 +251,29 @@ tasks:
         CHROME_PATH="${CHROME_PATH:-$(ls -d "$HOME"/.cache/puppeteer/chrome/*/chrome-linux64/chrome 2>/dev/null | tail -1)}"
         NODE_OPTIONS="--require ./scripts/lhci-posix-tmpdir.cjs"
         ./node_modules/.bin/lhci autorun --config=.lighthouserc.bulk.cjs
+      # The budget probe's own sites: the `root` fixture (26 packages, so the
+      # landing holds N=24 cards) and a README-heavy one (3 packages, 40 KB READMEs).
+      - node dist/cli/index.js build --config test/fixtures/site/root.config.json --out .lhci-budget/root
+      - node scripts/synthetic-index.mjs 3 40 .lhci-budget/readme-src
+      - node dist/cli/index.js build --config .lhci-budget/readme-src/catalog.config.json --out .lhci-budget/readme
+      - >-
+        node scripts/quality-budget.mjs
+        "${CHROME_PATH:-$(ls -d "$HOME"/.cache/puppeteer/chrome/*/chrome-linux64/chrome 2>/dev/null | tail -1)}"
+      - >-
+        node scripts/quality-budget.mjs --red-demo
+        "${CHROME_PATH:-$(ls -d "$HOME"/.cache/puppeteer/chrome/*/chrome-linux64/chrome 2>/dev/null | tail -1)}"
+      - >-
+        node scripts/quality-axe.mjs
+        "${CHROME_PATH:-$(ls -d "$HOME"/.cache/puppeteer/chrome/*/chrome-linux64/chrome 2>/dev/null | tail -1)}"
+      - >-
+        node scripts/quality-axe.mjs --red-demo
+        "${CHROME_PATH:-$(ls -d "$HOME"/.cache/puppeteer/chrome/*/chrome-linux64/chrome 2>/dev/null | tail -1)}"
       - >-
         node scripts/quality-view-switch.mjs
         "${CHROME_PATH:-$(ls -d "$HOME"/.cache/puppeteer/chrome/*/chrome-linux64/chrome 2>/dev/null | tail -1)}"
+      - >-
+        CHROME_PATH="${CHROME_PATH:-$(ls -d "$HOME"/.cache/puppeteer/chrome/*/chrome-linux64/chrome 2>/dev/null | tail -1)}"
+        node scripts/quality-interaction.mjs
 
   # Regenerate CHANGELOG.md from the full git history.
   changelog:

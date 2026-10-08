@@ -1,56 +1,19 @@
 import { mkdir, writeFile } from "node:fs/promises";
-import { connect } from "node:net";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, it, expect, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { DATA, UNAVAILABLE, USAGE } from "../src/cli/exit.js";
 import { main } from "../src/cli/main.js";
-import { USAGE, DATA, UNAVAILABLE } from "../src/cli/exit.js";
-import {
-  findFreePort,
-  isProcessAlive,
-  occupyPort,
-  scratchBaseDirEntries,
-  waitUntil,
-  withTempDir,
-  workerProcessPids,
-} from "./build/helpers.js";
+import { findFreePort, occupyPort, scratchBaseDirEntries, withTempDir } from "./build/helpers.js";
 
 const repoRoot = fileURLToPath(new URL("..", import.meta.url));
 
-/** Writes a minimal wire-shaped source directory — `--source` sugar for an
- * implicit single-entry, `root: true` config (C-001). Mirrors
- * `test/build/dev.test.ts`'s own fixture (kept local here too — DAMP,
- * different test file). */
-async function writeSourceFixture(dir: string): Promise<string> {
-  const sourceDir = join(dir, "source");
-  await mkdir(join(sourceDir, "p"), { recursive: true });
-  await writeFile(join(sourceDir, "config.json"), JSON.stringify({ format_version: 1 }), "utf8");
-  return sourceDir;
-}
-
-/** Resolves true once a TCP connection to `port` succeeds. */
-function isPortOpen(port: number): Promise<boolean> {
-  return new Promise((resolvePort) => {
-    const socket = connect({ port, host: "127.0.0.1" });
-    socket.once("connect", () => {
-      socket.destroy();
-      resolvePort(true);
-    });
-    socket.once("error", () => resolvePort(false));
-  });
-}
-
 /*
- * `ocx-catalog dev`'s `--source`/`--config` mutual-exclusion (C-001),
- * Implement phase (`cli/dev.ts`'s `runDev`).
- *
- * Bare `dev` (neither flag) now DOES resolve a default config path
- * (`./catalog.config.json`, same convention as `build`'s own
- * `DEFAULT_CONFIG_FILE`) — the orchestrator ruling that landed alongside
- * this WP's Implement phase corrected the stub-phase assumption this file
- * originally test-drove ("no default-path resolution exists or is
- * documented anywhere in this tree"); see `test/cli.test.ts`'s matching
- * `build`/`dev` case for the same assertion against the FULL CLI surface.
+ * `ocx-catalog dev`'s exit codes through the real commander surface and the
+ * real `devServer` (C-001, S-004, S-012). Every case here fails before the
+ * Astro child would be spawned, so nothing boots; the booted paths (smoke,
+ * SIGINT, reload) are test/acceptance/dev.test.ts. The mapping of each error
+ * class in isolation is cli_dev_error_mapping.test.ts.
  */
 
 async function runMain(args: string[]) {
@@ -65,119 +28,80 @@ async function runMain(args: string[]) {
     return true;
   });
   process.exitCode = undefined;
-  await main(["node", "ocx-catalog", ...args]);
-  const exitCode = process.exitCode;
-  process.exitCode = undefined;
-  outSpy.mockRestore();
-  errSpy.mockRestore();
-  return { exitCode, stdout: outChunks.join(""), stderr: errChunks.join("") };
+  try {
+    await main(["node", "ocx-catalog", ...args]);
+    return { exitCode: process.exitCode as number | undefined, stdout: outChunks.join(""), stderr: errChunks.join("") };
+  } finally {
+    process.exitCode = undefined;
+    outSpy.mockRestore();
+    errSpy.mockRestore();
+  }
 }
 
-describe("C-001 ocx-catalog dev — --source/--config mutual exclusion", () => {
-  it("--source and --config together exit 64 (USAGE), naming the conflict", async () => {
+/** A minimal wire-shaped source directory, the `--source` sugar's input. */
+async function writeSourceFixture(dir: string): Promise<string> {
+  const sourceDir = join(dir, "source");
+  await mkdir(join(sourceDir, "p"), { recursive: true });
+  await writeFile(join(sourceDir, "config.json"), JSON.stringify({ format_version: 1 }), "utf8");
+  return sourceDir;
+}
+
+afterEach(() => {
+  process.exitCode = undefined;
+});
+
+describe("usage errors exit 64", () => {
+  it("--source and --config together, naming the conflict", async () => {
     const { exitCode, stderr } = await runMain(["dev", "--source", "../index", "--config", "catalog.config.json"]);
     expect(exitCode).toBe(USAGE);
-    expect(stderr).toContain("--source");
-    expect(stderr).toContain("--config");
+    expect(stderr).toContain("ocx-catalog dev: --source and --config are mutually exclusive");
   });
 
-  it("bare dev (neither flag) resolves the default ./catalog.config.json and surfaces its real ConfigError", async () => {
+  it.each([["not-a-number"], ["0"], ["-1"], ["65536"], ["4321.5"]])("--port %s", async (port) => {
+    const { exitCode, stderr } = await runMain(["dev", "--source", ".", "--port", port]);
+    expect(exitCode).toBe(USAGE);
+    expect(stderr).toContain(`invalid --port value "${port}"`);
+  });
+
+  it("an unknown flag, through commander", async () => {
+    const { exitCode } = await runMain(["dev", "--frobnicate"]);
+    expect(exitCode).toBe(USAGE);
+  });
+});
+
+describe("data and availability errors", () => {
+  it("bare dev resolves ./catalog.config.json and exits 65 naming it when it is missing", async () => {
     const { exitCode, stderr } = await runMain(["dev"]);
     expect(exitCode).toBe(DATA);
     expect(stderr).toContain("ocx-catalog dev:");
     expect(stderr).toContain(join(repoRoot, "catalog.config.json"));
   });
-});
 
-describe("C-001/C-005/S-003 ocx-catalog dev — full CLI lifecycle", () => {
-  it("an invalid --port value exits 64 (USAGE) before devServer is ever reached", async () => {
-    const { exitCode, stderr } = await runMain(["dev", "--source", ".", "--port", "not-a-number"]);
-    expect(exitCode).toBe(USAGE);
-    expect(stderr).toContain("--port");
+  it("--config pointing at nothing exits 65", async () => {
+    await withTempDir("cli-dev-noconfig-", async (dir) => {
+      const missing = join(dir, "nope.json");
+      const { exitCode, stderr } = await runMain(["dev", "--config", missing]);
+      expect(exitCode).toBe(DATA);
+      expect(stderr).toContain(missing);
+    });
   });
 
-  it(
-    "--smoke boots a real server and exits 0",
-    async () => {
-      await withTempDir("cli-dev-smoke-", async (dir) => {
-        const sourcePath = await writeSourceFixture(dir);
-        const { exitCode, stderr } = await runMain(["dev", "--source", sourcePath, "--smoke"]);
-        expect(exitCode).toBeUndefined();
-        expect(stderr).toBe("");
-      });
-    },
-    30_000,
-  );
+  it("a requested --port that is already bound exits 69, naming the port, and creates no scratch root", async () => {
+    await withTempDir("cli-dev-portbusy-", async (dir) => {
+      const sourcePath = await writeSourceFixture(dir);
+      const port = await findFreePort();
+      const occupied = await occupyPort(port);
+      try {
+        const { exitCode, stderr } = await runMain(["dev", "--source", sourcePath, "--port", String(port)]);
 
-  it(
-    "a requested port already bound maps devServer's BuildError to exit 69, naming the port, and leaves no orphaned worker process or scratch dir",
-    async () => {
-      await withTempDir("cli-dev-portbusy-", async (dir) => {
-        const sourcePath = await writeSourceFixture(dir);
-        const port = await findFreePort();
-        const occupied = await occupyPort(port);
-        try {
-          const pidsBefore = new Set(workerProcessPids());
-          const scratchBefore = new Set(await scratchBaseDirEntries());
-
-          const { exitCode, stderr } = await runMain([
-            "dev",
-            "--source",
-            sourcePath,
-            "--port",
-            String(port),
-            "--smoke",
-          ]);
-          expect(exitCode).toBe(UNAVAILABLE);
-          expect(stderr).toContain("ocx-catalog dev:");
-          expect(stderr).toContain(String(port));
-
-          // Same reasoning as test/build/dev.test.ts's equivalent case: pids
-          // are diffed against the snapshot above (not a global count) so
-          // other test FILES' own concurrently-running dev-server workers
-          // never make this assertion drift, and the scratch-dir diff
-          // isolates THIS call's own leak from other test FILES running in
-          // parallel against the same shared base directory.
-          const newPids = workerProcessPids().filter((pid) => !pidsBefore.has(pid));
-          await waitUntil(() => newPids.every((pid) => !isProcessAlive(pid)));
-          const newEntries = (await scratchBaseDirEntries()).filter((entry) => !scratchBefore.has(entry));
-          await waitUntil(async () => {
-            const current = new Set(await scratchBaseDirEntries());
-            return newEntries.every((entry) => !current.has(entry));
-          });
-        } finally {
-          await occupied.release();
-        }
-      });
-    },
-    30_000,
-  );
-
-  it(
-    "interactive mode (no --smoke) waits for SIGINT, then gracefully closes and exits 0",
-    async () => {
-      await withTempDir("cli-dev-sigint-", async (dir) => {
-        const sourcePath = await writeSourceFixture(dir);
-        const port = await findFreePort();
-        // Wait for runDev's own SIGINT listener, not for the port: the
-        // worker's port opens BEFORE its boot IPC message reaches runDev,
-        // so an emit gated on the port can land while the only SIGINT
-        // listener in this process is signal-exit's (loaded by vite's
-        // rolldown at import) — which, alone on the signal, re-raises a
-        // REAL SIGINT and kills the vitest worker (`Channel closed` in CI).
-        const sigintListenersBefore = process.listenerCount("SIGINT");
-        const runPromise = runMain(["dev", "--source", sourcePath, "--port", String(port)]);
-        await waitUntil(() => process.listenerCount("SIGINT") > sigintListenersBefore, 30_000);
-        process.emit("SIGINT");
-        const { exitCode, stdout } = await runPromise;
-        expect(exitCode).toBeUndefined();
-        expect(await isPortOpen(port)).toBe(false);
-        // A server that says nothing is indistinguishable from a hung
-        // command — and with no --port the port is picked dynamically, so
-        // the URL is the only way to find it.
-        expect(stdout).toContain(`http://localhost:${port}/`);
-      });
-    },
-    30_000,
-  );
+        expect(exitCode).toBe(UNAVAILABLE);
+        expect(stderr).toContain("ocx-catalog dev:");
+        expect(stderr).toContain(`port ${port} is already in use`);
+        // Scratch roots are named for the creating pid: other test files' roots do not count.
+        expect((await scratchBaseDirEntries()).filter((entry) => entry.includes(`-${process.pid}-`))).toEqual([]);
+      } finally {
+        await occupied.release();
+      }
+    });
+  });
 });

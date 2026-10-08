@@ -1,8 +1,8 @@
 import { resolve } from "node:path";
 import { devServer } from "../build/dev.js";
-import { BuildError } from "../build/errors.js";
+import { BuildError, RenderError } from "../build/errors.js";
 import { ConfigError } from "../config/errors.js";
-import { DATA, UNAVAILABLE, USAGE } from "./exit.js";
+import { DATA, FAIL, UNAVAILABLE, USAGE } from "./exit.js";
 
 /** Raw commander option values for `ocx-catalog dev`. `port` arrives as a
  * string (commander doesn't coerce `<n>` options); `smoke` is a boolean
@@ -32,10 +32,12 @@ function parsePort(raw: string | undefined): number | undefined {
 
 /**
  * Runs `ocx-catalog dev`: resolves `--port` and `--source`/`--config`, then
- * either exits immediately once `devServer`'s promise resolves (`--smoke`)
- * or waits for `SIGINT` (Ctrl-C) to call `handle.close()` before returning,
- * satisfying S-003's "Ctrl-C cleans scratch dir". Error mapping mirrors
- * `cli/build.ts`'s `runBuild`.
+ * awaits `devServer`, which resolves on a clean stop (`--smoke` passing, or
+ * SIGINT/SIGTERM after it removed its scratch root; S-004). Error mapping
+ * mirrors `cli/build.ts`'s `runBuild` (C-001): `ConfigError` 65, `BuildError`
+ * `DATA` 65 / `UNAVAILABLE` 69 (a bound `--port`), `RenderError` (the Astro
+ * child died or never came up) 1; any other error propagates to `index.ts`,
+ * which exits 1.
  *
  * `--source`/`--config` resolution (C-001), same convention as `build`
  * (`cli/build.ts`'s `DEFAULT_CONFIG_FILE`):
@@ -68,30 +70,11 @@ export async function runDev(options: DevCommandOptions): Promise<void> {
   }
 
   try {
-    const handle = await devServer({
+    await devServer({
       configPath: hasSource ? undefined : resolve(options.config ?? DEFAULT_CONFIG_FILE),
       sourcePath: hasSource ? resolve(options.source as string) : undefined,
       port,
       smoke: options.smoke ?? false,
-    });
-
-    if (options.smoke) {
-      await handle.close();
-      return;
-    }
-
-    // Until this line, interactive `dev` printed NOTHING: `vitepress`'s
-    // `createServer()` has no banner of its own (that is `printUrls()`, which
-    // the worker deliberately never calls), so a server that was serving
-    // perfectly well was indistinguishable from a hung command — and without
-    // an explicit `--port` the port is chosen dynamically, so there was
-    // nothing to guess either.
-    process.stdout.write(`ocx-catalog dev: serving http://localhost:${handle.port}/ — Ctrl-C to stop\n`);
-
-    await new Promise<void>((resolveDev) => {
-      process.once("SIGINT", () => {
-        handle.close().finally(resolveDev);
-      });
     });
   } catch (err) {
     if (err instanceof ConfigError) {
@@ -102,6 +85,12 @@ export async function runDev(options: DevCommandOptions): Promise<void> {
     if (err instanceof BuildError) {
       process.stderr.write(`ocx-catalog dev: ${err.message}\n`);
       process.exitCode = err.code === "UNAVAILABLE" ? UNAVAILABLE : DATA;
+      return;
+    }
+    if (err instanceof RenderError) {
+      // The child's own diagnostics were already relayed line by line.
+      process.stderr.write(`ocx-catalog dev: ${err.message}\n`);
+      process.exitCode = FAIL;
       return;
     }
     throw err;

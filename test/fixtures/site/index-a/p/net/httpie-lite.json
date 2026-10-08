@@ -1,0 +1,58 @@
+{
+  "name": "index-a/net/httpie-lite",
+  "repository": "oci://ghcr.io/ocx-contrib/net/httpie-lite",
+  "owners": [
+    {
+      "login": "ocx-bot",
+      "github": "ocx-bot",
+      "id": 309019509,
+      "github_id": 309019509
+    }
+  ],
+  "status": "active",
+  "deprecated_message": null,
+  "created": "2026-01-19",
+  "upstream": {
+    "org": "net",
+    "repository_url": "https://github.com/net/httpie-lite",
+    "disclaimer": "Unaffiliated mirror of the upstream net/httpie-lite project."
+  },
+  "desc": {
+    "digest": "sha256:4dc42ed6140f7e4787a1befc854955fd7b13c6c0a86dc1f3749b6c51c67266b9",
+    "title": "httpie-lite",
+    "description": "A friendly HTTP client for the terminal.",
+    "keywords": [
+      "http",
+      "api",
+      "cli"
+    ],
+    "readme": "sha256:7463a3eec2bef7ba321173ced49132811009984c47a3fc411057b5d9902f6296",
+    "logo": "sha256:51ff92bf4996a56e94ecdd98d185b42b28837ddca69255a37af8b0ed6a30b2f0"
+  },
+  "tags": {
+    "1": {
+      "content": "sha256:9d142e79eab38e147246058107a9201ad3ff253bf6b4106249f017b8af028857",
+      "observed": "2026-01-19T09:00:00Z"
+    },
+    "1.0.0": {
+      "content": "sha256:513d0efb72877bc2277e3c566ea0ca003a4100e1eaa47e22c2a01bfa1545dd2d",
+      "observed": "2026-01-19T09:00:00Z"
+    },
+    "1.1.0": {
+      "content": "sha256:16bb5867ef3f7a6908f2d8ad14a1171cb5d045eef55f91cd83e6f681773853e5",
+      "observed": "2026-01-19T09:00:00Z"
+    },
+    "1.2.0": {
+      "content": "sha256:9d142e79eab38e147246058107a9201ad3ff253bf6b4106249f017b8af028857",
+      "observed": "2026-01-19T09:00:00Z"
+    },
+    "1.2": {
+      "content": "sha256:9d142e79eab38e147246058107a9201ad3ff253bf6b4106249f017b8af028857",
+      "observed": "2026-01-19T09:00:00Z"
+    },
+    "latest": {
+      "content": "sha256:9d142e79eab38e147246058107a9201ad3ff253bf6b4106249f017b8af028857",
+      "observed": "2026-01-19T09:00:00Z"
+    }
+  }
+}

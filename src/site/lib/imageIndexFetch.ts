@@ -1,28 +1,8 @@
-import { readImageIndexAnnotations } from '../../viewmodel/catalog.js'
-import type { CatalogPackageDetail } from '../../viewmodel/types.js'
-import { wirePrefix } from './cas.js'
+import { casUrl } from './cas.js'
 import type { FetchLike, ImageIndex } from './wireTypes.js'
 
-/**
- * C-600: reuses `readImageIndexAnnotations` (`src/viewmodel/catalog.ts`)
- * rather than hand-rolling a second annotation reader here (the
- * install-command drift class `subsystem-theme.md` warns about). That
- * parser is deliberately strict (throws naming the digest on a malformed
- * `annotations` value) because a build-time failure should abort the build
- * loudly. A malformed value reaching the BROWSER at runtime is different:
- * this is a third-party registry's own CAS bytes, fetched directly by an
- * end user's browser, with no build-time gate to catch it first — a crash
- * here would take down the whole detail page over a decoration field, so
- * this wrapper degrades a malformed value to "omitted" instead of
- * propagating the throw (same posture as `casUrl`'s malformed-digest ->
- * `null`, never a broken request).
- */
-export function readImageIndexDetail(index: ImageIndex, digest: string): CatalogPackageDetail {
-  try {
-    return readImageIndexAnnotations(index, digest)
-  } catch {
-    return {}
-  }
+function isImageIndex(data: unknown): data is ImageIndex {
+  return typeof data === 'object' && data !== null && Array.isArray((data as { manifests?: unknown }).manifests)
 }
 
 /**
@@ -35,7 +15,8 @@ export function readImageIndexDetail(index: ImageIndex, digest: string): Catalog
  * The cache stays keyed by `digest` ALONE, deliberately: a digest is a
  * content address, so the same digest under two sources is the same bytes.
  * Only the URL a miss is fetched from varies by `wireBase`. Any failure
- * (non-ok, network error, malformed JSON) resolves `null` and is not cached.
+ * (non-ok, network error, malformed JSON, JSON that is not an image index, a
+ * digest or name `casUrl` refuses) resolves `null` and is not cached.
  *
  * ponytail: plain Map, no eviction — image indices are small and a single
  * detail page touches at most a few dozen distinct digests; add an LRU cap
@@ -48,18 +29,23 @@ export function createImageIndexLoader(
   const inFlight = new Map<string, Promise<ImageIndex | null>>()
 
   return function loadImageIndex(ns, pkg, digest, wireBase) {
+    // The URL is built by the validating builder here, not trusted from the caller.
+    const url = casUrl(`${ns}/${pkg}`, digest, 'json', wireBase)
+    if (url === null) return Promise.resolve(null)
+
     const cached = cache.get(digest)
     if (cached) return Promise.resolve(cached)
 
     const pending = inFlight.get(digest)
     if (pending) return pending
 
-    const hex = digest.replace(/^sha256:/, '')
     const promise = (async (): Promise<ImageIndex | null> => {
       try {
-        const resp = await fetchFn(`${wirePrefix(wireBase)}/p/${ns}/${pkg}/o/sha256/${hex}.json`)
+        const resp = await fetchFn(url)
         if (!resp.ok) return null
-        const data: ImageIndex = await resp.json()
+        // The mirrored tree is untrusted: check the one field every consumer iterates.
+        const data: unknown = await resp.json()
+        if (!isImageIndex(data)) return null
         cache.set(digest, data)
         return data
       } catch {

@@ -1,12 +1,8 @@
-// @vitest-environment jsdom
-//
-// jsdom, not the package's happy-dom default: the last test runs the real
-// `sanitizeReadmeHtml` (DOMPurify), which happy-dom silently breaks — same
-// override as `sanitize.test.ts`.
+import { JSDOM } from 'jsdom'
 import hljs from 'highlight.js/lib/common'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import { createReadmeMarkdown } from '../../../src/site/lib/readmeMarkdown.js'
-import { sanitizeReadmeHtml } from '../../../src/site/lib/sanitize.js'
+import { createReadmeSanitizer, type ReadmeWindow } from '../../../src/site/lib/readmeSanitizer.js'
 
 const render = (src: string) => createReadmeMarkdown().render(src)
 
@@ -133,8 +129,9 @@ describe('emoji shortcodes', () => {
     expect(render('fine :) and :D and http://x.y')).toBe('<p>fine :) and :D and http://x.y</p>\n')
   })
 
-  test('the sanitizer keeps the emoji through to the v-html string', () => {
-    const out = sanitizeReadmeHtml(render('# Go :tada:\n\nlaunch :rocket:'))
+  test('the sanitizer keeps the emoji through to the set:html string', () => {
+    const sanitizer = createReadmeSanitizer(() => new JSDOM('').window as unknown as ReadmeWindow)
+    const out = sanitizer.sanitize(render('# Go :tada:\n\nlaunch :rocket:'))
     expect(out).toContain('🎉')
     expect(out).toContain('🚀')
   })
@@ -145,15 +142,20 @@ describe('highlighting', () => {
     expect(render('```js\nconst a = 1\n```')).toContain('hljs-keyword')
   })
 
-  test('a fence with no language is auto-detected without throwing', () => {
-    expect(render('```\nconst a = 1\n```')).toContain('<pre>')
+  test('a fence with no language, or an unknown one, is plain escaped text (no auto-detection)', () => {
+    const autoSpy = vi.spyOn(hljs, 'highlightAuto')
+    const plain = render('```\nconst a = 1 < 2\n```')
+    expect(plain).toContain('<pre><code>const a = 1 &lt; 2')
+    expect(plain).not.toContain('hljs-')
+    expect(render('```nonesuch\nconst a = 1\n```')).not.toContain('hljs-')
+    expect(autoSpy).not.toHaveBeenCalled()
   })
 
   test('a highlighter failure falls back to an escaped plain block', () => {
-    vi.spyOn(hljs, 'highlightAuto').mockImplementation(() => {
+    vi.spyOn(hljs, 'highlight').mockImplementation(() => {
       throw new Error('boom')
     })
-    const out = render('```\n<b>x</b>\n```')
+    const out = render('```js\n<b>x</b>\n```')
     expect(out).toContain('&lt;b&gt;x&lt;/b&gt;')
     expect(out).not.toContain('hljs-')
   })

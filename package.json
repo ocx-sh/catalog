@@ -1,12 +1,12 @@
 {
   "name": "@ocx-sh/catalog",
   "version": "0.5.3",
-  "description": "OCX catalog renderer — VitePress-based site generator for OCI-backed package indices",
+  "description": "Static Astro catalog renderer for OCX package indices (OCI-backed)",
   "keywords": [
     "ocx",
     "catalog",
     "package-index",
-    "vitepress",
+    "astro-component",
     "oci",
     "static-site-generator"
   ],
@@ -24,19 +24,12 @@
     "ocx-catalog": "dist/cli/index.js"
   },
   "exports": {
-    "./theme": {
-      "types": "./src/theme/index.mts",
-      "import": "./src/theme/index.mts"
-    },
     "./package.json": "./package.json"
   },
   "files": [
     "dist",
     "src/config/schema",
     "templates",
-    "src/theme",
-    "src/site/lib",
-    "src/viewmodel",
     "LICENSE",
     "README.md",
     "CHANGELOG.md"
@@ -49,52 +42,45 @@
     "provenance": true
   },
   "engines": {
-    "node": ">=20.19"
+    "node": ">=22.13"
   },
   "scripts": {
     "build": "tsc",
-    "postbuild": "node -e \"require('fs').chmodSync('dist/cli/index.js', 0o755)\"",
+    "postbuild": "node scripts/postbuild.mjs",
     "prepack": "npm run build",
     "test": "vitest run --coverage",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit && tsc -p tsconfig.theme.json"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@fontsource/ibm-plex-mono": "^5.2.7",
-    "@fontsource/ibm-plex-sans": "^5.2.8",
-    "@vueuse/core": "^14.3.0",
+    "@astrojs/markdown-satteri": "0.4.3",
+    "@astrojs/sitemap": "^3.7.4",
+    "@ocx-sh/theme": "file:/home/mherwig/dev/ocx-website/packages/theme",
+    "astro": "~7.3",
     "commander": "^14.0.2",
     "dompurify": "^3.4.14",
     "highlight.js": "^11.12.0",
+    "jsdom": "^29.1.1",
     "markdown-it": "^14.3.0",
     "markdown-it-emoji": "^3.1.0",
     "minisearch": "7.2.0",
-    "reka-ui": "^2.10.1"
-  },
-  "peerDependencies": {
-    "vitepress": "^2.0.0-alpha.18",
-    "vue": "^3.5.27"
+    "yaml": "^2.8.0"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.2",
     "@eslint/js": "^9.39.0",
     "@lhci/cli": "^0.15.0",
+    "@types/markdown-it": "^14.2.0",
     "@types/node": "^24.10.0",
-    "@vitejs/plugin-vue": "^6.0.8",
     "@vitest/coverage-v8": "^3.2.4",
-    "@vue/test-utils": "^2.4.11",
     "ajv": "^8.18.0",
     "eslint": "^10.9.0",
     "globals": "^16.5.0",
     "happy-dom": "^20.11.6",
-    "jsdom": "^29.1.1",
     "publint": "^0.3.14",
     "puppeteer-core": "24.43.1",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.67.0",
-    "vitepress": "^2.0.0-alpha.18",
-    "vitest": "^3.2.4",
-    "vue": "^3.5.27",
-    "yaml": "^2.8.0"
+    "vitest": "^3.2.4"
   }
 }

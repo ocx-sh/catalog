@@ -3,7 +3,7 @@ import { fetchPackageRoot } from "../../../src/site/lib/packageRootFetch.js";
 import { createRequestGate } from "../../../src/site/lib/requestGate.js";
 import type { FetchLike, PackageRoot } from "../../../src/site/lib/wireTypes.js";
 
-const ROOT = { name: "ocx.sh/kitware/cmake" } as PackageRoot;
+const ROOT = { name: "ocx.sh/kitware/cmake", tags: {} } as unknown as PackageRoot;
 const ALWAYS = () => true;
 
 type Resp = { ok: boolean; status: number; json?: () => Promise<unknown> };
@@ -44,6 +44,24 @@ describe("fetchPackageRoot", () => {
     ]);
   });
 
+  test.each([
+    ["a traversing namespace", "..", "b"],
+    ["a traversing package", "a", "../b"],
+    ["an empty package", "a", ""],
+    ["a query in the package", "a", "b?x=1"],
+    ["a fragment in the namespace", "a#", "b"],
+    ["an escape in the package", "a", "b%2e"],
+  ])("%s is not-found without a request", async (_label, ns, pkg) => {
+    const fetchFn = routes({})
+    expect(await fetchPackageRoot(fetchFn, ns, pkg, "", ALWAYS)).toEqual({ status: "not-found" });
+    expect(fetchFn).not.toHaveBeenCalled();
+  });
+
+  test("a multi-segment package name is still fetched", async () => {
+    const fetchFn = routes({ "/p/a/b/c/_root.json": OK });
+    expect(await fetchPackageRoot(fetchFn, "a", "b/c", "", ALWAYS)).toEqual({ status: "ok", root: ROOT });
+  });
+
   test("404 on both paths is not-found, not an error", async () => {
     const fetchFn = routes({ "/p/a/b/_root.json": NOT_FOUND, "/p/a/b.json": NOT_FOUND });
     expect(await fetchPackageRoot(fetchFn, "a", "b", "", ALWAYS)).toEqual({ status: "not-found" });
@@ -62,6 +80,17 @@ describe("fetchPackageRoot", () => {
       "/p/a/b/_root.json": { ok: true, status: 200, json: async () => Promise.reject(new SyntaxError("bad json")) },
     });
     await expect(fetchPackageRoot(garbled, "a", "b", "", ALWAYS)).rejects.toThrow("bad json");
+  });
+
+  test.each([
+    ["null", null],
+    ["a string", "oops"],
+    ["an object without tags", { name: "x" }],
+    ["tags that is null", { tags: null }],
+    ["tags that is an array", { tags: [] }],
+  ])("a body that is %s throws instead of reaching the island", async (_label, body) => {
+    const fetchFn = routes({ "/p/a/b/_root.json": { ok: true, status: 200, json: async () => body } });
+    await expect(fetchPackageRoot(fetchFn, "a", "b", "", ALWAYS)).rejects.toThrow("no tags");
   });
 
   describe("stale-response discard", () => {

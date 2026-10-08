@@ -1,8 +1,8 @@
 import { resolve } from "node:path";
 import { buildCatalog } from "../build/engine.js";
-import { BuildError } from "../build/errors.js";
+import { BuildError, RenderError } from "../build/errors.js";
 import { ConfigError } from "../config/errors.js";
-import { DATA, UNAVAILABLE } from "./exit.js";
+import { DATA, FAIL, UNAVAILABLE } from "./exit.js";
 
 /** Raw commander option values for `ocx-catalog build`. */
 export interface BuildCommandOptions {
@@ -23,7 +23,8 @@ const DEFAULT_OUT_DIR = "dist";
  * onto this CLI's sysexits-derived exit codes (C-001) — `ConfigError` (any
  * C-002 config-shape problem) and `BuildError` (`DATA`/`UNAVAILABLE`, see
  * `build/errors.ts`) both print `err.message` to stderr and set
- * `process.exitCode`; any other thrown error is NOT caught here and
+ * `process.exitCode`; a `RenderError` (the Astro child failed) prints the same
+ * way and sets `FAIL` (1); any other thrown error is NOT caught here and
  * propagates to `main.ts`'s caller, which maps it to `FAIL` (1) — matching
  * `main.ts`'s existing convention of only ever mapping KNOWN failure
  * classes locally. Never calls `process.exit()`.
@@ -42,6 +43,12 @@ export async function runBuild(options: BuildCommandOptions): Promise<void> {
     if (err instanceof BuildError) {
       process.stderr.write(`ocx-catalog build: ${err.message}\n`);
       process.exitCode = err.code === "UNAVAILABLE" ? UNAVAILABLE : DATA;
+      return;
+    }
+    if (err instanceof RenderError) {
+      // The child's own diagnostics were already relayed line by line.
+      process.stderr.write(`ocx-catalog build: ${err.message}\n`);
+      process.exitCode = FAIL;
       return;
     }
     throw err;

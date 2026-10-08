@@ -1,0 +1,32 @@
+---
+// The rail's platform card: the latest tag's `os/arch` set as the theme's OS glyph chips.
+import PlatformIcons from "@ocx-sh/theme/components/PlatformIcons.astro";
+import type { DetailView } from "../model/detail.js";
+
+interface Props {
+  view: DetailView;
+}
+const { view } = Astro.props;
+---
+
+<section class="rail-block" aria-labelledby="platforms-heading" data-platforms>
+  <h2 id="platforms-heading" class="rail-heading">Platforms</h2>
+  <div class="rail-card">
+    {
+      view.platforms.length === 0 ? (
+        <p class="rail-empty">No platforms listed.</p>
+      ) : (
+        <PlatformIcons platforms={[...view.platforms]} mode="os-arch" />
+      )
+    }
+  </div>
+</section>
+
+<style>
+  .rail-empty {
+    margin: 0;
+    font-family: var(--ocx-font-mono);
+    font-size: var(--ocx-text-sm);
+    color: var(--ocx-color-fg-subtle);
+  }
+</style>
