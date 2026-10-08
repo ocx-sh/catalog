@@ -1,9 +1,6 @@
 ---
 paths:
   - "**/*.ts"
-  - "**/*.tsx"
-  - "**/*.mts"
-  - "**/*.cts"
   - "**/tsconfig*.json"
 ---
 
@@ -12,29 +9,26 @@ paths:
 TS-specific quality guide, grounded in this repo's own config. Universal design
 principles (SOLID, DRY, YAGNI, severity tiers, review checklist) live in
 `quality-core.md` — this file covers TS-specific applications plus the module
-system and tooling actually wired up here. Vite/VitePress build-tool specifics:
+system and tooling actually wired up here. Vite/Astro build-tool specifics:
 `quality-vite.md`.
 
 ---
 
 ## tsconfig Baseline (this repo)
 
-Two configs, split by target environment — `tsc -p tsconfig.theme.json` typechecks
-`src/theme` separately from `tsc`'s own `tsconfig.json` run, because they resolve
-differently:
+One config, `tsconfig.json`, for everything under `src/` (the CLI, the
+view-model and `src/site/{model,lib,client}`; `dist/`-bound): `strict: true`,
+`module`/`moduleResolution: NodeNext`, `isolatedModules: true`, `declaration` +
+`declarationMap`, `esModuleInterop`, `forceConsistentCasingInFileNames`,
+`skipLibCheck`, `lib: [ES2022, DOM, DOM.Iterable]` (the DOM lib is for the
+browser-side logic in `src/site/lib` and `client`; the CLI code never touches
+it). There is no second, bundler-resolution config any more (the Vue theme that
+needed one is gone). `.astro` templates and `test/` are outside it: `tsc` does
+not read a template, so a type error inside one surfaces only when the
+acceptance build renders that page.
 
-- **`tsconfig.json`** (the CLI/library, `dist/`-bound): `strict: true`, `module`/
-  `moduleResolution: NodeNext`, `isolatedModules: true`, `declaration` +
-  `declarationMap`, `esModuleInterop`, `forceConsistentCasingInFileNames`,
-  `skipLibCheck`. Excludes `src/theme`.
-- **`tsconfig.theme.json`** (extends the above): `module: ESNext`,
-  `moduleResolution: bundler`, `lib: [ES2022, DOM, DOM.Iterable]`, `noEmit: true`.
-  Bundler resolution because `src/theme` is VitePress/Vite-consumed — extensionless
-  relative imports (`from './useToast'`) and `.vue` SFC specifiers, neither of
-  which `NodeNext` resolution can resolve at all.
-
-`strict: true` is non-negotiable in either config — never weaken it or add a
-per-file `// @ts-nocheck` to route around it.
+`strict: true` is non-negotiable: never weaken it or add a per-file
+`// @ts-nocheck` to route around it.
 
 **Not currently enabled** — real candidates, not yet turned on, so don't claim
 they're enforced: `noUncheckedIndexedAccess` (still not part of `strict` itself,
@@ -92,9 +86,9 @@ improvement, not a fact about the current baseline.
 
 - **Discriminated unions**: tag every union with a `kind`/`type` literal field. TS
   narrows exhaustively in a `switch`.
-- **`satisfies`** (used in `src/theme/index.mts`): validates a value conforms
-  to a type without widening the inferred type — `const config = { … } satisfies
-  Config` instead of `const config: Config = { … }` when you still want
+- **`satisfies`** (used in `src/site/lib/installIcons.ts`): validates a value
+  conforms to a type without widening the inferred type — `const config = { … }
+  satisfies Config` instead of `const config: Config = { … }` when you still want
   autocomplete on the literal values.
 - **`as const`** (used throughout `src/`, e.g. `src/config/load.ts`): freezes
   literal types.
@@ -123,32 +117,28 @@ function handle(msg: Message): Result {
   "./main.js"`, even though the source file is `main.ts` (the convention across
   `src/cli/`, `src/build/`, etc.).
 - `verbatimModuleSyntax` is not set, so `import type` for type-only imports is a
-  convention here, not a compiler-enforced one — used across the codebase (22
-  files as of this writing); keep using it for new type-only imports rather than
-  letting `tsc`'s type-only elision do it silently.
-- `.mts` (`src/theme/index.mts`, the `./theme` export entry point) marks a file
-  that's always ESM regardless of how a consumer resolves it — the one place this
-  repo actually uses the extension.
+  convention here, not a compiler-enforced one; keep using it for new type-only
+  imports rather than letting `tsc`'s type-only elision do it silently.
+- Code that runs inside the Astro child (`src/site/**`) is loaded by Astro/Vite
+  and by vitest as well as compiled to `dist/`: keep imports to the explicit
+  `.js` specifiers `NodeNext` requires, and never value-import the programmatic
+  API (`build|dev|preview|sync`) from `"astro"` (C-025).
 
 ---
 
 ## Tooling (this repo)
 
-- **Typecheck**: `npm run typecheck` — `tsc --noEmit` (the main `tsconfig.json`)
-  then `tsc -p tsconfig.theme.json` (the theme's separate bundler-resolution pass).
+- **Typecheck**: `npm run typecheck` — `tsc --noEmit` over `tsconfig.json`, a
+  single pass.
 - **Lint**: `npm run lint` — `eslint .`, config in `eslint.config.js`:
   `@eslint/js` recommended + `typescript-eslint` recommended (not the
-  type-checked variant — no `parserOptions.project` wired up), plus one
-  repo-specific `no-restricted-imports` pair banning `src/viewmodel/
-  version_order.ts` and `src/theme/utils/version.ts` from importing each other
-  (they implement different version-ordering grammars for different callers;
-  merging them silently would corrupt one side's output).
+  type-checked variant — no `parserOptions.project` wired up). No Astro plugin,
+  so `.astro` files are not linted; `docs/**` and `.agents/**` are ignored.
 - **Build**: `npm run build` — plain `tsc` (no bundler in the build step; this is
-  a library, not an app).
+  a library, not an app), then `scripts/postbuild.mjs`.
 - **Test**: `npm test` — `vitest run --coverage`, thresholds at 100%
-  branches/functions/lines/statements (`vitest.config.ts`), with explicit,
-  commented `coverage.exclude` entries for code that's subprocess- or
-  SSR-render-only and can't be meaningfully unit-covered (see that file).
+  branches/functions/lines/statements (`vitest.config.ts`), with a pinned,
+  commented `coverage.exclude` list (see `subsystem-tests.md`).
 
 ---
 
@@ -156,7 +146,7 @@ function handle(msg: Message): Result {
 
 See `quality-core.md` for the universal review checklist. TS-specific additions:
 
-- [ ] `strict: true` unchanged in both `tsconfig.json` and `tsconfig.theme.json`
+- [ ] `strict: true` unchanged in `tsconfig.json`
 - [ ] No `any` in exported signatures
 - [ ] No `as X` assertions bypassing narrowing
 - [ ] No non-null `!` without a justification comment

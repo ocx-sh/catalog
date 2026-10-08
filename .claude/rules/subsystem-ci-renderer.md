@@ -77,6 +77,17 @@ wrong or unsupported value here would otherwise render CI that silently dies
 at its own install step instead of failing loudly where the mistake was
 made — at config load.
 
+**bun still needs Node >= 22.13.** The engine spawns `process.execPath` and
+`bun x ocx-catalog` follows the CLI's node shebang, so bun is *added to* a
+Node runtime, never a replacement for one. GitHub: `actions/setup-node`
+(`node-version: "22"`, no `cache:` — no lockfile to key it on) runs before
+`oven-sh/setup-bun`, both pinned through the usual carry-forward. GitLab:
+both managers use `node:22-alpine`; bun adds an `npm install -g bun@1`
+script line ahead of `bun install` (verified: `node:22-alpine` +
+`npm install -g bun@1` yields `node` v22 and a working `bun`/`bun x`). The
+old `oven/bun:1` image has no Node. GitLab images are tag-pinned, not
+digest-pinned, as before.
+
 ## Template engine
 
 `renderTemplate`/`renderString` (`templates.ts`) is `{{key}}` substitution,

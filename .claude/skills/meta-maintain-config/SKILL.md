@@ -105,7 +105,7 @@ manual):
 2. **Research updates** — a researcher pass via `/hex-plan`'s primitive:
    Claude Code docs for new features (hooks, frontmatter, agents), and
    current best practices for this repo's actual stack (TypeScript, Vite/
-   Vitest/VitePress, npm publishing).
+   Vitest/Astro, npm publishing).
 3. **Update stale artifacts** — read current code, correct the rule,
    preserve its structure.
 4. **Self-update** — check whether this skill or `meta-ai-config.md` itself
@@ -135,7 +135,7 @@ Invoke the canonical multi-agent research primitive from `/hex-plan`
 
 1. Spawn researchers in parallel, split by axis (e.g. Claude Code/AI-
    tooling best practices vs. this repo's own stack — TypeScript, Vite/
-   VitePress/Vue, npm publishing conventions), plus an explorer pass to
+   Astro, npm publishing conventions), plus an explorer pass to
    ground findings in existing `.claude/` artifacts.
 2. Synthesize into actionable guidance; persist as
    `.agents/research/research_[topic].md`.
@@ -147,7 +147,7 @@ Invoke the canonical multi-agent research primitive from `/hex-plan`
 |---|---|---|
 | `subsystem-*.md` rules | Types, paths, exports | After refactors, new modules — see `meta-ai-config.md`'s "When to Update" |
 | `quality-typescript.md` | Claimed strict-mode/tsconfig baseline | After `tsconfig.json` changes |
-| `quality-vite.md` | Build-tool conventions | After Vite/Vitest/VitePress version bumps |
+| `quality-vite.md` | Build-tool conventions | After Vite/Vitest/Astro version bumps |
 | `quality-security.md` | CI/CD checklist | After `.github/workflows/**` changes |
 | `meta-ai-config.md` | Conventions, budget numbers, anti-patterns | After Claude Code releases |
 | `AGENTS.md` | Commands, layout, workflow | After new scripts, directories, or workflow changes |

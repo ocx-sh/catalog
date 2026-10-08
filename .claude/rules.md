@@ -11,14 +11,13 @@ rule nobody finds before a glob happens to fire.
 | What this package is, who consumes it, what is out of scope | [product-context.md](./rules/product-context.md) |
 | Code quality, any language | [quality-core.md](./rules/quality-core.md) |
 | TypeScript — strict mode, ESM, narrowing | [quality-typescript.md](./rules/quality-typescript.md) |
-| Vite / Vitest / VitePress build tooling | [quality-vite.md](./rules/quality-vite.md) |
-| CSS custom properties — naming, tiers, coverage honesty | [quality-design-tokens.md](./rules/quality-design-tokens.md) |
-| How a consumer's stylesheet wins — cascade layers, element seams, component hooks | [quality-css-overrides.md](./rules/quality-css-overrides.md) |
+| Vite / Vitest / Astro build tooling | [quality-vite.md](./rules/quality-vite.md) |
+| Design tokens (consumed from `@ocx-sh/theme`), literal-colour ban, the consumer cascade | [quality-design-tokens.md](./rules/quality-design-tokens.md) |
 | This package's own CI and release workflows | [quality-security.md](./rules/quality-security.md) |
-| The Vue 3 VitePress theme's conventions | [subsystem-theme.md](./rules/subsystem-theme.md) |
-| Reading indices — containment, CAS, labels, the mirror | [subsystem-sources.md](./rules/subsystem-sources.md) |
+| The Astro site (`src/site`) — route identity, URL sinks, sanitisation, CSP, install commands, filters, lazy islands | [subsystem-site.md](./rules/subsystem-site.md) |
+| Reading indices — containment, CAS, labels, reserved names, the mirror, scratch/staging | [subsystem-sources.md](./rules/subsystem-sources.md) |
 | Rendering other repositories' CI workflows | [subsystem-ci-renderer.md](./rules/subsystem-ci-renderer.md) |
-| The test gate and its non-negotiables | [subsystem-tests.md](./rules/subsystem-tests.md) |
+| The test gate — `unit`/`acceptance` projects, coverage exclusions, non-negotiables | [subsystem-tests.md](./rules/subsystem-tests.md) |
 | Maintaining `AGENTS.md`, rules, skills, agents | [meta-ai-config.md](./rules/meta-ai-config.md) |
 | Documentation pages — prose, examples, navigation, page types (grim-installed, `docs-essentials`) | [docs-quality.md](./rules/docs-quality.md) |
 
@@ -26,11 +25,11 @@ rule nobody finds before a glob happens to fire.
 
 | Edit path | Rules that auto-load |
 |---|---|
-| `**/*.ts`, `**/*.tsx`, `**/*.mts`, `**/*.cts`, `**/tsconfig*.json` | [quality-typescript.md](./rules/quality-typescript.md) |
-| `**/vite.config.*`, `**/vitest.config.*`, `**/.vitepress/config.*` | [quality-vite.md](./rules/quality-vite.md) |
-| `**/*.css`, `**/*.scss`, `**/*.sass`, `**/*.less`, `**/*.styl`, `src/theme/**/*.vue` | [quality-design-tokens.md](./rules/quality-design-tokens.md), [quality-css-overrides.md](./rules/quality-css-overrides.md) |
+| `**/*.ts`, `**/tsconfig*.json` | [quality-typescript.md](./rules/quality-typescript.md) |
+| `**/vitest.config.*`, `src/site/astro_config.ts`, `docs/astro.config.mjs` | [quality-vite.md](./rules/quality-vite.md) |
+| `src/site/**/*.astro` | [quality-design-tokens.md](./rules/quality-design-tokens.md) |
 | `.github/workflows/**`, `.github/actions/**`, `.github/zizmor.yml` | [quality-security.md](./rules/quality-security.md) |
-| `src/theme/**` | [subsystem-theme.md](./rules/subsystem-theme.md) |
+| `src/site/**` | [subsystem-site.md](./rules/subsystem-site.md) |
 | `src/sources/**`, `src/build/**` | [subsystem-sources.md](./rules/subsystem-sources.md) |
 | `src/ci/**`, `templates/**` | [subsystem-ci-renderer.md](./rules/subsystem-ci-renderer.md) |
 | `test/**`, `vitest.config.ts` | [subsystem-tests.md](./rules/subsystem-tests.md) |

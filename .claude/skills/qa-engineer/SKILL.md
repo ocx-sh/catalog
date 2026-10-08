@@ -77,8 +77,8 @@ isolation.
   `coverage.thresholds`. Never treat a looser local run as sufficient.
 - **`npx vitest run <path>` / `npx vitest <path>`** — target a single file
   while iterating, without waiting on the full coverage run
-- **`@vue/test-utils` + `happy-dom`/`jsdom`** — for `src/theme/**` component
-  tests
+- **`happy-dom`/`jsdom`** — for `src/site/client` island tests; built pages
+  are covered by the `acceptance` vitest project instead
 
 ## Constraints
 

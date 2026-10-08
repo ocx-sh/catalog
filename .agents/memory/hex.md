@@ -50,7 +50,7 @@ perspectives:
 
 - Active plan: `.claude/state/plans/plan_ocx_theme_port.md` (tier xhigh) —
   port onto `@ocx-sh/theme` (Astro 7 subprocess renderer + Starlight docs) on
-  branch `feat/ocx-theme-port`. Inputs: `.claude/artifacts/adr_ocx_theme_port_2026-10-07.md`,
+  branch `hex/plan-ocx-theme-port` (cut from `feat/ocx-theme-port`). Inputs: `.claude/artifacts/adr_ocx_theme_port_2026-10-07.md`,
   `research_ocx_theme_port_discovery.md`, `research_astro_programmatic_renderer.md`.
   Library requests go to the `ocx-website-*` session; gate G1 = one pending SHA.
 - Previous active plan: `plan_sota_release_ready.md` (tier high; status not re-checked).

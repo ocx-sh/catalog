@@ -11,9 +11,10 @@ This repo's whole CI/CD security surface is three workflow files —
 `.github/workflows/ci.yml` and `.github/workflows/release.yml`, which build,
 test, and publish an npm package, and `.github/workflows/pages.yml`, which
 builds and checks the Starlight documentation site and, by manual dispatch only,
-deploys the redirect stubs to GitHub Pages. No SQL,
-no user-facing auth, no server. The checklist below is scoped to what those
-three files actually do; verify every claim against them (and
+deploys the redirect stubs to GitHub Pages — plus one local composite action,
+`.github/actions/install-ocx-theme` (temporary, see the last checklist item).
+No SQL, no user-facing auth, no server. The checklist below is scoped to what
+those files actually do; verify every claim against them (and
 `.github/zizmor.yml`, `renovate.json`) before asserting it — this file is not
 a generic OWASP checklist.
 
@@ -59,10 +60,35 @@ a generic OWASP checklist.
       only deploying job, `redirect-stubs`, is gated on `workflow_dispatch` plus
       an explicit `handoff_done` input, so a fork PR can build the docs but can
       never deploy them.
+- [ ] **No `file:` dependency reaches `main`.** The ocx theme is a `file:`
+      dependency in the root and `docs/` manifests until `@ocx-sh/theme` 0.2.0
+      is on npm, and a `file:` specifier (or a lockfile `resolved: file:…`)
+      breaks every consumer install. The guard `scripts/check-no-file-deps.mjs`
+      scans both `package.json` AND both lockfiles; `ci.yml` runs it on pull
+      requests targeting `main`, and its unit test must stay red on a planted
+      specifier in each file kind. `npm audit signatures` (`audit-signatures`)
+      cannot verify a `file:` dependency, so the guard, not that job, is the
+      control. Landing the real dependency swaps `file:` for `^0.2.0` in both
+      manifests and regenerates BOTH lockfiles.
 - [ ] A step that installs a dependency from another repository is marked
       `TEMPORARY` with the plan step that removes it, checks that repository
-      out at a full 40-hex SHA with `persist-credentials: false`, and runs no
-      lifecycle script of it (`pages.yml`: the ocx theme, `npm pack --ignore-scripts`).
+      out at a full 40-hex SHA with `persist-credentials: false` and a sparse
+      checkout, and packs it with `--ignore-scripts`. Today that is the
+      composite action `.github/actions/install-ocx-theme`, temporary until
+      `@ocx-sh/theme` 0.2.0 is on npm (plan step I.1). It checks out
+      `ocx-sh/website` at one pinned SHA (bump that one place and every caller
+      follows), runs `npm pack --ignore-scripts` on `packages/theme`, points
+      the `prefix` manifest's dependency at the tarball and runs `npm install`.
+      That last `npm install` **does run lifecycle scripts** of every
+      dependency, so every caller must hold `contents: read` only (no
+      `id-token`, no `pages`), leaving any script nothing to mint. Callers: the
+      `lint`, `typecheck`, `test`, `pack-verify`, `audit-signatures` and
+      `web-quality` jobs of `ci.yml`, and `pages.yml`'s `build` job (with
+      `prefix: docs`). All hold `contents: read` only; adding the action to a
+      job with a wider grant, or to `release.yml`'s `publish` job, is a
+      Block-tier finding. A change under the action's directory re-triggers
+      `pages.yml` (both of its `paths:` lists name it). Bump the SHA
+      deliberately; remove the action when the theme is on npm.
 
 ---
 
@@ -110,12 +136,16 @@ just unattested. Never "fix" a failing exchange by adding a stored npm token
 
 ## Dependency Safety
 
-- `renovate.json` groups routine npm minor/patch bumps, keeps `vitepress`/`vue`
-  (alpha-channel, version-locked to each other) as separate manual-review PRs,
-  and runs weekly lockfile maintenance.
+- `renovate.json` groups routine npm minor/patch bumps and runs weekly lockfile
+  maintenance. `astro` is held to a minor range (`~7.3` in the root manifest),
+  and an `astro`/`@astrojs/*` bump merges only with the acceptance project green
+  (`npm test` builds real sites); in `docs/`, `astro` and `@astrojs/starlight`
+  move as ONE PR together with the matching `@ocx-sh/theme` release, because the
+  theme's peer ranges bound them.
 - `audit-signatures` (`ci.yml`) runs `npm audit signatures` on every PR —
   verifies each resolved dependency's registry signature against npm's public
   key, independent of `npm audit`'s vulnerability-database scan.
+- Both CI and release run Node 24 / npm 11 (`engines.node` is `>=22.13`).
 
 ## Output Guidelines
 

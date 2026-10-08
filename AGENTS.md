@@ -12,11 +12,12 @@ automatically; other agents should open those paths directly.
 
 ## What is `@ocx-sh/catalog`
 
-A [VitePress](https://vitepress.dev) static-site generator that renders one
-or more **OCX package indices** into a browsable catalog: a package grid,
-per-package detail pages (README, platforms, versions, install commands),
-search, and an optional docs mount. Binary: `ocx-catalog`. ESM-only,
-Node >= 20.19, npm toolchain.
+An [Astro](https://astro.build) static-site generator, built on the
+`@ocx-sh/theme` design system, that renders one or more **OCX package
+indices** into a browsable catalog: a package grid, per-package detail pages
+(README, platforms, versions, install commands), search, and an optional docs
+mount. Binary: `ocx-catalog` (`build | dev | ci`); `build`/`dev` spawn the
+`astro` CLI as a subprocess. ESM-only, Node >= 22.13, npm toolchain.
 
 **An index is not this package**, and that distinction is the load-bearing
 one here: this package only ever *reads* an index — it never writes index
@@ -28,19 +29,20 @@ surfaces this package owns versus reads, and the non-goals →
 [`product-context.md`](./.claude/rules/product-context.md). Canonical; do
 not restate it here.
 
-> **Status: pre-1.0, published.** `latest` on npm is `0.4.0` (verified via
-> `npm view @ocx-sh/catalog version`), the same version tagged `v0.4.0` in
-> this repo — the release lane has carried every version since `0.1.0`
-> through `0.2.0`, `0.2.1`, `0.3.0`, and `0.4.0`. The GitHub remote
-> [`ocx-sh/catalog`](https://github.com/ocx-sh/catalog) is public, and the
-> user documentation is an Astro/Starlight site under `docs/` (ocx theme; built
-> for `https://ocx.sh/apps/catalog/`, while GitHub Pages still serves the last
-> MkDocs deployment until the owner's host hand-off; `README.md` is a pointer
-> at it, not a second copy). The
-> release lane is fully operational: `0.1.0` was a one-time manual bootstrap
-> publish (trusted publishing cannot pre-provision a new package name), and
-> every version since went out through CI with a real provenance
-> attestation. No release setup remains — see [Release](#release).
+> **Status: pre-1.0, published.** `latest` on npm is `0.5.3` (verified via
+> `npm view @ocx-sh/catalog version`), the same version tagged `v0.5.3` in
+> this repo; the release lane has carried every version since `0.1.1`. The
+> GitHub remote [`ocx-sh/catalog`](https://github.com/ocx-sh/catalog) is
+> public. **`0.6.0` is unreleased**: the Astro + `@ocx-sh/theme` port (the
+> VitePress/Vue renderer and the `@ocx-sh/catalog/theme` export are gone). It
+> waits on `@ocx-sh/theme` 0.2.0 reaching npm (until then the theme is a
+> `file:` dependency that must never reach `main`) and on the post-deploy probe
+> gate in [`product-context.md`](./.claude/rules/product-context.md). The user
+> documentation is an Astro/Starlight site under `docs/`, built for
+> `https://ocx.sh/apps/catalog/` (GitHub Pages still serves the last MkDocs
+> deployment until the owner's host hand-off); `README.md` is a pointer at it,
+> not a second copy. The release lane is fully operational (npm trusted
+> publishing with provenance) — see [Release](#release).
 
 ## Rule Catalog
 
@@ -63,8 +65,8 @@ scripts still exist underneath; `task` wraps them.
 task                # → verify (the default)
 task verify         # the four-gate quality run: lint → typecheck → test → pack-smoke
 task lint           # npm run lint (eslint, flat config)
-task typecheck      # npm run typecheck (tsc --noEmit && tsc -p tsconfig.theme.json)
-task test           # npm test (vitest run --coverage — 100% gate)
+task typecheck      # npm run typecheck (tsc --noEmit)
+task test           # npm test (vitest run --coverage — 100% gate; unit + acceptance projects)
 task pack-smoke     # node scripts/pack-smoke.mjs (publint + attw + real pack/install)
 task build          # npm run build (tsc -> dist/; postbuild chmods the CLI entry)
 task docs:build     # npm --prefix docs run build (the Starlight docs site; standalone)
@@ -74,19 +76,24 @@ task changelog:preview   # git-cliff --unreleased
 task release:prepare BUMP=auto|patch|minor|major   # see Release
 task dev:indexes         # seed .dev-indexes/ (needs ../index checked out)
 task dev:catalog CASE=multi-root   # serve one seeded multi-index case
+task quality:web         # build the fixture sites; Lighthouse, budget probe, axe, view-switch (Chrome)
+task quality:interaction # first-interaction, cold-URL, palette, popover and CSP gates (Chrome)
 ```
 
 `task verify` is the local equivalent of the CI quality gate — run it before
 calling anything done. Repo-hygiene tasks (`lint:actions`, `lint:links`,
-`secrets`, `lint:workflows`), `quality:web` (Lighthouse CI over a fixture
-site), `dev:*` (the manual multi-index review harness — the one task that
-needs the sibling `ocx-sh/index` checkout) and `docs:*` (the Starlight
-documentation site) run standalone, not as part of `verify` — `verify` must
-stay runnable with the npm toolchain alone.
+`secrets`, `lint:workflows`), `quality:web` and `quality:interaction` (real
+Chrome over the built fixture sites; need Chrome or a puppeteer-cached one),
+`dev:*` (the manual multi-index review harness — the one task that needs the
+sibling `ocx-sh/index` checkout) and `docs:*` (the Starlight documentation
+site) run standalone, not as part of `verify` — `verify` must stay runnable with
+the npm toolchain alone.
 
 CI (`.github/workflows/ci.yml`) runs: `lint`, `typecheck`, `test`,
 `pack-verify`, `workflows-lint` (zizmor), `audit-signatures`, `repo-checks`
-(actionlint/lychee/gitleaks), and `web-quality` (Lighthouse CI).
+(actionlint/lychee/gitleaks), `web-quality` (`task quality:web`), and the
+`file:`-dependency guard on pull requests targeting `main`
+([`quality-security.md`](./.claude/rules/quality-security.md)).
 `.github/workflows/pages.yml` builds and checks `docs/` on every docs-touching PR
 (`task docs:check`, lychee included, is the dead-link gate). It deploys nothing
 from `main` until the owner's host hand-off; the manual `redirect-stubs` job
@@ -101,7 +108,11 @@ then replaces the old GitHub Pages site with meta-refresh stubs.
   `vitest.config.ts`, each of which has a stated reason.
 - **Coverage cannot detect unreachable production code.** A new module
   needs a test proving a *shipped entrypoint* reaches it — this repo has
-  shipped a fully-tested, fully-orphaned module before.
+  shipped a fully-tested, fully-orphaned module before. `npm test` runs two
+  vitest projects: `unit`, and `acceptance` (the real CLI building fixture
+  sites; `ACCEPT_CONFIG=root,catalog` narrows which). `.astro` templates are
+  outside coverage and `tsc`; the acceptance build and grep tests pin them
+  ([`subsystem-tests.md`](./.claude/rules/subsystem-tests.md)).
 - `test/` is not in `tsconfig.json`'s `include`, so `npm run typecheck`
   does not check test files. A fixture passing a removed field fails only
   at runtime — grep for call sites when changing a public shape.
@@ -118,7 +129,10 @@ refs only** — a mutable ref is never carried forward. See
 ## Workflow
 
 - **Branch + PR + merge** against the `ocx-sh/catalog` GitHub remote — the
-  active workflow; never commit straight to `main`.
+  active workflow; never commit straight to `main`. The 0.6.0 port lands wave by
+  wave on an integration branch (see its plan); the owner cuts the PRs from it
+  to `main`. Agent worktrees under `.agents/worktrees/` use the main checkout's
+  `node_modules` through a symlink, so never `npm install` inside one.
 - Commits: [Conventional Commits](https://www.conventionalcommits.org/)
   (`feat:`, `fix:`, `ci:`, `chore:`, `docs:`, `test:`). No `Co-Authored-By`
   trailers.
@@ -151,14 +165,14 @@ escalating tier.
 | `src/cli/` | `ocx-catalog` — `build \| dev \| ci`; commander wiring, BSD sysexit codes |
 | `src/config/` | `catalog.config.json` loader + its JSON Schema (`schema/`) |
 | `src/sources/` | Index readers (`path`/`url`/`git`), label derivation, the mirror, `_headers` |
-| `src/build/` | VitePress orchestration: scratch roots, page synthesis, generated config, dev child process |
+| `src/build/` | Build orchestration: `engine.ts` (`buildCatalog`), scratch roots, `site.json` and `public/` assembly, README pre-render, the `astro` subprocess runner, `dev` supervisor and reload |
 | `src/ci/` | The generated-workflow renderer — templates, pins, header versioning, drift check |
-| `src/theme/` | The Vue 3 VitePress theme (components, composables, utils, styles) |
+| `src/site/` | The Astro site that ships in the package: pages, `Page` layout, components, view-model `model/`, shared `lib/`, browser islands `client/`, the Astro config builder and integration |
 | `src/viewmodel/` | The `/data/catalog/catalog.json` view-model emitter |
 | `templates/` | Rendered CI workflow templates (`ci/*.yml`) |
-| `docs/` | The user documentation site (Astro/Starlight, `docs/astro.config.mjs`) — published at `https://ocx-sh.github.io/catalog/` |
+| `docs/` | The user documentation site (Astro/Starlight, `docs/astro.config.mjs`) — built for `https://ocx.sh/apps/catalog/` |
 | `test/` | Vitest suites, mirroring `src/` |
-| `scripts/pack-smoke.mjs` | Publish-shape verification (publint, attw, real pack + install) |
+| `scripts/` | `pack-smoke.mjs` (publish-shape verification: publint, attw, real pack + install), `quality-*.mjs` (the Chrome gates), `synthetic-index.mjs`, `dev-indexes.mjs` |
 
 ## Release
 

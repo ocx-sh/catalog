@@ -270,7 +270,7 @@ For widgets that can be pure CSS/HTML (`<details>`, `popover`, `<dialog>`), ship
 8. **Untrusted content stays untrusted.** `set:html` of README output is raw; the sandbox/`_headers` precondition in `product-context.md` is unchanged.
 9. **Astro writes into the root.** `.astro/` (types, content store) lands in the scratch root; keep it disposable and out of the consumer's tree. Do not run two `ocx-catalog` processes against the same root.
 10. **Not covered by this research:** Windows path/`file:` URL handling for `injectRoute` entrypoints, Vitest-in-process behaviour, Zag components inside the shipped theme, and the CSS cascade-layer
-    override story (`quality-css-overrides.md`) under Astro's scoped-style strategy (Starlight sets `scopedStyleStrategy: "where"` and a CSS layer-order plugin, which is the precedent to copy).
+    override story (the since-retired cascade-contract rule) under Astro's scoped-style strategy (Starlight sets `scopedStyleStrategy: "where"` and a CSS layer-order plugin, which is the precedent to copy).
 
 ## Sources
 
@@ -286,3 +286,21 @@ For widgets that can be pure CSS/HTML (`<details>`, `popover`, `<dialog>`), ship
 - Astro 7.3.6 package source (`dist/core/dev/restart.js`, `dist/core/dev/dev.js`, `dist/core/create-vite.js`, `dist/types/public/config.d.ts`): `npm i astro@7`
 - npm registry metadata: `astro`, `@astrojs/starlight`, `@zag-js/*` (`npm view`)
 - Roadmap discussions seen only in search results: https://github.com/withastro/roadmap/discussions/357, https://github.com/withastro/roadmap/discussions/1308
+
+## Scale probe (E.7)
+
+Proves C-047 (data handoff: README bytes are read per page from the mirrored CAS file, never carried in `site.json`). Measured 2026-10-07 on Astro 7.3.6, Node 24.14, WSL2 (32 GB, V8 heap limit 4288 MB), through the real CLI (`node dist/cli/index.js build`) under `/usr/bin/time -v`, builds run sequentially. Input: `scripts/synthetic-index.mjs <n> 20 <dir>` (root source, one image index and one unique ~20 KB README per package; 2 platforms, 4 tags). Probe-only page: `package.astro` rendered every README through `createReadmeRenderer` (T.2) + `set:html`, with `publicDir` found under the build cwd (not committed; P-detail replaces the page).
+
+| Packages | READMEs | Wall time | Peak RSS (largest process) | `site.json` | Output | Result |
+|---|---|---|---|---|---|---|
+| 1,000 | 20 KB each (44 MB tree) | 40.4 s | 949,772 KB (0.91 GiB) | 1,026,834 B | 135 MB | exit 0, 1,001 `index.html` |
+| 10,000 | 20 KB each (431 MB tree) | 7 min 13.8 s | 1,438,292 KB (1.37 GiB) | 10,215,836 B | 1.4 GB | exit 0, 10,001 `index.html` |
+
+- **Which process peaks.** `/usr/bin/time -v` on the parent reports the maximum over the parent and its waited-for children, i.e. the single largest process, not their sum. A `/proc/<pid>/status` `VmHWM` sampler run beside it confirmed the Astro child is the peak: child 1,441,020 KB vs `time` 1,438,292 KB (n=10,000); child 954,432 KB vs 949,772 KB (n=1,000). The CLI parent peaked separately at 1,111,960 KB (n=10,000; 268,176 KB at n=1,000) and stays resident while the child runs, so the machine-wide footprint during the render is about 2.4 GiB at 10k, about 1.2 GiB at 1k.
+- **Stop rule not triggered.** Peak RSS 1.37 GiB is far below 4 GiB. `site.json` does not grow with README size: 200 packages with 1 KB READMEs vs 40 KB READMEs gave 210,831 B vs 210,832 B (a 1-byte difference), and it scales with package count only (about 1 KB per package: 1.03 MB at 1k, 10.2 MB at 10k). The model shape in C-047 stands.
+- **Scaling.** Peak RSS grows about 0.5 GiB for 10x the packages (0.91 to 1.37 GiB); wall time is about 10x (about 36 ms per page on one core; `build.concurrency: 1` is pinned by C-045). Time, not memory, is what grows at 10k.
+- **`--max-old-space-size`: not warranted.** Node 24's default V8 heap limit here is 4,288 MB (it derives from system memory), and the largest process uses 1.4 GB RSS, so a default flag would add nothing. The Q6 item 7 estimate of 2 to 3 GB was conservative. Leave `NODE_OPTIONS` to the consumer, and keep documenting it for hosts with small memory (a 2 GB CI runner is the realistic constraint, and the CLI parent plus child total 2.4 GiB at 10k).
+
+### Finding: `ssr.noExternal: true` breaks README rendering inside the Astro child
+
+`astroConfig` (E.1) pins `ssr.noExternal: true` and `environments.prerender.resolve.noExternal: true`, which bundles every dependency into the prerender chunk. `createReadmeRenderer` imports `jsdom` (CommonJS, uses `__dirname`); bundled, the first README render fails with `__dirname is not defined in ES module scope` (reproduced at n=3). The probe used `external: ["jsdom"]` next to both `noExternal: true` pins (`vite.ssr` and `vite.environments.prerender.resolve`) and every build above ran with that edit. This is not committed: P-detail (or the T.2 owner) must decide the fix. Options: keep `jsdom` external (the chunk then resolves it from the staging dir upward, so it must be hoisted where the consumer's `outDir` sits, which is the failure the `noExternal` comment describes for `cookie`), or render the README outside the Astro child (in the CLI parent, handing the page HTML through the mirrored `public/` tree rather than `site.json`), or swap the sanitizer for a bundle-safe DOM.

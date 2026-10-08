@@ -756,7 +756,7 @@ C-036.
 | C-037 | README fault isolation: a README over 1 MiB (the mirror's `MAX_CAS_ASSET_BYTES`, applied before render), missing from the mirror, failing to render or sanitise, or failing the idempotency tripwire renders a "README unavailable" pane and one stderr warning naming the package; the build still exits 0 |
 | C-038 | No partial output: Astro builds into a fresh sibling staging dir of `outDir`; only a fully successful build promotes it (rename `outDir` aside, rename staging into place, remove the old tree); a failure during public assembly, render or promotion leaves the previous `outDir` byte-unchanged and removes the staging dir |
 | C-039 | URL joins: `joinBase` throws for a path not matching `^/(?!/)`, containing `\`, a control character, or a `.`/`..` segment (`joinBase("/", "//evil.example")` throws); the root source's `wirePrefix` is `""` and its CAS URLs start `/p/`, never `//p/` |
-| C-040 | Inlined data and generated source: inline JSON uses one `jsonForScript()` (`JSON.stringify(x).replace(/</g, "\\u003c")`); the generated `astro.config.mjs` interpolates exactly two `JSON.stringify`'d paths (tests: `"`, `\`, `${`, newline, U+2028); no `define:vars` with wire data; no `innerHTML`/`outerHTML`/`insertAdjacentHTML` in `src/site/client/**` (grep test, shown red once); keyword links use `encodeURIComponent` |
+| C-040 | Inlined data and generated source: no inline JSON at all (no `<script type="application/json">`, no `define:vars`; grep test `test/site/no_inline_json.test.ts`; the `jsonForScript` helper was dropped as unreferenced); the generated `astro.config.mjs` interpolates exactly two `JSON.stringify`'d paths (tests: `"`, `\`, `${`, newline, U+2028); no `define:vars` with wire data; no `innerHTML`/`outerHTML`/`insertAdjacentHTML` in `src/site/client/**` (grep test, shown red once); keyword links use `encodeURIComponent` |
 | C-041 | Hostile metadata: a fixture package whose description, keywords, license, owner login, tag names, `supersededBy`, `ownerUrl` and `wireBase` carry `"`, `\n---`, `</script>`, `${…}` and `<img onerror>` renders inert in built HTML and in island DOM |
 | C-042 | One URL sink: every wire-derived `href`/`src` goes through one `safeHref`-based helper returning the canonical `parsed.href` or `null`; a grep test fails on any other `href={`/`src={` expression fed from wire data in `src/site/**` |
 | C-043 | Page CSP: every built HTML page carries a CSP `<meta>` with `script-src 'self'` + SHA-256 hashes, `object-src 'none'`, `base-uri 'none'`, `style-src 'self' 'unsafe-inline'`; no inline `<script>` whose hash is missing from the policy; Playwright reports no CSP violation on the fixture pages |
@@ -966,3 +966,51 @@ Rejected or narrowed after checking the code:
   server is unverified; the supervisor respawns the child instead.
 - **SEC-F8, "set the variable in `cli/main.ts` before a lazy import"** —
   superseded by (a′), not wrong: no in-process import exists any more.
+
+---
+
+## Revision 2 (2026-10-08, review)
+
+Records four changes the post-integration review made. The text above is not
+rewritten; where a change supersedes it, this section is the current answer.
+
+1. **README render and sanitise moved from the Astro child to the CLI parent**
+   (`src/build/readmes.ts`, commit `06f1d94`). Reason: jsdom, which the
+   sanitiser needs, cannot be bundled into the Astro child, and an external copy
+   resolves from the staging directory (see `subsystem-site.md`). Effects:
+   - **D2, per-page README render.** The child no longer renders a README per
+     page. The parent renders and sanitises every README during assembly and
+     writes `<scratch>/readme/<sha256(key)>.html`. The page reads that file.
+   - **C-014 and C-047.** Sanitisation still happens once, at build, through one
+     `set:html` sink. `site.json` still carries paths only, never README bytes,
+     and `writeSiteJson` rejects a path outside the README directory. The child
+     reads pre-sanitised HTML files.
+   - **D1, per-render heap boundary.** The rationale "the render child takes its
+     own `NODE_OPTIONS`" no longer isolates the README cost. jsdom's footprint
+     now sits in the parent, so the parent is the largest process. See item 2.
+2. **Measured RSS split at 10,000 packages** (review re-measure of 2026-10-08,
+   in `measurements_ocx_theme_port.md`). The CLI parent is the largest process.
+   Uncapped it peaked at 2.76 to 2.91 GiB RSS, mostly uncollected garbage: a
+   forced-GC probe held it near 1.15 GiB. The Astro child peaked at 1.0 to
+   1.16 GiB. With `NODE_OPTIONS=--max-old-space-size=1792` the parent peaked at
+   1.65 to 1.69 GiB with no heap error, and `NODE_OPTIONS` reaches both
+   processes because the child inherits the environment. "No flag needed" is
+   established for hosts with about 7 GB of RAM or more. Smaller hosts were not
+   tested. This answers the open question the first scale run left (which
+   process peaks) and replaces the `1.4 GiB` figure from E.7 in the upgrade
+   note.
+3. **Docs-mount link rewriting** (`src/site/docs_markdown.ts`, commit
+   `3b40302`). The ADR is silent on docs links, and the first published notes
+   said they are never rewritten. The first real build of the 17 `ocx-sh/index`
+   pages then found 80 broken internal links. A hast plugin now rewrites `<a href>` in the docs collection: a
+   relative link resolves against its `.md` file, drops `.md`, maps `index.md`
+   to its directory and gets the trailing slash and `/docs/` prefix, keeping
+   `?query` and `#fragment`; an extensionless `./foo` works; a root-relative
+   link gets `base` prepended. External, `//`, `mailto:`, `#only` and relative
+   non-`.md` links are untouched. A raw-HTML `<a href>` is not rewritten.
+   Separately, since `23b12cd` `docs/index.md` serves `/docs/` and
+   `<dir>/index.md` serves `/docs/<dir>/` (`src/build/docs_scan.ts`), which
+   removes the `docsNav` workaround the migration notes first proposed.
+4. **`{#id}` heading suffixes stay visible text** (S-010, decision unchanged).
+   The rewriting in item 3 does not touch headings or ids. A consumer drops the
+   suffix and links to the generated id.

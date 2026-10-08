@@ -1,6 +1,6 @@
 ---
 name: meta-validate-context
-description: Use when auditing the freshness of `.claude/rules/subsystem-*.md` files against current codebase state, or when a subsystem (theme, sources, CI renderer, tests) has undergone significant change.
+description: Use when auditing the freshness of `.claude/rules/subsystem-*.md` files against current codebase state, or when a subsystem (site, sources, CI renderer, tests) has undergone significant change.
 user-invocable: true
 argument-hint: "all | subsystem-name"
 triggers:
@@ -29,7 +29,7 @@ For each `subsystem-*.md` rule file:
 
 | Rule | Key references to verify | Path scope |
 |---|---|---|
-| [`subsystem-theme.md`](../../rules/subsystem-theme.md) | Vue components, composables, CSS custom-property tokens | `src/theme/**` |
+| [`subsystem-site.md`](../../rules/subsystem-site.md) | Route-identity and URL-sink helpers, the README sanitisation chokepoint, CSP hashes, island DOM contracts | `src/site/**` |
 | [`subsystem-sources.md`](../../rules/subsystem-sources.md) | Reader functions (`path.ts`/`walker.ts`/`git.ts`), containment/digest-validation functions, `mirror.ts` write path | `src/sources/**`, `src/build/**` |
 | [`subsystem-ci-renderer.md`](../../rules/subsystem-ci-renderer.md) | Template files, the generated-header version contract, drift-check logic | `src/ci/**`, `templates/**` |
 | [`subsystem-tests.md`](../../rules/subsystem-tests.md) | `vitest.config.ts`'s `coverage.exclude` list, golden-fixture convention, test helper locations | `test/**`, `vitest.config.ts` |
@@ -64,7 +64,7 @@ grep -n "coverage" -A 20 vitest.config.ts
 - STALE: [reference] — renamed to [new name] or removed
 - MISSING: [new export] — not documented in the rule
 
-### subsystem-theme.md
+### subsystem-site.md
 ...
 ```
 
