@@ -6,6 +6,9 @@ sidebar:
 
 import { Tabs, TabItem } from '@astrojs/starlight/components';
 
+{/* doc_type: how-to */}
+{/* doc_tier: integration */}
+
 Render this repository's CI job file for GitLab, include it from your root
 `.gitlab-ci.yml`, then add the `pages` job GitLab itself requires to publish
 the built site — `ocx-catalog ci` renders the build/verify half only; the
@@ -85,7 +88,9 @@ job file in memory and fails if it has drifted from `catalog.config.json`
 (see [CI rendering](../../reference/ci-rendering/)). Set `"verifyCi": false`
 in the `ci` block to omit `catalog:verify`.
 
-Set `"packageManager": "bun"` and the image and script lines change instead:
+Set `"packageManager": "bun"` and the script lines change instead. The image stays
+`node:22-alpine`, because the CLI runs on Node 22.13 or later even when bun installs
+the packages:
 
 <Tabs syncKey="package-manager">
 
@@ -103,8 +108,9 @@ script:
 <TabItem label="bun">
 
 ```yaml
-image: oven/bun:1
+image: node:22-alpine
 script:
+  - npm install -g bun@1
   - bun install --frozen-lockfile
   - bun x ocx-catalog build
 ```
@@ -128,28 +134,33 @@ pages:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
   script:
     - npm ci
-    - npx ocx-catalog build --out public
+    - npx ocx-catalog build --out dist
+    - rm -rf public
+    - mv dist public
   artifacts:
     paths:
       - public
 ```
 
-`--out public` builds straight into the directory GitLab publishes, so no
-separate move step is needed. The `rules:` entry limits the job to the
-default branch — GitLab publishes whatever the most recent successful
-`pages` job on that branch produced.
+The job builds into `dist`, clears any checked-in `public` directory in the
+job's throwaway checkout, and moves the result to `public`, the directory
+GitLab publishes. Do not pass `--out public` when your `catalog.config.json`
+sets `"publicDir": "./public"`. The build refuses an output that equals or sits
+inside an input, and fails with `OUT_DIR_OVERLAPS_INPUT`. The `rules:` entry limits the job to the default
+branch. GitLab publishes whatever the most recent successful `pages` job on
+that branch produced.
 
 :::caution[The default project Pages URL is a subpath]
-A generated catalog site cannot be served from a URL subpath: the build
-never emits a VitePress `base:`, and the theme's data fetches
-(`/data/catalog/catalog.json`, `/p/<ns>/<pkg>.json`, and the OCI image
-index fetches) are literal root-relative strings. The default GitLab
-Pages URL — `https://<group>.gitlab.io/<project>/` — is a subpath, so
-every asset and every one of those fetches 404s once deployed there.
-This is GitLab's own project-Pages URL topology, not a missing option in
-this package: enable **GitLab Pages' unique domain** for the project (a
-dedicated root URL GitLab assigns per project) or attach a **custom
-domain** at the domain root instead.
+The traditional GitLab Pages URL is
+`https://<group>.gitlab.io/<project>/`. That is a path prefix, and a build
+only works under the prefix it was built for. Set `"base": "/<project>/"` in
+`catalog.config.json`, or give `siteUrl` the same path, and rebuild.
+Otherwise every asset and data fetch resolves against the wrong location
+and answers 404.
+
+A project with **GitLab Pages' unique domain** enabled, or a **custom
+domain**, serves the domain root, so the default `base` of `/` is correct
+there. See [`base`](../../reference/config-schema/#base).
 :::
 
 The mirrored `/p/*` tree also ships an inert `_headers` file — GitLab Pages

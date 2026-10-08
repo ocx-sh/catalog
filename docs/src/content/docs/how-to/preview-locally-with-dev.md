@@ -4,8 +4,10 @@ sidebar:
   label: "Preview locally"
   order: 5
 ---
+<!-- doc_type: how-to -->
+<!-- doc_tier: everyday -->
 
-`ocx-catalog dev` boots a live VitePress dev server against your sources, without a full `build` step in between.
+`ocx-catalog dev` boots a live Astro dev server against your sources, without a full `build` step in between. It requires Node.js `>=22.13`.
 
 ## Basic usage
 
@@ -24,9 +26,15 @@ If you omit both `--source` and `--config`, `dev` looks for `./catalog.config.js
 | `--source <path>` | Preview a bare source directory, no config file |
 | `--config <path>` | Preview using a real `catalog.config.json` |
 | `--port <n>` | Request a specific port |
-| `--smoke` | Boot, confirm the server is listening, then exit |
+| `--smoke` | Boot, request `<base>` and `<base>data/catalog/catalog.json`, require `200` from both, then exit |
 
-`--port` must be an integer between 1 and 65535 — anything else exits with usage code 64. If the port is already bound, `dev` exits with code 69.
+The server binds `127.0.0.1` only. Without `--port`, `dev` uses the first free port from 4321 upward and prints the URL. `--port` must be an integer between 1 and 65535, and anything else exits with usage code 64. If the requested port is already bound, `dev` exits with code 69 instead of picking another.
+
+The site is served under your configured `base`. With `"base": "/catalog/"`, open `http://127.0.0.1:4321/catalog/`, not the bare origin.
+
+## Live reload
+
+`dev` watches the config file, every `path` source, `docs`, `css`, `publicDir` and `brand.logo`. After a short quiet period it rebuilds the inputs and Astro restarts in place. A failed rebuild prints the error and keeps serving the last good state. `url` and `git` sources are read again only when their config entry changes, or when you restart `dev`. Changing `base` respawns the Astro child on the same port.
 
 ## `--smoke`
 
@@ -34,14 +42,14 @@ If you omit both `--source` and `--config`, `dev` looks for `./catalog.config.js
 npx ocx-catalog dev --source ../my-index --smoke
 ```
 
-`--smoke` boots the server, waits for it to confirm it's listening, then shuts it down and exits. It proves the server *starts* — it does not render or check any page. Use it in CI as a cheap "does this config still boot" check, not as a substitute for a real build/render pass.
+`--smoke` boots the server, requests `<base>` and `<base>data/catalog/catalog.json`, then shuts it down and exits. Both must answer `200`, or `dev` exits `1` and names the failing path. It proves the home page and catalog data are served. It does not render or check any package or docs page. Use it in CI as a cheap "does this config still boot" check, not as a substitute for a real build.
 
 ## Stopping the server
 
-Without `--smoke`, `dev` runs until you press Ctrl-C. That sends `SIGINT`, which shuts down the forked VitePress worker process and disposes the scratch build root it was serving from.
+Without `--smoke`, `dev` runs until you press Ctrl-C. That sends `SIGINT`, which stops the Astro child process and removes the scratch build root it was serving from.
 
-`dev` runs the actual VitePress server in a forked child process rather than in the CLI's own process — VitePress's `createServer()` must never share a process with another Vite instance, which the CLI's own process could otherwise become depending on how it's invoked. See `src/build/dev.ts`'s header comment for the full reasoning.
+`dev` is a supervisor. The Astro dev server runs in a separate child process, and the CLI waits until the site answers before it prints the URL. See `src/build/dev.ts`'s header comment for the full reasoning.
 
 :::caution
-`ocx-catalog dev` never reads `_headers`. The mirror step still writes the file into the scratch tree, but nothing during a dev session interprets or applies it — there's no Cloudflare Pages/Netlify runtime behind Vite's dev server. Local preview does not exercise the sandboxing a real deployment depends on. See [Hosting and headers](../../ops/hosting-and-headers/) before choosing where to deploy.
+`ocx-catalog dev` never reads `_headers`. The mirror step still writes the file into the scratch tree, but nothing during a dev session interprets or applies it — there's no Cloudflare Pages or Netlify runtime behind the dev server. Local preview does not exercise the sandboxing a real deployment depends on. See [Hosting and headers](../../ops/hosting-and-headers/) before choosing where to deploy.
 :::

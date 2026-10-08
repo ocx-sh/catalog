@@ -3,6 +3,8 @@ title: "Configure sources"
 sidebar:
   order: 2
 ---
+<!-- doc_type: how-to -->
+<!-- doc_tier: everyday -->
 
 `sources[]` in `catalog.config.json` is a list of one or more places to read an OCX index from. This page covers the three source kinds, how to aggregate several indices into one catalog, and how labels are derived and kept unique.
 
@@ -153,6 +155,8 @@ A label is also the index's **public name**: it is what the catalog's index-scop
 is rejected when that index's roots are named `acme/…`; write `"label": "acme"`, or leave `label` out and let it derive. (A source with no package roots at all has nothing to disagree with, so an explicit label on an empty index is fine — its scope tab simply reads 0.)
 
 A non-root source's label also becomes the first segment of its packages' page URLs, so it may not equal a namespace the `root: true` source publishes — both would claim `/<that name>/**`. That pair fails the build too (`INDEX_NAMESPACE_COLLISION`).
+
+A label may not equal a name the build writes at the output root, such as `docs`, `_astro`, `sitemap-*`, a `publicDir` entry or the `brand.logo` file name. The same goes for every namespace the `root: true` source publishes. That fails with `INDEX_LABEL_RESERVED`. See [Reserved names](../../reference/config-schema/#reserved-names).
 
 Two sources resolving to the same final label — whether explicit, derived, or one of each — fails the build (`LABEL_CONFLICT`).
 

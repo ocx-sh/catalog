@@ -26,6 +26,6 @@
     "reference/cli/": "reference/cli/",
     "reference/config-schema/": "reference/config-schema/",
     "reference/output-layout/": "reference/output-layout/",
-    "reference/theme-tokens/": "reference/"
+    "reference/theme-tokens/": "how-to/customize-branding-and-docs/"
   }
 }

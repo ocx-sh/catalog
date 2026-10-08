@@ -6,6 +6,8 @@ sidebar:
 
 import { Tabs, TabItem } from '@astrojs/starlight/components';
 
+{/* doc_type: reference */}
+
 `catalog.config.json` configures one `@ocx-sh/catalog` deployment: data
 sources, branding, nav, and CI rendering. Validation is hand-rolled in
 `src/config/load.ts`, not `ajv`-driven; `src/config/schema/catalog.config.schema.json`
@@ -20,18 +22,20 @@ every place they diverge.
 | `$schema` | string | no | none | Editor/tooling pointer at the published JSON Schema. Never read at runtime. |
 | `configVersion` | number, `const 1` | no | `1` | Forward-compat discriminator. |
 | `sources` | array of source entry, `minItems: 1` | yes | — | One or more index sources this catalog renders. |
-| `brand` | object | yes | — | Site branding: title, wordmark, logo. |
-| `nav` | array of nav entry | no | none (no extra links) | Extra top-nav links, rendered after the built-in Docs entry when `docs` is set. |
-| `footer` | object | no | none (footer shows only `catalog json`) | Footer links — a dedicated key, not a reuse of `nav[]`; the footer's own link set isn't the header's. |
-| `docs` | string | no | none (no docs mount) | Single docs directory, resolved relative to the config file's directory; must stay inside it. |
-| `docsNav` | array of nav entry | no | one auto entry labelled `docs` at `/docs/` | Labelled entries for the docs-mount link(s) in the top nav, replacing that single auto entry. Requires `docs` to be set. Every `link` must be `/docs/` or start with it. |
-| `css` | string | no | none | Custom stylesheet, resolved relative to the config file's directory; must stay inside it. |
-| `publicDir` | string | no | none (no public assets copied) | Static assets directory, resolved relative to the config file's directory; must stay inside it. Copied verbatim into VitePress's `publicDir`, served at the site root. |
+| `brand` | object | yes, except under `chrome: "ocx"` | — | Site branding: title, wordmark, logo. Rejected under `chrome: "ocx"`. |
+| `nav` | array of nav entry | no | none (no extra links) | Extra top-nav links, rendered after the docs entries when `docs` is set. Links starting with `/` are joined onto `base`. Rejected under `chrome: "ocx"`. |
+| `footer` | object | no | none (no footer links) | Footer links. A dedicated key, not a reuse of `nav[]`. Links starting with `/` are joined onto `base`. Rejected under `chrome: "ocx"`. |
+| `docs` | string | no | none (no docs mount) | Single docs directory, resolved relative to the config file's directory. Must stay inside it. Mounted at `<base>docs/`. See [Docs mount](#docs-mount). |
+| `docsNav` | array of nav entry | no | one auto entry labelled `docs` at `/docs/` | Labelled entries for the docs-mount link(s) in the top nav, replacing that single auto entry. Requires `docs` to be set. Every `link` must be `/docs/` or start with it, and is joined onto `base`. |
+| `css` | string | no | none | Custom stylesheet, resolved relative to the config file's directory. Must stay inside it. Copied to the site root under its file name and linked from every page. It wins over the theme because every theme rule sits in a cascade layer. It has no stable selector contract. Its file name may not match a `publicDir` file or `brand.logo`. See [Stylesheet](#stylesheet). |
+| `publicDir` | string | no | none (no public assets copied) | Static assets directory, resolved relative to the config file's directory; must stay inside it. Copied verbatim into the site's public root, served at `base`. Its top-level entries become [reserved names](#reserved-names). |
 | `ci` | object | no | none | CI workflow rendering configuration for `ocx-catalog ci`. |
-| `siteUrl` | string | no | none (no sitemap, no `og:url`) | Deployment origin (e.g. `https://index.ocx.sh`); must be an absolute `http(s)` URL. |
+| `siteUrl` | string | no | none (no sitemap, no `og:url`) | Deployment URL (e.g. `https://index.ocx.sh`). Must be an absolute `http(s)` URL. Enables `sitemap-index.xml`, canonical and `og:url` tags, and a default `robots.txt`. A path in it is the default for `base`. |
 | `ownerUrl` | string | no | `https://github.com/{login}` | Owner-profile link template for the package page's `owners` row: an absolute `http(s)` URL containing `{login}` exactly once, e.g. `https://gitlab.com/{login}` (a self-hosted GitLab/Gitea works the same). The index does not say which forge its owner logins belong to, so this is deployment config. The login is URL-encoded into the template. |
 | `description` | string | no | none | Site-wide tagline/meta description, distinct from `brand.title`. |
-| `favicon` | string | no | none (no icon link) | Site-root-relative href for the browser-tab icon (e.g. `/favicon.svg`). Not a filesystem path — this package never reads it, only bakes it into rendered HTML. |
+| `favicon` | string | no | none (no icon link) | Href for the browser-tab icon. Either a catalog-root-relative path (e.g. `/favicon.svg`), joined onto `base` in the page, or an absolute `http(s)` URL, used as written. A root-relative path must name a file the build copies into the public root from `publicDir` or `brand.logo`, or the build fails with exit `65`. A `//host` value, a bare or relative file name, a `javascript:` value and any path with a dot segment fail with `INVALID_TYPE`. |
+| `base` | string | no | the path of `siteUrl`, else `/` | URL path prefix the site is served under. See [`base`](#base). |
+| `chrome` | `"neutral"` \| `"ocx"` | no | `"neutral"` | **Experimental.** Page chrome. See [`chrome`](#chrome). |
 
 Every string field above (and every string field in every sub-object below)
 carries `minLength: 1` in the schema; the loader mirrors this by rejecting an
@@ -59,9 +63,9 @@ recognize yet.
 
 | Field | Type | Required | Default | Meaning |
 |---|---|---|---|---|
-| `title` | string | yes | — | Site `<title>` / `og:site_name`. |
+| `title` | string | yes | — | Site `<title>` and `og:site_name`. |
 | `wordmark` | string | no | falls back to `title` in the header | Header wordmark — the text beside the logo/mark. Exists because the two are legitimately different strings (a `<title>` reads as prose, a wordmark is usually the deployment's own host). |
-| `logo` | string, local path only | no | the theme's built-in mark | Logo asset, resolved relative to the config file's directory; must stay inside it (`PATH_ESCAPE` otherwise). Copied into the site's public root and rendered in the header in place of the built-in mark. |
+| `logo` | string, local path only | no | the theme's built-in mark | Logo asset, resolved relative to the config file's directory. Must stay inside it (`PATH_ESCAPE` otherwise). Copied into the site's public root under its file name and rendered in the header in place of the built-in mark. Its file name becomes a [reserved name](#reserved-names). |
 
 `brand` is closed: any key other than `title`/`wordmark`/`logo` is
 `UNKNOWN_KEY`.
@@ -83,8 +87,15 @@ which a spec-conformant parser resolves to a different origin. A
 `javascript:`/`data:` value, or any link that escapes the site's own origin,
 is rejected at config load, not just sanitized at render time — this config
 can be fork-PR-authored for a corporate mirror, and there is no render-time
-second line of defense (the theme's header/footer components bind this
-value straight to `:href`).
+second line of defense (the theme's header and footer components render this
+value as an `href`).
+
+A link with a dot segment (`.`, `..` or an encoded `%2e`) is rejected at load,
+because the renderer cannot join it onto `base`. A link that starts with `/` is
+joined onto `base` when the page renders.
+Write it relative to the catalog root, such as `/status`, and it becomes
+`/catalog/status` under `"base": "/catalog/"`. Absolute `http(s)` links are
+left as written.
 
 `nav` entries are closed: any key other than `text`/`link` is `UNKNOWN_KEY`.
 
@@ -98,11 +109,10 @@ value straight to `:href`).
 |---|---|---|---|
 | `links` | array of nav entry | yes | Footer links, same shape and `assertSafeNavLink` validation as `nav[]`. |
 
-`footer` is closed: any key other than `links` is `UNKNOWN_KEY`. This key
-replaced `SiteFooter.vue`'s old behaviour of reading `theme.nav` directly —
-a mirror that configures `nav[]` for its header no longer gets those same
-links repeated in its footer; it needs its own `footer.links[]`. Omitting
-`footer` entirely leaves the footer showing only its `catalog json` link.
+`footer` is closed: any key other than `links` is `UNKNOWN_KEY`. A mirror that
+configures `nav[]` for its header does not get those links repeated in its
+footer. It needs its own `footer.links[]`. Omitting `footer` renders no
+footer links.
 
 ## `docsNav[]`
 
@@ -131,8 +141,10 @@ not a second implementation):
 - `docsNav` present without `docs` configured is `INVALID_TYPE` — it would
   point at a mount that doesn't exist.
 
-Omitting `docsNav` (with `docs` set) keeps today's behaviour exactly: one
-auto entry labelled `docs` pointing at `/docs/`.
+Omitting `docsNav` (with `docs` set) gives one auto entry labelled `docs`
+pointing at `/docs/`. That link leads to a page only when the docs tree has a
+`docs/index.md`, so name real pages in `docsNav` if it has none. Each `link` is
+joined onto `base`.
 
 ## `ci`
 
@@ -221,6 +233,131 @@ whose `protocol` isn't literally `https:`.
 | At most one entry may set `default: true` | `MULTIPLE_DEFAULT` | yes (same shape — both live inside `allOf`, since one schema object can hold only one `contains`) |
 | Two entries must not declare the same explicit `label` | `LABEL_CONFLICT` | **no** — array-element uniqueness keyed on an optional field isn't expressed in the schema at all; loader-only |
 
+## `base`
+
+`base` is the URL path prefix the site is served under. It is a leading and
+trailing `/` with segments of letters, digits, `.`, `_` and `-`. No segment may
+be `.` or `..`. Valid values are `/` and `/catalog/`. The schema expresses the
+shape as a `pattern`, and the loader checks it again.
+
+```json
+{ "base": "/catalog/", "siteUrl": "https://ocx.sh/catalog/" }
+```
+
+The default comes from `siteUrl`. When `siteUrl` carries a path, that path is
+the `base`. When it is an origin only, or absent, the default is `/`. An
+explicit `base` beside an origin-only `siteUrl` is always legal.
+
+When both carry a path, they must be equal. The schema cannot compare two
+fields, so only the loader enforces this.
+
+What `base` changes in the output:
+
+- Every page link, asset URL and client-side data fetch carries the prefix.
+- `nav[]`, `footer.links[]` and `docsNav[]` links that start with `/` are
+  joined onto it.
+- `favicon` and the `css` file are joined onto it when a page links them.
+- Every pattern in `_headers` is prefixed with it.
+- `ocx-catalog dev` serves under it.
+
+The files themselves land at the same paths under `--out` for every `base`.
+Your host decides where that tree is mounted. See
+[Output layout](../output-layout/) and [Hosting and headers](../../ops/hosting-and-headers/).
+
+## `chrome`
+
+:::caution[Experimental]
+`chrome` is experimental and exists for the ocx.sh deployment. Its output can
+change between releases without a deprecation period.
+:::
+
+`chrome` selects the page header and footer.
+
+| Value | Header and footer | `brand` | `nav`, `footer`, `docsNav` |
+|---|---|---|---|
+| `"neutral"` (default) | The mirror's own, from `brand`, `nav`, `footer` and `docsNav` | Required | Optional |
+| `"ocx"` | The ocx.sh shell owns both | Rejected | Rejected |
+
+Under `"ocx"`, naming `brand`, `nav`, `footer` or `docsNav` fails with
+`CHROME_OCX_CONFLICT`. The shell also supplies a `favicon.svg` at the site root
+unless your `publicDir` ships one. Any value other than the two is
+`INVALID_TYPE`.
+
+## Docs mount
+
+`docs` points at a directory of Markdown that the build mounts at
+`<base>docs/`. The mount follows these rules:
+
+- Only `**/*.md` files are mounted. `.mdx` files and dot-files are skipped.
+- The page URL is the path without `.md`, so `guide/install.md` becomes
+  `<base>docs/guide/install/`. An `index.md` serves its directory, so
+  `docs/index.md` is `<base>docs/` and `guide/index.md` is `<base>docs/guide/`.
+  Two files that map to one route, such as `foo.md` and `foo/index.md`, fail
+  the build.
+- Each path segment may use letters, digits, `-`, `_` and `.`. Anything else
+  fails the build with exit `65`.
+- Frontmatter that is not valid YAML fails the build with exit `65`.
+- Frontmatter `title` (a string) names the page. Without it, the file name
+  does.
+- Frontmatter `order` (a number) sorts the page in the sidebar. Pages without
+  one sort last.
+- The sidebar groups pages by directory. Groups sort by name. Pages sort by
+  `order`, then title.
+- VitePress-only syntax is not interpreted. `::: details` blocks and `{#id}`
+  heading anchors render as plain text.
+- Fenced code blocks are not syntax-highlighted.
+- Headings get generated ids. Link to those ids, not to a custom anchor.
+- Links to pages are rewritten. A relative link, with or without `.md`,
+  resolves against its own file and becomes a directory route under `base`.
+  `index.md` maps to its directory, and `?query` and `#fragment` are kept.
+  A root-relative link such as `/docs/install/` gains `base`.
+- Left as written: external links, `//` links, `mailto:`, `#fragment`-only
+  links and relative links to non-page files. A link in raw HTML
+  (`<a href>`) is not rewritten.
+
+The source Markdown is never copied into the output. Docs are trusted
+content, rendered at build time. Review a docs change like code.
+
+## Stylesheet
+
+`css` is copied to the site root under its file name and linked from every
+page. Every theme rule sits inside a cascade layer, so any unlayered rule you
+write wins at any specificity, wherever the file is linked.
+
+The theme keeps no stable selector contract. Class names, element structure and
+`data-slot` attributes can change in any release. Only `:root` custom-property
+overrides are expected to survive an upgrade. See
+[Branding and docs mount](../../how-to/customize-branding-and-docs/#custom-stylesheet).
+
+## Reserved names
+
+The build writes several names at the top level of the output. A source
+label or a root-source namespace that equals one of them would claim the same
+path, so the build rejects it with `INDEX_LABEL_RESERVED`.
+
+| Reserved | Why |
+|---|---|
+| `p`, `index`, `c`, `config.json` | The mirrored wire trees and root config |
+| `data` | `data/catalog/catalog.json` |
+| `docs` | The docs mount |
+| `assets`, `public`, `_astro` | Static-site output directories |
+| `404` | The not-found page |
+| `pagefind` | The search bundle |
+| `robots.txt`, `_headers` | Files written at the root |
+| `sitemap-*` | Any name starting `sitemap-` (the sitemap files) |
+| `favicon*` | Any name starting `favicon`, in any format |
+| Each top-level entry of `publicDir` | Copied to the root |
+| The file name of `brand.logo` | Copied to the root |
+| The file name of `css` | Copied to the root |
+
+The comparison ignores case, because macOS and Windows treat `Docs` and `docs`
+as one directory. The check covers every non-root source label and every
+namespace the `root: true` source publishes. A root source's own label is
+exempt, because its packages keep bare routes.
+
+A 0.5.x config that loaded can fail here after an upgrade. Rename the index or
+move the namespace.
+
 ## Path containment
 
 Five fields are resolved relative to the config file's own directory and
@@ -234,9 +371,14 @@ This check is **lexical only** — `resolve()`/`relative()` string math, never
 config directory whose target resolves outside it passes this check despite
 the eventual read landing outside the directory. `loadConfig` never reads
 `docs`/`css`/`publicDir`/`brand.logo`/`path` off disk itself, so this is out
-of scope for the loader; the source-reading layer that does read them
-independently re-verifies containment per file (see
-[Output layout](../output-layout/)).
+of scope for the loader.
+
+The later reads differ. Only `path` and `git` sources are re-verified with
+`realpath`, per file, by the source readers (`src/sources/path.ts`). The build
+copies `publicDir`, `brand.logo` and `css`, and reads `docs`, with the lexical
+check above as their only containment test. Do not place a symlink that
+points outside the config directory in any of them. See
+[Security and trust model](../../explanation/security-and-trust-model/#digest-verification-and-realpath-re-checks).
 
 `ownerUrl` sits between the two: the schema's `pattern` expresses "absolute
 `http(s)` URL with `{login}` exactly once", so a missing placeholder, a
@@ -301,7 +443,9 @@ schema and loader.
   "siteUrl": "https://index.ocx.sh",
   "ownerUrl": "https://gitlab.com/{login}",
   "description": "The public OCX package index.",
-  "favicon": "/favicon.svg"
+  "favicon": "/favicon.svg",
+  "base": "/",
+  "chrome": "neutral"
 }
 ```
 
@@ -329,3 +473,7 @@ that loads a config (`build`, `dev`, `ci`) maps every one of them to exit
 | `MULTIPLE_DEFAULT` | More than one `sources[]` entry sets `default: true`. |
 | `LABEL_CONFLICT` | Two `sources[]` entries declare the same explicit `label`. |
 | `PATH_ESCAPE` | A `css`/`docs`/`publicDir`/`brand.logo`/`path` value resolves outside the config file's directory. |
+| `BASE_INVALID` | `base`, or the path of `siteUrl` as its default, is not a canonical URL path prefix. |
+| `BASE_SITEURL_MISMATCH` | `base` and the path of `siteUrl` both carry a path and differ. |
+| `CHROME_OCX_CONFLICT` | `chrome: "ocx"` is combined with `brand`, `nav`, `footer` or `docsNav`. |
+| `OUT_DIR_OVERLAPS_INPUT` | The output directory equals or contains a configured input, or lies inside `docs` or `publicDir`. Raised by `build` and `dev`, not by `loadConfig`. |

@@ -4,6 +4,8 @@ sidebar:
   label: Overview
   order: 0
 ---
+<!-- doc_type: landing -->
+<!-- doc_tier: everyday -->
 
 Task-shaped guides. Each one answers a single question and links out rather
 than repeating another page.
@@ -18,3 +20,5 @@ than repeating another page.
 - [Preview locally](preview-locally-with-dev/) — `ocx-catalog dev`.
 - [Branding and docs mount](customize-branding-and-docs/) — brand, CSS
   tokens, nav, and the `docs` mount.
+- [Upgrade to 0.6](upgrade-to-0-6/) — the twelve changes a 0.5.x consumer
+  must act on.

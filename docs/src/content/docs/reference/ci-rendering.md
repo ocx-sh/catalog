@@ -3,6 +3,7 @@ title: "CI rendering"
 sidebar:
   order: 3
 ---
+<!-- doc_type: reference -->
 
 What `ocx-catalog ci [--check]` emits and the rules it enforces
 (`src/ci/`). This is a reference to the mechanics — for a worked setup, see
@@ -60,11 +61,11 @@ pins at all.
 
 Defaults, used when there's nothing to carry forward:
 
-| Action | Default pin |
-|---|---|
-| `actions/checkout` | `34e114876b0b11c390a56381ad16ebd13914f8d5` (`v4.3.1`) |
-| `actions/setup-node` | `820762786026740c76f36085b0efc47a31fe5020` (`v7.0.0`) |
-| `oven-sh/setup-bun` | `0c5077e51419868618aeaa5fe8019c62421857d6` (`v2.2.0`) |
+| Action | Default pin | Used when |
+|---|---|---|
+| `actions/checkout` | `34e114876b0b11c390a56381ad16ebd13914f8d5` (`v4.3.1`) | Always |
+| `actions/setup-node` | `820762786026740c76f36085b0efc47a31fe5020` (`v7.0.0`) | Always. Node 22 is set for both package managers, and `cache: npm` is added for `npm` only |
+| `oven-sh/setup-bun` | `0c5077e51419868618aeaa5fe8019c62421857d6` (`v2.2.0`) | `bun` only, after `actions/setup-node` |
 
 Two situations fall back to the default and warn on stderr instead of
 carrying a committed pin forward:
@@ -98,6 +99,13 @@ render cycle.
 | `forge` | `"github"` \| `"gitlab"` | required |
 | `packageManager` | `"npm"` \| `"bun"` | `"npm"` |
 | `verifyCi` | `boolean` | `true` |
+
+With `bun`, the GitHub workflow still runs `actions/setup-node` with Node 22,
+because the engine spawns `process.execPath` and `bun x ocx-catalog` follows
+the CLI's `node` shebang. Bun needs Node 22.13 or later too. The GitLab jobs use
+`node:22-alpine` for both managers, and `bun` adds `npm install -g bun@1`
+before `bun install --frozen-lockfile`. A render made before 0.6.0 that used
+`oven/bun:1` reports drift until you run `ocx-catalog ci` again.
 
 `packageManager` is a closed union — any other value fails config loading
 rather than rendering CI that fails at its own install step. `verifyCi:

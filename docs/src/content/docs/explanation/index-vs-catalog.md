@@ -3,6 +3,7 @@ title: "Index vs. catalog"
 sidebar:
   order: 1
 ---
+<!-- doc_type: explanation -->
 
 An **index** and this **catalog** renderer are two different things owned by
 two different projects, and almost every question about what this package
@@ -36,7 +37,7 @@ an index can be sparse and static-hostable at all.
 
 `@ocx-sh/catalog` is a renderer, not a producer. Point it at one or more
 indices — a local directory, an HTTPS endpoint, or a git repository — and it
-builds a static [VitePress](https://vitepress.dev)-based site around them: a
+builds a static [Astro](https://astro.build)-based site around them: a
 package grid, per-package detail pages, search, an optional docs mount. It
 never writes to an index and never invents index data; every fact on a
 rendered page traces back to a file a configured source handed it.

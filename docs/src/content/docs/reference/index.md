@@ -4,6 +4,8 @@ sidebar:
   label: Overview
   order: 0
 ---
+<!-- doc_type: landing -->
+<!-- doc_tier: everyday -->
 
 Exact surfaces, transcribed from the implementation.
 

@@ -4,6 +4,8 @@ sidebar:
   label: Overview
   order: 0
 ---
+<!-- doc_type: landing -->
+<!-- doc_tier: everyday -->
 
 Background for decisions that look arbitrary until you know why.
 

@@ -3,6 +3,7 @@ title: "Multi-source model"
 sidebar:
   order: 2
 ---
+<!-- doc_type: explanation -->
 
 A `catalog.config.json` can list more than one `sources[]` entry — one
 `index.ocx.sh`, one corporate mirror, one local directory for testing —
@@ -23,7 +24,7 @@ still lands in full under its own label prefix.
 ## One merged grid catalog
 
 `resolveCatalog()` (`src/build/sources_pipeline.ts`) builds the single
-`/data/catalog/catalog.json` the theme's `useCatalog.ts` fetches, by walking
+`/data/catalog/catalog.json` the site's client-side code fetches, by walking
 every source **in `sources[]` config order** and keeping every package each
 one publishes.
 
@@ -70,7 +71,7 @@ packages it contributes after the merge:
 ```
 
 `excludeFromAll` is the source's own flag, passed through: when `true`, the
-theme's `all` tab omits that index's packages (its own tab and routes are
+site's `all` tab omits that index's packages (its own tab and routes are
 unaffected). `root` and `default` answer different questions, and a config sets them
 independently:
 
@@ -89,7 +90,7 @@ is served at the site root, every route is qualified — and one of the indexes
 is still the one an arriving visitor should land on. `root: true` cannot say
 that without also moving every URL.
 
-It is written for **every** catalog, one source included — the theme needs it
+It is written for **every** catalog, one source included — the site needs it
 to resolve a package's route, and a single non-root source has qualified
 routes just as an aggregating one does. "This deployment aggregates nothing,
 so show no scope control" is then one fact about the data (`indexes` has a
@@ -101,8 +102,8 @@ The `root: true` source's packages keep the bare path they have always had:
 
 | source | qualified name | route |
 |---|---|---|
-| `root: true` | `ocx.sh/hashicorp/terraform` | `/hashicorp/terraform` |
-| any other | `corp.example/platform/deploy-kit` | `/corp.example/platform/deploy-kit` |
+| `root: true` | `ocx.sh/hashicorp/terraform` | `/hashicorp/terraform/` |
+| any other | `corp.example/platform/deploy-kit` | `/corp.example/platform/deploy-kit/` |
 
 Note that this table reads `root`, never `default`: marking an index default
 changes which tab opens, never where a page lives.

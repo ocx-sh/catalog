@@ -4,6 +4,9 @@ title: "OCX Catalog"
 
 import { CardGrid, LinkCard } from '@astrojs/starlight/components';
 
+{/* doc_type: landing */}
+{/* doc_tier: first-steps */}
+
 `@ocx-sh/catalog` renders one or more **OCX package indices** into a browsable
 static site: a package grid, per-package detail pages with README, platforms,
 versions and install commands, client-side search, and an optional docs section.
@@ -14,10 +17,10 @@ already there. It never writes to an index and never invents index data. See
 [Index vs. catalog](explanation/index-vs-catalog/) for where that line sits.
 
 :::caution[Read this before you pick a host]
-A generated catalog site only works when it is served from a **domain
-root**, and the security headers it emits are honoured by Cloudflare Pages
-and Netlify only. Both facts are load-bearing for GitHub Pages and GitLab
-Pages deployments — see [Known limitations](ops/known-limitations/) and
+A build works under one URL prefix, set with `base`. The security headers it
+emits are honoured by Cloudflare Pages and Netlify only. Both facts matter
+for GitHub Pages, GitLab Pages and Bunny deployments. See
+[Known limitations](ops/known-limitations/) and
 [Hosting and headers](ops/hosting-and-headers/).
 :::
 
@@ -54,18 +57,17 @@ Pages deployments — see [Known limitations](ops/known-limitations/) and
 ## Install
 
 ```sh
-npm install --save-dev @ocx-sh/catalog vitepress vue
+npm install --save-dev @ocx-sh/catalog
 ```
 
-Node.js `>=20.19`. `vitepress` and `vue` are peer dependencies — this package
-plugs a theme into your own VitePress install rather than bundling one. Then
-work through the [Quickstart](how-to/quickstart/).
+Node.js `>=22.13`. The package bundles its renderer, so there are no peer
+dependencies to install. Then work through the [Quickstart](how-to/quickstart/).
+
+Upgrading from 0.5? Read [Upgrade to 0.6](how-to/upgrade-to-0-6/) first.
 
 ## The rest of the documentation
 
-| Section | What is in it |
-|---|---|
-| [How-To](how-to/) | Task-shaped guides: quickstart, sources, deploys, local preview, branding |
-| [Reference](reference/) | Exhaustive: CLI flags and exit codes, config schema, CI rendering, output layout |
-| [Explanation](explanation/) | Why the design is the way it is: ownership, multi-source, security model |
-| [Ops](ops/) | Limitations, host selection, troubleshooting |
+- [How-To](how-to/) covers task-shaped guides: quickstart, sources, deploys, local preview and branding.
+- [Reference](reference/) lists CLI flags and exit codes, the config schema, CI rendering and the output layout.
+- [Explanation](explanation/) covers why the design is the way it is: ownership, multi-source and the security model.
+- [Ops](ops/) covers limitations, host selection and troubleshooting.

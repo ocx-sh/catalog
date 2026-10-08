@@ -3,6 +3,7 @@ title: "Security and trust model"
 sidebar:
   order: 3
 ---
+<!-- doc_type: explanation -->
 
 A configured source is third-party data, not a trusted input. The build
 reads it, and the published site then serves it same-origin, to every
@@ -100,10 +101,16 @@ mirrored source.
 
 ## How a README is rendered
 
-A package's README is Markdown from a third party, rendered in the visitor's
-browser with raw HTML **disabled**: an HTML tag in a README is shown as
-escaped text, never parsed, and the result passes through a sanitizer before
-it reaches the page. Two conveniences work without enabling raw HTML:
+A package's README is Markdown from a third party. The build renders it to
+HTML with raw HTML **disabled**: an HTML tag in a README is shown as escaped
+text, never parsed. The result then passes through a sanitizer before it is
+written into the page, so no README is rendered in the visitor's browser.
+
+The sanitizer also applies a link policy. Only absolute `http(s)` and
+`mailto:` links and `#fragment` links survive. Any other link becomes its
+text. Only absolute `http(s)` images survive, and other images are dropped.
+Relative paths would resolve against the catalog's own host, so they are
+never kept. Two conveniences work without enabling raw HTML:
 
 - **HTML comments are dropped.** `<!-- … -->` (single- or multi-line, block
   or inline) is removed silently, as GitHub does, instead of showing up as
