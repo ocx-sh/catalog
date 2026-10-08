@@ -1,7 +1,9 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "lib": ["ES2022"],
+    // DOM: src/site/lib holds browser-side logic shared with the theme (dom.ts,
+    // sanitize.ts, …); the CLI code never touches it.
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "rootDir": "src",

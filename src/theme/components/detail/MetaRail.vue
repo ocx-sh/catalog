@@ -3,17 +3,19 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useData } from 'vitepress'
 import { useClipboard, useLocalStorage } from '@vueuse/core'
 import { useToast } from '../../composables/useToast'
-import { safeHref } from '../../utils/safeHref'
-import { ownerProfileUrl } from '../../utils/ownerUrl'
+import { safeHref } from '../../../site/lib/safeHref'
+import { ownerProfileUrl } from '../../../site/lib/ownerUrl'
 import PlatformMatrix from './PlatformMatrix.vue'
 import CopyIcon from '../shared/CopyIcon.vue'
 import { SelectRoot, SelectTrigger, SelectPortal, SelectContent, SelectViewport, SelectItem, SelectItemText } from 'reka-ui'
-import CopyContextMenu, { buildTagCopyActions, type CopyAction } from '../shared/CopyContextMenu.vue'
+import CopyContextMenu from '../shared/CopyContextMenu.vue'
+import { buildTagCopyActions, type CopyAction } from '../../../site/lib/copyActions'
 import ExternalIcon from '../shared/ExternalIcon.vue'
-import { installCommand, useInstallFlavors, type InstallIcon } from '../../composables/useInstallFlavors'
-import { parseTag, type VersionTable } from '../../utils/version'
-import type { Owner, PackageRoot } from '../../composables/usePackageRoot'
-import { ownerLogin } from '../../composables/usePackageRoot'
+import { useInstallFlavors } from '../../composables/useInstallFlavors'
+import { installCommand, type InstallIcon } from '../../../site/lib/installFlavors'
+import { type VersionTable } from '../../../site/lib/version'
+import { buildVersionOptions, pickVersionOption, type PinLevel } from '../../../site/lib/pinLevel'
+import { ownerLogin, type Owner, type PackageRoot } from '../../../site/lib/wireTypes'
 import type { ImageIndex } from '../../composables/useImageIndex'
 import type { CatalogPackageDetail } from '../../../viewmodel/types.js'
 
@@ -23,7 +25,7 @@ const props = defineProps<{
    * deployment's own schema uses, see `subsystem-sources.md`'s labels.ts
    * note), safe for CLI command strings directly (unlike CAS URLs). */
   qualifiedName: string
-  /** Default row's primary tag (`utils/version.ts`'s `buildVersionTable`
+  /** Default row's primary tag (`site/lib/version.ts`'s `buildVersionTable`
    * output) — `null` when the package has no live tag at all. */
   primaryTag: string | null
   latestVersionLabel: string | null
@@ -60,46 +62,9 @@ const activeRow = computed(
   () => rows.value.find(r => (r.variant ?? DEFAULT_VARIANT) === variantValue.value) ?? rows.value[0] ?? null,
 )
 
-// Granularity per alias-chain member, derived from the tag itself: depth 0
-// is `latest` (default variant) or the bare variant name (rolling); then
-// major ("3"), minor ("3.31"), patch ("3.31.7"), and a build/prerelease-
-// qualified tag is the fully pinned one. The DEEPEST member of a chain
-// always displays as "pinned" regardless of its depth (owner spec: only
-// when a build tag exists too does the plain patch tag show as "patch" —
-// no duplicate "pinned" labels).
-type PinLevel = 'latest' | 'rolling' | 'major' | 'minor' | 'patch' | 'pinned'
-const LEVEL_RANK: Record<PinLevel, number> = { latest: 0, rolling: 0, major: 1, minor: 2, patch: 3, pinned: 4 }
-
-function depthLevel(tag: string): PinLevel {
-  const parsed = parseTag(tag)
-  if (parsed.kind === 'latest') return 'latest'
-  if (parsed.kind === 'other') return 'rolling'
-  const v = parsed.version
-  if (v.minor === null) return 'major'
-  if (v.patch === null) return 'minor'
-  if (v.prerelease === null && v.build === null) return 'patch'
-  return 'pinned'
-}
-
-interface VersionOption {
-  tag: string
-  /** Real depth rank — preference matching works on this. */
-  rank: number
-  /** Displayed label — the deepest option always reads "pinned". */
-  label: PinLevel
-}
-
-const versionOptions = computed<VersionOption[]>(() => {
-  const opts = (activeRow.value?.aliasChain ?? []).map((m) => {
-    const level = depthLevel(m.tag)
-    return { tag: m.tag, rank: LEVEL_RANK[level], label: level }
-  })
-  if (opts.length) {
-    const deepest = opts.reduce((a, b) => (b.rank >= a.rank ? b : a))
-    deepest.label = 'pinned'
-  }
-  return opts
-})
+// Granularity per alias-chain member (`site/lib/pinLevel.ts`): the DEEPEST
+// member of a chain always displays as "pinned" regardless of its depth.
+const versionOptions = computed(() => buildVersionOptions(activeRow.value?.aliasChain ?? []))
 
 const selectedTag = ref<string | null>(null)
 
@@ -112,20 +77,9 @@ const selectedTag = ref<string | null>(null)
 const pinPreference = useLocalStorage<PinLevel>('ocx-install-pin', 'latest')
 
 function applyPinPreference() {
-  const opts = versionOptions.value
-  if (!opts.length) {
-    selectedTag.value = activeRow.value?.primaryTag ?? null
-    return
-  }
-  // Most-fitting match by depth rank: nearest to the preferred level, ties
-  // resolved toward the deeper option (a "pinned" preference on a chain
-  // ending at patch still lands on that deepest tag; a "patch" preference
-  // with no patch tag prefers the pinned build over the looser minor).
-  const target = LEVEL_RANK[pinPreference.value]
-  const best = [...opts].sort(
-    (a, b) => Math.abs(a.rank - target) - Math.abs(b.rank - target) || b.rank - a.rank,
-  )[0]!
-  selectedTag.value = best.tag
+  // Most-fitting match by depth rank (`pickVersionOption`); a chain with no
+  // live alias member falls back to the row's own primary tag.
+  selectedTag.value = pickVersionOption(versionOptions.value, pinPreference.value)?.tag ?? activeRow.value?.primaryTag ?? null
 }
 
 onMounted(applyPinPreference)
@@ -214,7 +168,7 @@ const owners = computed(() => props.root.owners)
 // Owner profile links are the page's `frontmatter.ownerUrl` (the source's
 // `sources[].ownerUrl`) else `themeConfig.ownerUrl` (config `ownerUrl`, a
 // `{login}` template; absent -> `https://github.com/{login}`) around
-// wire-sourced username text. `utils/ownerUrl.ts` owns the substitution and
+// wire-sourced username text. `site/lib/ownerUrl.ts` owns the substitution and
 // routes the result through `safeHref` (C-605), so this is not the one
 // wire-adjacent href on the page that skips it.
 //
@@ -238,7 +192,7 @@ function ownerHref(owner: Owner): string | null {
 
 // `upstream.repository_url` is third-party metadata (wire-sourced, not
 // authored here) — allowlist the scheme before it ever reaches an `:href`
-// (CWE-79 guard, see `utils/safeHref.ts`). `null` degrades to plain text.
+// (CWE-79 guard, see `site/lib/safeHref.ts`). `null` degrades to plain text.
 const safeUpstreamUrl = computed(() => safeHref(props.root.upstream?.repository_url))
 
 // `source` = the repo whose CI built the artifacts. Two independent

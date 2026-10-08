@@ -2,7 +2,8 @@
 import { computed } from 'vue'
 import { useCopyState } from '../../composables/useCopyState'
 import { useToast } from '../../composables/useToast'
-import { installCommand, useInstallFlavors } from '../../composables/useInstallFlavors'
+import { useInstallFlavors } from '../../composables/useInstallFlavors'
+import { installCommand } from '../../../site/lib/installFlavors'
 import CopyIcon from '../shared/CopyIcon.vue'
 
 const props = defineProps<{

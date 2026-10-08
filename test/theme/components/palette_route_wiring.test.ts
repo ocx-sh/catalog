@@ -3,7 +3,7 @@
 // Owner finding: every package link in the ⌘K palette 404'd on a multi-index
 // catalog. `SearchModal.vue` built `/<ns>/<pkg>` by hand while
 // `build/sources_pipeline.ts` writes a non-root index's pages under their
-// index name — the exact rule `utils/packageRoute.ts` exists to hold, and
+// index name — the exact rule `site/lib/packageRoute.ts` exists to hold, and
 // which `PackageCard`/`PackageTable` already went through.
 //
 // The palette had never been mounted by any test: `@localSearchIndex` is a

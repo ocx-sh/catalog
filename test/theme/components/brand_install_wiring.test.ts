@@ -26,21 +26,12 @@ const InstallRow = (await import("../../../src/theme/components/catalog/InstallR
 const MetaRail = (await import("../../../src/theme/components/detail/MetaRail.vue")).default;
 const PackageCard = (await import("../../../src/theme/components/catalog/PackageCard.vue")).default;
 const IdentityBlock = (await import("../../../src/theme/components/detail/IdentityBlock.vue")).default;
-const { buildTagCopyActions } = await import("../../../src/theme/components/shared/CopyContextMenu.vue");
-const { DEFAULT_INSTALL_FLAVORS } = await import("../../../src/theme/composables/useInstallFlavors.js");
 
 /** A rebranded deployment: its own wordmark + logo (the CLI name itself is
- * fixed theme content, not configurable — see `useInstallFlavors.ts`). */
+ * fixed theme content, not configurable — see `site/lib/installFlavors.ts`). */
 const ACME_THEME = {
   brand: { title: "Acme Packages", wordmark: "packages.acme.example", logo: "/acme-logo.svg" },
 }
-
-/** A non-default set of install flavors, for `buildTagCopyActions`'s own
- * generic behavior — unrelated to config since `install[]` was removed. */
-const CUSTOM_FLAVORS = [
-  { label: "Vendor it", command: "acme vendor {name}", icon: "project" as const },
-  { label: "Add globally", command: "acme --global add {name}", icon: "global" as const },
-];
 
 const ROOT = {
   name: "ocx.sh/kitware/cmake",
@@ -146,30 +137,6 @@ describe("install wiring — detail install grid (MetaRail)", () => {
   });
 });
 
-describe("install wiring — copy context menu", () => {
-  test("carries one command item per flavor, after the copy actions", () => {
-    const actions = buildTagCopyActions("ocx.sh/kitware/cmake", "3.31.7", CUSTOM_FLAVORS);
-    expect(actions.map((a) => a.label)).toEqual([
-      "Copy identifier",
-      "Copy tag",
-      "Copy link",
-      "Vendor it",
-      "Add globally",
-    ]);
-    expect(actions.at(-1)?.command).toBe("acme --global add ocx.sh/kitware/cmake:3.31.7");
-  });
-
-  test("built-in flavors reproduce the default command set", () => {
-    const actions = buildTagCopyActions("ocx.sh/kitware/cmake", null, DEFAULT_INSTALL_FLAVORS);
-    expect(actions.filter((a) => !a.label.startsWith("Copy ")).map((a) => a.command)).toEqual([
-      "ocx add ocx.sh/kitware/cmake",
-      "ocx --global add ocx.sh/kitware/cmake",
-      "ocx package exec ocx.sh/kitware/cmake",
-      "ocx package install ocx.sh/kitware/cmake",
-    ]);
-  });
-});
-
 // C-601: a corporate-mirror deployment's own index carries its own brand
 // token in `root.name` (e.g. `acme.example/<ns>/<pkg>`, not `ocx.sh/...`).
 // Every surface below used to strip a hardcoded `ocx.sh/` and re-synthesize
@@ -189,31 +156,6 @@ describe("C-601 mirror-agnostic install / copy-link", () => {
     }).html();
     expect(html).toContain("acme.example/widgets/tool");
     expect(html).not.toContain("ocx.sh/");
-  });
-
-  // Copy-link used to DERIVE the route by stripping the qualified name's
-  // first segment. That held only while every package sat at a bare
-  // `<ns>/<pkg>` route; a non-root index's package is served at
-  // `/<index>/<ns>/<pkg>`, so the route is no longer a function of the name
-  // and the owner of the link passes it in.
-  test("buildTagCopyActions' Copy-link uses the route it is given, brand token and all", () => {
-    for (const [qualifiedName, routePath] of [
-      ["ocx.sh/kitware/cmake", "/kitware/cmake"],
-      ["acme.example/widgets/tool", "/acme.example/widgets/tool"],
-    ]) {
-      const actions = buildTagCopyActions(qualifiedName, null, [], routePath);
-      const copyLink = actions.find((a) => a.label === "Copy link");
-      expect(copyLink?.command).toBe(`${window.location.origin}${routePath}`);
-    }
-  });
-
-  // The detail page's own menus (MetaRail/VersionTree/TagBadge) pass no
-  // route: the page being viewed IS the package, so its own URL is the link
-  // and there is nothing to derive.
-  test("buildTagCopyActions' Copy-link falls back to the current page's own URL", () => {
-    const actions = buildTagCopyActions("acme.example/widgets/tool", null, []);
-    const copyLink = actions.find((a) => a.label === "Copy link");
-    expect(copyLink?.command).toBe(`${window.location.origin}${window.location.pathname}`);
   });
 });
 
@@ -241,7 +183,7 @@ describe("no hardcoded brand or CLI name in the theme's own source", () => {
     for (const relPath of [
       "src/theme/components/detail/MetaRail.vue",
       "src/theme/components/catalog/InstallRow.vue",
-      "src/theme/components/shared/CopyContextMenu.vue",
+      "src/site/lib/copyActions.ts",
     ]) {
       const source = sourceWithoutComments(relPath);
       expect(source, relPath).toContain("installCommand(");
@@ -251,7 +193,7 @@ describe("no hardcoded brand or CLI name in the theme's own source", () => {
   });
 
   test("the built-in CLI name lives in exactly one module", () => {
-    const source = sourceWithoutComments("src/theme/composables/useInstallFlavors.ts");
+    const source = sourceWithoutComments("src/site/lib/installFlavors.ts");
     expect(source).toMatch(/['"`]ocx add \{name\}['"`]/);
   });
 
@@ -266,6 +208,7 @@ describe("no hardcoded brand or CLI name in the theme's own source", () => {
       "src/theme/components/catalog/InstallRow.vue",
       "src/theme/components/detail/IdentityBlock.vue",
       "src/theme/components/shared/CopyContextMenu.vue",
+      "src/site/lib/copyActions.ts",
     ]) {
       expect(sourceWithoutComments(relPath), relPath).not.toContain("ocx.sh/");
     }

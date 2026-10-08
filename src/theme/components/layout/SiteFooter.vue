@@ -2,7 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useData } from 'vitepress'
 import { useCatalog } from '../../composables/useCatalog'
-import { isExternalLink } from '../../utils/dom'
+import { isExternalLink } from '../../../site/lib/dom'
 
 // Site-wide footer (owner finding, grimoire-index precedent): policy line +
 // raw-data pointer + the catalog freshness stamp, which lived awkwardly in

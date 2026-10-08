@@ -1,15 +1,8 @@
 import { computed, nextTick, ref, shallowRef, toValue, watch, type MaybeRefOrGetter } from 'vue'
 import { useIntersectionObserver } from '@vueuse/core'
+import { nextWindowLimit, WINDOW_SIZE, windowSlice } from '../../site/lib/windowing'
 
-/**
- * How many items the catalog builds at a time.
- *
- * 48 covers a tall viewport of either shape with room over: table rows are
- * ~40px, and the card grid is three or four across at the 300px minimum
- * track. Small enough that the first paint is cheap, large enough that a
- * reader on an ordinary screen never sees the second slice arrive.
- */
-export const WINDOW_SIZE = 48
+export { WINDOW_SIZE }
 
 /**
  * Renders a growing slice of a list rather than all of it.
@@ -56,7 +49,7 @@ export function useWindowedList<T>(source: MaybeRefOrGetter<readonly T[]>, size 
     limit.value = size
   })
 
-  const visible = computed(() => (limit.value >= all.value.length ? all.value : all.value.slice(0, limit.value)))
+  const visible = computed(() => windowSlice(all.value, limit.value))
   const hasMore = computed(() => visible.value.length < all.value.length)
 
   // `rootMargin` is what keeps this invisible in use: the next slice is built
@@ -67,17 +60,8 @@ export function useWindowedList<T>(source: MaybeRefOrGetter<readonly T[]>, size 
     (entries, observer) => {
       if (!entries.some((entry) => entry.isIntersecting)) return
       if (limit.value >= all.value.length) return
-      // Doubling, capped at eight slices: 48, 96, 192, 384, then +384. Every
-      // growth re-lays-out the whole table — its subgrid tracks are sized
-      // over every row, so an append near the bottom of 3000 rows is a
-      // ~700ms layout whether it adds 48 rows or 384. What a reader who
-      // scrolls the whole way pays is the NUMBER of those, and this takes it
-      // from 63 to 11. The cap keeps a single growth to a few hundred
-      // items, so no one step is a second-long freeze either.
-      // ponytail: still O(n) per growth past a couple of thousand rows —
-      // the upgrade is virtualization (unmounting what scrolled out), and the
-      // signal for it is this scroll costing seconds at a real index's size.
-      limit.value += Math.min(limit.value, size * 8)
+      // Doubling, capped at eight slices — see `nextWindowLimit`.
+      limit.value = nextWindowLimit(limit.value, size)
       // An IntersectionObserver reports TRANSITIONS, not states. Once the
       // slice is built the sentinel has moved down by the slice's height —
       // and if that is less than the margin (48 table rows are ~1900px, the

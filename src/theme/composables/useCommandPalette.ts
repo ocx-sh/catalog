@@ -1,6 +1,6 @@
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute } from 'vitepress'
-import { isEditableTarget } from '../utils/dom'
+import { isEditableTarget } from '../../site/lib/dom'
 
 // Module-singleton — `isOpen` is one shared ref so every consumer (the
 // SiteHeader trigger button, the global shortcut listener below, and

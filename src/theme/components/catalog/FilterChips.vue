@@ -6,7 +6,7 @@
 
 import { computed, ref } from 'vue'
 import { PopoverRoot, PopoverTrigger, PopoverPortal, PopoverContent } from 'reka-ui'
-import { OS_GLYPHS, OS_ORDER } from '../../utils/osGlyphs'
+import { OS_GLYPHS, OS_ORDER } from '../../../site/lib/osGlyphs'
 
 interface KeywordChip {
   keyword: string

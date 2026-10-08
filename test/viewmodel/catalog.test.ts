@@ -74,7 +74,7 @@ describe("catalogPlatforms", () => {
   // OCX's platform-agnostic platform is an ordinary `{os, architecture}`
   // descriptor whose both halves are "any" — nothing here special-cases it, so
   // it surfaces as `any/any`, the string the theme's `isPlatformAgnostic`
-  // (src/theme/utils/platformAgnostic.ts) recognises.
+  // (src/site/lib/platformAgnostic.ts) recognises.
   it("passes the platform-agnostic descriptor through as `any/any`", () => {
     const d = digest("any");
     const root = emptyRoot({

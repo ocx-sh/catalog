@@ -2,7 +2,7 @@
 //
 // WP-08 integration pin: ReadmePane must route markdown-it's output through
 // the sanitizer before it reaches `v-html`. The sanitizer itself is covered
-// exhaustively in `test/theme/utils/sanitize.test.ts`; this test exists so a
+// exhaustively in `test/site/lib/sanitize.test.ts`; this test exists so a
 // future refactor cannot quietly unwire the chokepoint — the failure mode
 // that made the module dead code for its first three rounds of review.
 //
@@ -23,7 +23,7 @@ const SOURCE = readFileSync(
   "utf8",
 );
 const MARKDOWN_SOURCE = readFileSync(
-  resolve(process.cwd(), "src/theme/utils/readmeMarkdown.ts"),
+  resolve(process.cwd(), "src/site/lib/readmeMarkdown.ts"),
   "utf8",
 );
 
@@ -31,11 +31,11 @@ describe("ReadmePane sanitizer wiring", () => {
   // C-606: the sanitizer (dompurify, ~29KB) moved from a static top-level
   // import into this component's existing dynamic-import group (alongside
   // markdown-it/highlight.js) so it leaves the grid entry chunk too — a
-  // static `import { sanitizeReadmeHtml } from '../../utils/sanitize'` must
+  // static `import { sanitizeReadmeHtml } from '../../../site/lib/sanitize'` must
   // never come back (that would re-widen the entry chunk this split shrinks).
   test("imports the sanitizer chokepoint dynamically, never statically", () => {
     expect(SOURCE).not.toMatch(/^\s*import\s*\{\s*sanitizeReadmeHtml\s*\}\s*from/m);
-    expect(SOURCE).toMatch(/import\(['"]\.\.\/\.\.\/utils\/sanitize['"]\)/);
+    expect(SOURCE).toMatch(/import\(['"]\.\.\/\.\.\/\.\.\/site\/lib\/sanitize['"]\)/);
     expect(SOURCE).toMatch(/\{\s*sanitizeReadmeHtml\s*\}/);
   });
 
@@ -55,13 +55,13 @@ describe("ReadmePane sanitizer wiring", () => {
   });
 
   // The markdown pipeline (markdown-it, highlight.js, markdown-it-emoji) is
-  // one lazy chunk behind `utils/readmeMarkdown`; a static import of it or
+  // one lazy chunk behind `site/lib/readmeMarkdown`; a static import of it or
   // of any of the three would pull them into the shared bundle (C-606), and
   // bypassing it would drop comment stripping and emoji.
   test("builds markdown through the lazily imported readmeMarkdown util, never statically", () => {
-    expect(SOURCE).toMatch(/import\(['"]\.\.\/\.\.\/utils\/readmeMarkdown['"]\)/);
+    expect(SOURCE).toMatch(/import\(['"]\.\.\/\.\.\/\.\.\/site\/lib\/readmeMarkdown['"]\)/);
     expect(SOURCE).toMatch(/createReadmeMarkdown\(\)/);
-    expect(SOURCE).not.toMatch(/^\s*import\s.*from\s+['"](?:markdown-it|highlight\.js|markdown-it-emoji|\.\.\/\.\.\/utils\/readmeMarkdown)/m);
+    expect(SOURCE).not.toMatch(/^\s*import\s.*from\s+['"](?:markdown-it|highlight\.js|markdown-it-emoji|\.\.\/\.\.\/\.\.\/site\/lib\/readmeMarkdown)/m);
     expect(SOURCE).not.toMatch(/new MarkdownIt/);
   });
 });

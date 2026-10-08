@@ -35,6 +35,7 @@
     "src/config/schema",
     "templates",
     "src/theme",
+    "src/site/lib",
     "src/viewmodel",
     "LICENSE",
     "README.md",

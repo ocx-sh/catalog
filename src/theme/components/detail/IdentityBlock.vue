@@ -3,10 +3,11 @@ import { computed } from 'vue'
 import { useCopyState } from '../../composables/useCopyState'
 import { useToast } from '../../composables/useToast'
 import { useImageFallback } from '../../composables/useImageFallback'
-import { casUrl, LOGO_EXT_CANDIDATES } from '../../utils/cas'
-import { monogramHue, monogramInitials } from '../../utils/monogram'
+import { casUrl, LOGO_EXT_CANDIDATES } from '../../../site/lib/cas'
+import { monogramHue, monogramInitials } from '../../../site/lib/monogram'
 import CopyIcon from '../shared/CopyIcon.vue'
-import CopyContextMenu, { buildTagCopyActions } from '../shared/CopyContextMenu.vue'
+import CopyContextMenu from '../shared/CopyContextMenu.vue'
+import { buildTagCopyActions } from '../../../site/lib/copyActions'
 import { useInstallFlavors } from '../../composables/useInstallFlavors'
 import type { PackageRoot } from '../../composables/usePackageRoot'
 
@@ -21,7 +22,7 @@ const props = defineProps<{
    * from the version table and shares it with MetaRail too. */
   latestVersionLabel: string | null
   /** Mount prefix of the source this package came from — see
-   * `utils/cas.ts`'s `wirePrefix`. Omitted for the `root: true` source. */
+   * `site/lib/cas.ts`'s `wirePrefix`. Omitted for the `root: true` source. */
   wireBase?: string
 }>()
 
@@ -43,7 +44,7 @@ const { toast } = useToast()
 const flavors = useInstallFlavors()
 const menuActions = computed(() => buildTagCopyActions(qualifiedDisplayName.value, null, flavors.value))
 
-// Logo fallback chain: svg -> png -> monogram tile (see utils/cas.ts's
+// Logo fallback chain: svg -> png -> monogram tile (see site/lib/cas.ts's
 // ponytail note on why extension guess-and-retry is needed at all) —
 // `useImageFallback` owns the shared retry-chain mechanics.
 const logoCandidates = computed(() =>

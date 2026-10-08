@@ -10,13 +10,14 @@ import {
   PopoverContent,
 } from 'reka-ui'
 import TagBadge from './TagBadge.vue'
-import CopyContextMenu, { buildTagCopyActions } from '../shared/CopyContextMenu.vue'
+import CopyContextMenu from '../shared/CopyContextMenu.vue'
+import { buildTagCopyActions } from '../../../site/lib/copyActions'
 import CopyIcon from '../shared/CopyIcon.vue'
 import { useCopyState } from '../../composables/useCopyState'
 import { useToast } from '../../composables/useToast'
 import { useInstallFlavors } from '../../composables/useInstallFlavors'
-import { minorGroupHasYanked, rowHasHiddenYanked } from '../../utils/version'
-import type { MajorGroup, MinorGroup, VariantRow, VersionTable } from '../../utils/version'
+import { minorGroupHasYanked, rowHasHiddenYanked } from '../../../site/lib/version'
+import type { MajorGroup, MinorGroup, VariantRow, VersionTable } from '../../../site/lib/version'
 
 // Relocated + reworked from `components/VersionTree.vue` (pre-redesign).
 // WP-D is the single owner of `buildVersionTable`'s redesign (plan
@@ -565,7 +566,7 @@ function onMinorHover(minor: MinorGroup) {
 
 /* Collapsed-state yank warning — the row/minor toggle's only passive signal
    that a yanked release is hidden underneath (see `rowHasHiddenYanked` /
-   `minorGroupHasYanked` in utils/version.ts). */
+   `minorGroupHasYanked` in site/lib/version.ts). */
 .expand-toggle.warn {
   color: var(--ocx-color-warning);
 }

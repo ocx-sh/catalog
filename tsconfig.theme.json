@@ -12,7 +12,9 @@
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "noEmit": true
   },
-  "include": ["src/theme"],
+  // src/site/lib is typechecked here too, under bundler resolution — the
+  // theme imports it extensionless, the CLI build under NodeNext (tsconfig.json).
+  "include": ["src/theme", "src/site/lib"],
   // Base tsconfig.json excludes src/theme (see its own comment) — reset that
   // here, this file's whole job is to typecheck exactly that directory.
   "exclude": []

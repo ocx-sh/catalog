@@ -36,7 +36,7 @@ const MAX_CONCURRENCY = 16;
  * here if a real asset ever legitimately needs more. */
 const MAX_RESPONSE_BYTES = 8 * 1024 * 1024;
 
-/** Mirrors `src/theme/utils/cas.ts`'s `LOGO_EXT_CANDIDATES` order (not a
+/** Mirrors `src/site/lib/cas.ts`'s `LOGO_EXT_CANDIDATES` order (not a
  * live import — that file is browser/VitePress-theme source, excluded from
  * this package's Node build; same value, cited by name for provenance). */
 const LOGO_EXT_CANDIDATES = ["svg", "png"] as const;
@@ -614,7 +614,7 @@ export interface UrlSourceOptions {
  *    CAS blob (`p/<ns>/<pkg>/o/sha256/<hex>.<ext>`) not already present in
  *    `cacheDir`. No registry-side extension discovery: `readme` is always
  *    `.md` (schema-pinned); `logo` tries `.svg` then `.png`, in that order
- *    (mirroring `src/theme/utils/cas.ts`'s `LOGO_EXT_CANDIDATES`) — both
+ *    (mirroring `src/site/lib/cas.ts`'s `LOGO_EXT_CANDIDATES`) — both
  *    absent degrades to "no asset" plus a warning, never a build failure.
  * 4. Concurrency 16 across the combined root+CAS fetch queue; each request
  *    retries up to 3 times AFTER its initial attempt (4 total) on failure,

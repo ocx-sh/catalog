@@ -181,7 +181,7 @@ function casRelpath(namespace: string, pkg: string, digest: string, ext: string)
  * multi-source catalog looked like a catalog whose packages publish no
  * `__ocx.desc` at all.
  *
- * Exported for the browser side too: `src/theme/utils/cas.ts` re-exports it
+ * Exported for the browser side too: `src/site/lib/cas.ts` re-exports it
  * and builds its own CAS URLs through it, so both halves of a build agree by
  * construction rather than by two copies staying in step. A live import is
  * safe here where `WIRE_ASSET_EXTENSIONS`'s could not be — the dependency

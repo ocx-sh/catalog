@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { read } from "./css_contract_helpers.js";
 
 /*
- * The monogram hues moved out of `utils/monogram.ts` (16 hardcoded literals
+ * The monogram hues moved out of `site/lib/monogram.ts` (16 hardcoded literals
  * applied as inline styles, unreachable from a consumer stylesheet) into
  * `--ocx-color-monogram-{0..3}` in palette.css, applied by an `.mg-<index>`
  * class.
@@ -71,10 +71,10 @@ describe("monogram hue tokens", () => {
     expect(dark).toContain(`--ocx-color-monogram-${i}-tint: ${tint};`);
   });
 
-  it("no longer carries any colour in utils/monogram.ts", () => {
+  it("no longer carries any colour in site/lib/monogram.ts", () => {
     // The module must stay pure index arithmetic. A colour reappearing here
     // means an inline style came back, which is unreachable for a consumer.
-    const source = read("src/theme/utils/monogram.ts").replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+    const source = read("src/site/lib/monogram.ts").replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
     expect(source).not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
     expect(source).not.toMatch(/\brgba?\(/);
     expect(source).not.toContain("MONOGRAM_HUES");

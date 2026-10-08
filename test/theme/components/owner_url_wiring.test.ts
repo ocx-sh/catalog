@@ -4,7 +4,7 @@
 // used to hard-code `https://github.com/<login>`; `.vue` internals are
 // coverage-excluded, so only the rendered anchor of the real component proves
 // the configured template reaches the owners row. The substitution/safety
-// rules themselves are unit-tested in `test/theme/utils/ownerUrl.test.ts`.
+// rules themselves are unit-tested in `test/site/lib/ownerUrl.test.ts`.
 import { mount } from "@vue/test-utils";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { ref } from "vue";

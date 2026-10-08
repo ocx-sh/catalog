@@ -5,11 +5,20 @@ import { useLocalStorage } from '@vueuse/core'
 import { SelectRoot, SelectTrigger, SelectPortal, SelectContent, SelectViewport, SelectItem, SelectItemText } from 'reka-ui'
 import { useCatalog } from '../../composables/useCatalog'
 import { useWindowedList } from '../../composables/useWindowedList'
-import { filterPackages } from '../../utils/filterPackages'
-import { selectRailKeywords } from '../../utils/keywordRail'
-import { isEditableTarget } from '../../utils/dom'
-import { osRank } from '../../utils/osGlyphs'
-import { concreteOses } from '../../utils/platformAgnostic'
+import { filterPackages } from '../../../site/lib/filterPackages'
+import { selectRailKeywords } from '../../../site/lib/keywordRail'
+import { isEditableTarget } from '../../../site/lib/dom'
+import { osRank } from '../../../site/lib/osGlyphs'
+import { concreteOses } from '../../../site/lib/platformAgnostic'
+import {
+  ALL_INDEXES,
+  excludedIndexNames,
+  hasIndexScope,
+  parseCatalogUrlState,
+  resolveIndexScope,
+  serializeCatalogUrlState,
+  sortPackages,
+} from '../../../site/lib/catalogState'
 import SearchInput from './SearchInput.vue'
 import FilterChips from './FilterChips.vue'
 import IndexTabs from './IndexTabs.vue'
@@ -38,12 +47,11 @@ onMounted(() => {
   // BEFORE the catalog fetch resolves — the grid's first paint is already
   // filtered and already scoped, never all-packages-then-filter. onMounted
   // runs pre-paint, so the input never flashes empty either.
-  const params = new URLSearchParams(window.location.search)
-  const q = params.get('q')
-  if (q) query.value = q
+  const state = parseCatalogUrlState(window.location.search)
+  if (state.q) query.value = state.q
   // Three states, and they are all distinct: absent (`null`) is "no scope
   // chosen yet", an empty value is "all indexes", anything else names one.
-  urlIndex = params.get('index')
+  urlIndex = state.index
   // Settles immediately when the catalog is already cached; a no-op on a
   // cold load, where the `indexes` watch takes over once the fetch lands.
   resolveScope()
@@ -63,13 +71,6 @@ const query = ref('')
 // A scope is a place, not a filter: it stays out of `activeFilterLabels` and
 // `clearFilters` below, and an unknown `?index=` value is ignored rather than
 // showing an empty grid for an index this deployment does not have.
-/** How "all indexes" is spelled in the URL: an EMPTY value, not an absent
- * param. Absent has to keep meaning "no scope chosen yet" — that is what a
- * first visit looks like, and what resolves to the default index — so if
- * "all" were also absent, a shared link to the all view would silently
- * reopen scoped to the default. An empty string can never collide with a
- * real index either: a label is `^[A-Za-z0-9._-]+$`, so it is never empty. */
-const ALL_INDEXES = ''
 let urlIndex: string | null = null
 const activeIndex = ref<string | null>(null)
 const indexes = computed(() => catalog.value.indexes)
@@ -79,12 +80,12 @@ const indexes = computed(() => catalog.value.indexes)
  *
  * Presence of `indexes` is NOT that question. The envelope now ships for
  * every catalog, one source included, because the route rule needs it
- * (`utils/packageRoute.ts`); a one-entry envelope means there is exactly one
+ * (`site/lib/packageRoute.ts`); a one-entry envelope means there is exactly one
  * place to be, so there is no tab row to render and no scope to spell in the
  * URL. Keying either off `indexes !== undefined` would put `?index=ocx.sh`
  * on every single-source deployment's address bar.
  */
-const hasScope = computed(() => (indexes.value?.length ?? 0) > 1)
+const hasScope = computed(() => hasIndexScope(indexes.value))
 
 /**
  * Indexes the "all" scope leaves out (`indexes[].excludeFromAll`), as the
@@ -100,9 +101,7 @@ const hasScope = computed(() => (indexes.value?.length ?? 0) > 1)
  * always shows.
  * The command palette does not read this: ⌘K spans every index.
  */
-const excludedNames = computed(() =>
-  hasScope.value ? (indexes.value ?? []).filter(entry => entry.excludeFromAll).map(entry => entry.name) : [],
-)
+const excludedNames = computed(() => excludedIndexNames(indexes.value))
 const excludedFromAll = computed(() => (activeIndex.value === null ? excludedNames.value : []))
 
 /**
@@ -123,15 +122,7 @@ const excludedFromAll = computed(() => (activeIndex.value === null ? excludedNam
 function resolveScope() {
   const list = indexes.value
   if (list === undefined) return
-  if (urlIndex === ALL_INDEXES) {
-    activeIndex.value = null
-    return
-  }
-  if (urlIndex !== null && list.some(entry => entry.name === urlIndex)) {
-    activeIndex.value = urlIndex
-    return
-  }
-  activeIndex.value = list.find(entry => entry.default)?.name ?? null
+  activeIndex.value = resolveIndexScope(urlIndex, list)
 }
 
 watch(indexes, resolveScope)
@@ -162,14 +153,11 @@ watch(indexes, resolveScope)
 // Client-only by nature: the watch only fires on user input. `history.state`
 // is passed through untouched — VitePress's router owns it.
 watch([query, activeIndex, indexes], ([q, index]) => {
-  const params = new URLSearchParams()
   // Written for every aggregating catalog, including the default index and
   // including "all", so the address bar always says exactly what is on
   // screen — it is the only thing anyone can copy. A catalog with one index
   // has no scope to state, so it gets no param at all (`hasScope`).
-  if (hasScope.value) params.set('index', index ?? ALL_INDEXES)
-  if (q) params.set('q', q)
-  const search = params.toString()
+  const search = serializeCatalogUrlState({ index: hasScope.value ? (index ?? ALL_INDEXES) : null, q })
   window.history.replaceState(window.history.state, '', search ? `${window.location.pathname}?${search}` : window.location.pathname)
 })
 // Cards ↔ concise table, persisted across visits. SSR-safe: the grid/table
@@ -241,13 +229,7 @@ const allTotal = computed(() =>
 
 // Timestamp sorts are newest-first; `updated: null` (tagless) sinks to the
 // end. 'name' keeps the catalog's own package-id order untouched.
-const sorted = computed(() => {
-  const key = sortBy.value
-  const list = key === 'name'
-    ? filtered.value
-    : [...filtered.value].sort((a, b) => (b[key] ?? '').localeCompare(a[key] ?? ''))
-  return sortInverted.value ? [...list].reverse() : list
-})
+const sorted = computed(() => sortPackages(filtered.value, sortBy.value, sortInverted.value))
 
 // What the grid and the table actually BUILD. `sorted` stays the answer to
 // "how many packages are there" — the count, the keyword rail and every
@@ -386,7 +368,7 @@ const pinnedKeywords = computed(() =>
 )
 
 // Rail = chips picked by SPLITTING POWER (greedy balanced-coverage, see
-// utils/keywordRail.ts — not raw frequency, which surfaces ubiquitous and
+// site/lib/keywordRail.ts — not raw frequency, which surfaces ubiquitous and
 // redundant tags), over the CURRENT RESULT SET rather than the whole
 // catalog (owner decision). A rail scored against everything keeps offering
 // keywords that no remaining package carries, so every one of those chips
@@ -440,7 +422,7 @@ function clearFilters() {
 // Page-scoped "/" handler — focuses the inline SearchInput. This is
 // deliberately separate from WP-E's global ⌘K command palette (frozen
 // cross-WP decision, plan_site_redesign.md Status block): no import from
-// or dependency on any `search/`/`useCommandPalette` module here (`utils/
+// or dependency on any `search/`/`useCommandPalette` module here (`site/lib/
 // dom.ts` is a neutral leaf, not scoped under either, so importing it
 // doesn't break that rule).
 const searchInputRef = ref<InstanceType<typeof SearchInput> | null>(null)

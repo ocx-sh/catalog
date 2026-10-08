@@ -8,8 +8,8 @@ import ThemeToggle from './ThemeToggle.vue'
 // SearchInput, which is WP-C scope).
 import { useCommandPalette } from '../../composables/useCommandPalette'
 import ExternalIcon from '../shared/ExternalIcon.vue'
-import { isExternalLink } from '../../utils/dom'
-import { CTRL, paletteModifier } from '../../utils/modifierKey'
+import { isExternalLink } from '../../../site/lib/dom'
+import { CTRL, paletteModifier } from '../../../site/lib/modifierKey'
 
 // WP-10: the fixed skeleton (brand, search, theme toggle) always renders;
 // its CONTENT is consumer-config-driven — the wordmark and logo from C-002

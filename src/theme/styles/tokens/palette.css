@@ -32,7 +32,7 @@
  *   --ocx-color-success      #0e9f6e -> #0a7652  (worst case 3.01:1, MonogramTile's own
  *                                    10%-tint bg -> 4.89:1; also
  *                                    MONOGRAM_HUES.light.text[1] in
- *                                    utils/monogram.ts uses the same new
+ *                                    site/lib/monogram.ts uses the same new
  *                                    value, see that file's docblock)
  *   --ocx-color-keyword      #6f5bd0 -> #6a55ce  (worst case 4.27:1 on --ocx-color-keyword-tint over
  *                                    --ocx-color-bg -> 4.56:1)
@@ -94,7 +94,7 @@
   --ocx-color-code-bg: #f6f8fa;
   --ocx-color-code-fg: #1b2129;
 
-  /* Monogram tile rotation (0-3), moved out of `utils/monogram.ts` where they
+  /* Monogram tile rotation (0-3), moved out of `site/lib/monogram.ts` where they
    * were 16 hardcoded literals applied as inline styles — unreachable from a
    * consumer stylesheet except with `!important`. Indexed 0-3 to match
    * `monogramHue()`'s return value directly: a 1-based token name would put an

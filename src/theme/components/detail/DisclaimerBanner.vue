@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { safeHref } from '../../utils/safeHref'
+import { safeHref } from '../../../site/lib/safeHref'
 import ExternalIcon from '../shared/ExternalIcon.vue'
 
 // MANDATORY whenever `upstream.disclaimer` is present — a governance
@@ -13,7 +13,7 @@ const props = defineProps<{
 }>()
 
 // `repositoryUrl` is third-party wire metadata — allowlist the scheme
-// before it reaches an `:href` (CWE-79 guard, see `utils/safeHref.ts`).
+// before it reaches an `:href` (CWE-79 guard, see `site/lib/safeHref.ts`).
 // `null` degrades to plain text rather than dropping the line entirely.
 const safeRepositoryUrl = computed(() => safeHref(props.repositoryUrl))
 </script>

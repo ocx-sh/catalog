@@ -1,85 +1,25 @@
 import type { MaybeRefOrGetter } from 'vue'
 import { onMounted, ref, toValue, watch } from 'vue'
-import { wirePrefix } from '../utils/cas'
+import { fetchPackageRoot } from '../../site/lib/packageRootFetch'
+import { createRequestGate } from '../../site/lib/requestGate'
 
-// TS interfaces mirror the wire JSON field names 1:1 (snake_case) —
-// schema/root.schema.json is the source of truth, no camelCase translation
-// layer in between.
+export type { Desc, Owner, PackageRoot, TagEntry, Upstream, Yanked } from '../../site/lib/wireTypes'
+import type { PackageRoot } from '../../site/lib/wireTypes'
 
-export interface Owner {
-  /** The owner's forge USERNAME — never a display name. Canonical since
-   *  ocx-indexbot 0.5.0. Optional because an index published before that
-   *  carries only the legacy pair below. */
-  login?: string
-  /** The owner's numeric forge user id, and the index's own ownership key. */
-  id?: number
-  /** Pre-0.5.0 spelling of `login`. A root written by 0.5.0 or later carries
-   *  it too, derived from `login`, so the two never disagree. */
-  github?: string
-  /** Pre-0.5.0 spelling of `id`. */
-  github_id?: number
-}
-
-/** The owner's forge username, whichever spelling the root carries. */
-export function ownerLogin(owner: Owner): string | undefined {
-  return owner.login ?? owner.github
-}
-
-export interface Upstream {
-  org: string
-  repository_url?: string
-  disclaimer?: string | null
-}
-
-export interface Desc {
-  digest: string
-  title: string
-  description: string
-  keywords: string[]
-  readme?: string
-  logo?: string
-}
-
-export interface Yanked {
-  reason: string
-  at: string
-}
-
-export interface TagEntry {
-  content: string
-  observed: string
-  yanked?: Yanked
-}
-
-export interface PackageRoot {
-  name: string
-  repository: string
-  owners: Owner[]
-  status: 'active' | 'deprecated' | 'yanked'
-  deprecated_message: string | null
-  superseded_by?: string | null
-  created: string
-  upstream?: Upstream
-  /** Repository whose CI produced the builds (bot-derived from the latest
-   * version's `org.opencontainers.image.source` annotation) — NOT
-   * `upstream.repository_url`, which attributes the vendor a namespace
-   * mirrors. Schema-restricted to `https://`; still run through `safeHref`
-   * before it reaches an `:href`. */
-  source?: string | null
-  desc: Desc | null
-  tags: Record<string, TagEntry>
-}
+// `fetch` resolved per call so a swapped `globalThis.fetch` is honoured.
+const fetchWire = (url: string) => fetch(url)
 
 /**
  * Fetches the wire package root — `<wireBase>/p/<ns>/<pkg>/_root.json`, the
  * ad-blocker-safe alias `sources/mirror.ts` writes beside the canonical
  * `<wireBase>/p/<ns>/<pkg>.json`, which is used as the 404 fallback (schema:
- * `root.schema.json` either way; the two are byte-identical). `wireBase` is the mount prefix of the source this
- * package came from — `''` (the site root) for the `root: true` source,
+ * `root.schema.json` either way; the two are byte-identical; the alias-first
+ * fetch itself is `site/lib/packageRootFetch.ts`). `wireBase` is the mount
+ * prefix of the source this package came from — `''` (the site root) for the `root: true` source,
  * `index/<label>` for every other; the detail page reads it off its own
- * frontmatter. See `utils/cas.ts`'s `wirePrefix`.
+ * frontmatter. See `site/lib/cas.ts`'s `wirePrefix`.
  *
- * CAS gotcha: build any CAS asset URL (`casUrl()` from `utils/cas.ts`) from
+ * CAS gotcha: build any CAS asset URL (`casUrl()` from `site/lib/cas.ts`) from
  * the bare `<ns>/<pkg>` route params passed in here — NEVER from
  * `root.name`, which carries the `ocx.sh/` prefix and 404s every CAS
  * request built from it.
@@ -100,12 +40,12 @@ export function usePackageRoot(
   const error = ref<string | null>(null)
   const notFound = ref(false)
 
-  // Monotonic request token: guards every state write below against a
+  // Monotonic request gate: guards every state write below against a
   // slow, now-superseded response landing after a newer navigation already
   // fired its own fetch — without this, a stale package-A response can
   // overwrite package-B's state after a quick A→B nav (URL shows B, page
   // renders A).
-  let requestToken = 0
+  const gate = createRequestGate()
 
   onMounted(() => {
     watch(
@@ -115,47 +55,25 @@ export function usePackageRoot(
       // source would refetch package B's root under source A's prefix.
       () => [toValue(ns), toValue(pkg), toValue(wireBase)] as const,
       async ([nsVal, pkgVal, baseVal]) => {
-        const token = ++requestToken
+        const isCurrent = gate.begin()
         loading.value = true
         error.value = null
         notFound.value = false
         try {
-          // Alias first, canonical second. `/p/<ns>/<pkg>.json` — the wire
-          // root's own URL — is BLOCKED by any browser running EasyList/
-          // EasyPrivacy when the package name matches one of their ~800
-          // unanchored `/<word>.js` rules: the rule matches that substring
-          // inside `/<word>.json`, `fetch` rejects, and this composable's
-          // catch below renders "Failed to load: NetworkError" on a page
-          // whose data is perfectly fine (`ocx.sh/hawkeye/hawkeye` vs
-          // EasyPrivacy's `/hawkeye.js`, 2026-08-27). `sources/mirror.ts`
-          // writes `_root.json` beside every root for exactly this fetch —
-          // see `sources/types.ts`'s `packageRootAliasPath`.
-          //
-          // The canonical path stays as the fallback: a tree mirrored by an
-          // older build of this package has no alias, and 404-then-retry is
-          // strictly better there than a bogus "Package not found".
-          const base = wirePrefix(baseVal)
-          let resp = await fetch(`${base}/p/${nsVal}/${pkgVal}/_root.json`)
-          if (token !== requestToken) return
-          if (resp.status === 404) {
-            resp = await fetch(`${base}/p/${nsVal}/${pkgVal}.json`)
-          }
-          if (token !== requestToken) return
-          if (resp.status === 404) {
+          const result = await fetchPackageRoot(fetchWire, nsVal, pkgVal, baseVal, isCurrent)
+          if (result.status === 'stale') return
+          if (result.status === 'not-found') {
             notFound.value = true
             root.value = null
             return
           }
-          if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
-          const data = await resp.json()
-          if (token !== requestToken) return
-          root.value = data
+          root.value = result.root
         } catch (e) {
-          if (token !== requestToken) return
+          if (!isCurrent()) return
           error.value = e instanceof Error ? e.message : 'Failed to load package'
           root.value = null
         } finally {
-          if (token === requestToken) loading.value = false
+          if (isCurrent()) loading.value = false
         }
       },
       { immediate: true },

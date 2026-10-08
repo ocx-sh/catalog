@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { OS_GLYPHS, osRank } from '../../utils/osGlyphs'
-import { visiblePlatforms } from '../../utils/platforms'
-import { AGNOSTIC_OS } from '../../utils/platformAgnostic'
+import { OS_GLYPHS, osRank } from '../../../site/lib/osGlyphs'
+import { visiblePlatforms } from '../../../site/lib/platforms'
+import { AGNOSTIC_OS } from '../../../site/lib/platformAgnostic'
 import type { ManifestDescriptor } from '../../composables/useImageIndex'
 
 // Presentational only — glyph + label + arch chips from one OCI image

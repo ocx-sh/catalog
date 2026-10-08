@@ -12,8 +12,8 @@ import {
 } from 'reka-ui'
 import MiniSearch, { type SearchResult } from 'minisearch'
 import { useCatalog } from '../../composables/useCatalog'
-import { filterPackages } from '../../utils/filterPackages'
-import { packageRoutePath } from '../../utils/packageRoute'
+import { filterPackages } from '../../../site/lib/filterPackages'
+import { packageRoutePath } from '../../../site/lib/packageRoute'
 import { useCommandPalette, useGlobalPaletteShortcut } from '../../composables/useCommandPalette'
 
 // Mounted once in Layout.vue — this is THE singleton palette consumer, so
@@ -98,7 +98,7 @@ interface FlatResult {
  * <pkg>` for every other. This built the bare path unconditionally and so
  * 404'd on every package from a non-root index: `build/sources_pipeline.ts`
  * writes those pages under their index name, and nothing bare exists there
- * to land on. Route rules belong in `utils/packageRoute.ts`, never
+ * to land on. Route rules belong in `site/lib/packageRoute.ts`, never
  * re-derived at a call site. */
 function pkgHref(pkg: { name: string }) {
   return packageRoutePath(pkg.name, catalog.value.indexes)

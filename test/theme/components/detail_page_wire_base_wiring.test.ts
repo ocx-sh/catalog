@@ -5,7 +5,7 @@
 //
 // This is the regression the 100% coverage gate could never have caught, and
 // the reason AGENTS.md says so out loud: every line of `usePackageRoot` /
-// `useImageIndex` / `utils/cas.ts` was already executed by their own unit
+// `useImageIndex` / `site/lib/cas.ts` was already executed by their own unit
 // tests, but nothing asserted the URL they built pointed at the tree
 // `sources/mirror.ts` actually wrote. For a source without `root: true` the
 // mirror writes `index/<label>/p/**` while all four builders emitted

@@ -2,7 +2,8 @@
 import { computed } from 'vue'
 import { useCopyState } from '../../composables/useCopyState'
 import { useToast } from '../../composables/useToast'
-import CopyContextMenu, { buildTagCopyActions, type CopyAction } from '../shared/CopyContextMenu.vue'
+import CopyContextMenu from '../shared/CopyContextMenu.vue'
+import { buildTagCopyActions, type CopyAction } from '../../../site/lib/copyActions'
 import CopyIcon from '../shared/CopyIcon.vue'
 import { useInstallFlavors } from '../../composables/useInstallFlavors'
 

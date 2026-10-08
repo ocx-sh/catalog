@@ -142,7 +142,7 @@ function assertPlausibleUrl(value: string, key: string, protocols: readonly stri
 }
 
 /** The one placeholder `ownerUrl` carries — the theme substitutes an owner's
- * login for it (`src/theme/utils/ownerUrl.ts`). */
+ * login for it (`src/site/lib/ownerUrl.ts`). */
 const OWNER_URL_PLACEHOLDER = "{login}";
 
 /** `ownerUrl` is a URL TEMPLATE: a plausible absolute http(s) URL (a
@@ -275,7 +275,7 @@ const NAV_LINK_SENTINEL_ORIGIN = "https://ocx-catalog-nav-sentinel.invalid";
  * normalized to `/` for special schemes; tabs and newlines are stripped
  * before parsing). A second hand-rolled string check would just be a new
  * place for browser behaviour to drift away from ours — the same reasoning
- * `src/theme/utils/safeHref.ts` applies to wire-sourced absolute URLs.
+ * `src/site/lib/safeHref.ts` applies to wire-sourced absolute URLs.
  *
  * Returns `false` rather than throwing on an unparseable value (e.g. `//[`,
  * an invalid IPv6 authority): the caller's fall-through reports it with the
@@ -292,7 +292,7 @@ function staysOnSite(value: string): boolean {
 /**
  * `nav[].link` allowlist (C-605): an absolute `http:`/`https:` URL, or a
  * path that genuinely resolves back onto this site's own origin. Mirrors
- * `src/theme/utils/safeHref.ts`'s runtime http(s)-only allowlist for the
+ * `src/site/lib/safeHref.ts`'s runtime http(s)-only allowlist for the
  * absolute-URL half; the site-relative half is this loader's own addition,
  * since `safeHref` only ever sees wire-sourced ABSOLUTE URLs, never a
  * config-authored relative path like the existing `nav: [{ link: "/docs/" }]`

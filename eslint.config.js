@@ -35,18 +35,18 @@ export default tseslint.config(
   },
   {
     // Design-record ruling (WP-05): src/viewmodel/version_order.ts (Python
-    // indexbot port) and src/theme/utils/version.ts (Rust ocx_lib port)
+    // indexbot port) and src/site/lib/version.ts (Rust ocx_lib port)
     // implement DIFFERENT version grammars for different purposes — a
     // future "dedupe these, they look similar" refactor would silently
     // corrupt one side's latestVersion computation. Forbid the import edge
     // in either direction so that mistake fails lint, not code review.
     files: ["src/viewmodel/version_order.ts"],
     rules: {
-      "no-restricted-imports": ["error", { patterns: ["**/theme/utils/version*"] }],
+      "no-restricted-imports": ["error", { patterns: ["**/site/lib/version*"] }],
     },
   },
   {
-    files: ["src/theme/utils/version.ts"],
+    files: ["src/site/lib/version.ts"],
     rules: {
       "no-restricted-imports": ["error", { patterns: ["**/viewmodel/version_order*"] }],
     },

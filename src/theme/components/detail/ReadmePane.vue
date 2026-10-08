@@ -2,7 +2,7 @@
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useClipboard } from '@vueuse/core'
 import { PopoverRoot, PopoverTrigger, PopoverPortal, PopoverContent } from 'reka-ui'
-import { casUrl } from '../../utils/cas'
+import { casUrl } from '../../../site/lib/cas'
 import CopyIcon from '../shared/CopyIcon.vue'
 import { useToast } from '../../composables/useToast'
 
@@ -17,7 +17,7 @@ const props = defineProps<{
   bareName: string
   digest: string | null
   /** Mount prefix of the source this package came from — see
-   * `utils/cas.ts`'s `wirePrefix`. Omitted for the `root: true` source. */
+   * `site/lib/cas.ts`'s `wirePrefix`. Omitted for the `root: true` source. */
   wireBase?: string
 }>()
 
@@ -42,15 +42,15 @@ async function load() {
   }
   try {
     // Dynamic imports — the markdown pipeline (`markdown-it`, `highlight.js`,
-    // `markdown-it-emoji`, all behind `utils/readmeMarkdown`) and the
+    // `markdown-it-emoji`, all behind `site/lib/readmeMarkdown`) and the
     // sanitizer (dompurify, ~29KB) only reach the browser as their own
     // chunks, fetched the first time a README actually renders, instead of
     // static imports pulling them into the shared every-page/grid-entry
     // bundle (C-606).
     const [resp, { createReadmeMarkdown }, { sanitizeReadmeHtml }] = await Promise.all([
       fetch(url),
-      import('../../utils/readmeMarkdown'),
-      import('../../utils/sanitize'),
+      import('../../../site/lib/readmeMarkdown'),
+      import('../../../site/lib/sanitize'),
     ])
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
     const text = await resp.text()

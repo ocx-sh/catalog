@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { useData } from 'vitepress'
 import Logo from '../layout/Logo.vue'
-import { isExternalLink } from '../../utils/dom'
+import { isExternalLink } from '../../../site/lib/dom'
 
 // C-602: this component used to hardcode a `github.com/ocx-sh/ocx` issue
 // CTA and a `/docs/how-to/announce-a-package` mirror-contribution link —

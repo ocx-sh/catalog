@@ -60,7 +60,7 @@ import type { PackageRoute } from "../viewmodel/route.js";
  * frontmatter (`packagePageContent`), which is the only channel the
  * client-side detail page has for it: `DetailPage.vue` reads it back off
  * `useData().frontmatter` and hands it to `usePackageRoot`, `useImageIndex`
- * and the two `utils/cas.ts` callers.
+ * and the two `site/lib/cas.ts` callers.
  *
  * It was plumbed here but unconsumed until 0.2.1, and everything downstream
  * fetched an unconditional root-relative `/p/<ns>/<pkg>...` (a single-source
@@ -129,7 +129,7 @@ export interface SynthesizePagesOptions {
  *
  * `wireBase` is how the per-source mount prefix reaches the BROWSER — the
  * detail page's own wire fetches (`usePackageRoot`, `useImageIndex`,
- * `ReadmePane`/`IdentityBlock` via `utils/cas.ts`) are client-side and have
+ * `ReadmePane`/`IdentityBlock` via `site/lib/cas.ts`) are client-side and have
  * no other channel to it. Emitted only when non-empty.
  *
  * `ownerUrl` (a source's own owner-profile template) rides the same channel

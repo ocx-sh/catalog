@@ -6,7 +6,7 @@
 // the grid, the "all" tab's count, the keyword rail/vocabulary and the table's
 // platform columns — and that an excluded index stays fully reachable through
 // its own tab. The unit half (the `excludeIndexes` predicate) lives in
-// `test/theme/utils/filterPackages.test.ts`.
+// `test/site/lib/filterPackages.test.ts`.
 import { mount } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { ref } from "vue";
