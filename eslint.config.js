@@ -24,6 +24,10 @@ export default tseslint.config(
       // js.configs.recommended would otherwise try to parse.
       "site/**",
       "src/theme/**/*.vue",
+      // Agent worktrees (.agents/worktrees/<name>/) are full checkouts with
+      // their own tsconfig.json: linting them from the main checkout makes
+      // typescript-eslint find several tsconfigRootDir candidates and fail.
+      ".agents/**",
     ],
   },
   js.configs.recommended,
