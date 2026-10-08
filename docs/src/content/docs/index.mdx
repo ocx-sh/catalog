@@ -1,0 +1,73 @@
+---
+title: "OCX Catalog"
+---
+
+import { CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+{/* doc_type: landing */}
+{/* doc_tier: first-steps */}
+
+`@ocx-sh/catalog` renders one or more **OCX package indices** into a browsable
+static site: a package grid, per-package detail pages with README, platforms,
+versions and install commands, client-side search, and an optional docs section.
+
+It is a *renderer*, not a producer. Point it at an index — a local directory, an
+HTTPS endpoint, or a git repository — and it builds a site around what is
+already there. It never writes to an index and never invents index data. See
+[Index vs. catalog](explanation/index-vs-catalog/) for where that line sits.
+
+:::caution[Read this before you pick a host]
+A build works under one URL prefix, set with `base`. The security headers it
+emits are honoured by Cloudflare Pages and Netlify only. Both facts matter
+for GitHub Pages, GitLab Pages and Bunny deployments. See
+[Known limitations](ops/known-limitations/) and
+[Hosting and headers](ops/hosting-and-headers/).
+:::
+
+## Start from what you are trying to do
+
+<CardGrid>
+  <LinkCard
+    title="I run an index on GitHub and want a browsable catalog site."
+    description="Render the CI workflow, build the site, deploy it to GitHub Pages, and the two things that will silently break if you use the default project Pages URL."
+    href="how-to/deploy-on-github-pages/"
+  />
+  <LinkCard
+    title="I run an index on GitLab and want a browsable catalog site."
+    description="The rendered job file, the include: line your root .gitlab-ci.yml needs, and a pages job that publishes the build."
+    href="how-to/deploy-on-gitlab-pages/"
+  />
+  <LinkCard
+    title="I want my catalog to also show the public index.ocx.sh packages."
+    description="Aggregate the official index alongside your own as a second, non-root source. Every package from both stays listed, on its own detail page."
+    href="how-to/configure-sources/#aggregate-the-public-index"
+  />
+  <LinkCard
+    title="I want to self-host my own index: corporate mirror or air-gapped."
+    description="A path or git source as your only source, with no dependency on index.ocx.sh and no build-time egress to it."
+    href="how-to/configure-sources/#self-host-your-own-index"
+  />
+  <LinkCard
+    title="I just want to see it running before committing to anything."
+    description="One command against a directory of index JSON, no config file, no deploy."
+    href="how-to/preview-locally-with-dev/"
+  />
+</CardGrid>
+
+## Install
+
+```sh
+npm install --save-dev @ocx-sh/catalog
+```
+
+Node.js `>=22.13`. The package bundles its renderer, so there are no peer
+dependencies to install. Then work through the [Quickstart](how-to/quickstart/).
+
+Upgrading from 0.5? Read [Upgrade to 0.6](how-to/upgrade-to-0-6/) first.
+
+## The rest of the documentation
+
+- [How-To](how-to/) covers task-shaped guides: quickstart, sources, deploys, local preview and branding.
+- [Reference](reference/) lists CLI flags and exit codes, the config schema, CI rendering and the output layout.
+- [Explanation](explanation/) covers why the design is the way it is: ownership, multi-source and the security model.
+- [Ops](ops/) covers limitations, host selection and troubleshooting.

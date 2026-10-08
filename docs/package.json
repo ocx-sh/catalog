@@ -1,0 +1,17 @@
+{
+  "name": "ocx-catalog-docs",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev --host",
+    "build": "astro build",
+    "preview": "astro preview",
+    "check": "ocx-site check --dist dist --repo ocx-sh/catalog"
+  },
+  "dependencies": {
+    "@astrojs/markdown-satteri": "^0.4.0",
+    "@astrojs/starlight": ">=0.42.0 <0.43",
+    "@ocx-sh/theme": "file:/home/mherwig/dev/ocx-website/packages/theme",
+    "astro": "^7.3.5"
+  }
+}

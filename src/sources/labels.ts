@@ -9,7 +9,8 @@
  * source's final label is known.
  */
 
-import type { ResolvedSource } from "../config/types.js";
+import { basename } from "node:path";
+import type { CatalogConfig, ResolvedSource } from "../config/types.js";
 import { SourceError } from "./types.js";
 import type { CatalogSourcePackage } from "../viewmodel/types.js";
 
@@ -167,9 +168,12 @@ export function checkIndexNamespaceCollisions(
  * written into the same directory `pages.ts` copies the docs mount into,
  * with no hostile intent required.
  *
- * A ROOT source is exempt: its packages keep bare routes, so its label never
+ * `isReserved` is the per-build predicate from `reservedNames` (C-027): the
+ * static list plus whatever this build writes at the output root. A ROOT
+ * source is exempt here — its packages keep bare routes, so its LABEL never
  * becomes a top-level path segment (it still mirrors to `index/<label>/`,
- * which is nested and cannot collide).
+ * which is nested and cannot collide); its NAMESPACES do, and
+ * `checkReservedRootNamespaces` covers them.
  *
  * Runs beside the other cross-source checks purely for locality — unlike
  * them it needs no fetched data, since a derived label is already resolved
@@ -177,14 +181,32 @@ export function checkIndexNamespaceCollisions(
  */
 export function checkReservedIndexLabels(
   labels: readonly { readonly label: string; readonly root: boolean }[],
+  isReserved: ReservedNames,
 ): void {
   labels.forEach(({ label, root }, index) => {
-    if (root || !RESERVED_LABELS.has(label.toLowerCase())) return;
+    if (root || !isReserved(label)) return;
     throw new SourceError(
       "INDEX_LABEL_RESERVED",
       `sources[${index}]'s label ${JSON.stringify(label)} is a path this build already owns — both would claim /${label}/`,
     );
   });
+}
+
+/**
+ * The root source's side of the same collision (C-027): its packages keep
+ * bare routes, so each of its namespaces is a top-level path segment, and a
+ * namespace named `docs`, `_astro`, or `Favicon.svg` would be written into —
+ * or over — something the build owns. The namespace comes from the source's
+ * own package names, so no hostile intent is needed either.
+ */
+export function checkReservedRootNamespaces(namespaces: Iterable<string>, isReserved: ReservedNames): void {
+  for (const namespace of namespaces) {
+    if (!isReserved(namespace)) continue;
+    throw new SourceError(
+      "INDEX_LABEL_RESERVED",
+      `the root source publishes namespace ${JSON.stringify(namespace)}, a path this build already owns — both would claim /${namespace}/`,
+    );
+  }
 }
 
 /**
@@ -234,28 +256,58 @@ export function checkLabelConflicts(labels: readonly string[]): void {
 const SAFE_LABEL_RE = /^[A-Za-z0-9._-]+$/;
 
 /**
- * Top-level site paths this build owns, which a non-root label may therefore
- * not be — its packages are served at `/<label>/…`, so a label equal to one
- * of these makes two different things claim one prefix, and whichever write
- * lands second wins silently.
- *
- * The sibling of `checkIndexNamespaceCollisions`, which stops the same
- * collision against a ROOT SOURCE's namespaces. That check was written first
- * and stopped one case short: the build's own reserved prefixes are just as
- * collidable and need no hostile source to conflict with, only a source
- * whose roots happen to be named `docs/…`.
- *
- * Compared case-INSENSITIVELY. `SAFE_LABEL_RE` admits `Docs`, and macOS and
+ * Decides whether a top-level site name is one this build owns (C-027).
+ * Compared case-INSENSITIVELY: `SAFE_LABEL_RE` admits `Docs`, and macOS and
  * Windows both resolve that to the same directory as `docs`, so a
- * case-sensitive check would pass on CI and collide on a contributor's
- * laptop.
- *
- * `p` and `index` are `mirror.ts`'s wire trees; `data` carries
- * `data/catalog/catalog.json`; `docs` is `pages.ts`'s docs mount; `assets`
- * and `404` are VitePress's own output. Not speculative — every one is a
- * path something in this build already writes.
+ * case-sensitive check would pass CI and collide on a contributor's laptop.
  */
-const RESERVED_LABELS: ReadonlySet<string> = new Set(["p", "index", "data", "docs", "assets", "404", "public"]);
+export type ReservedNames = (name: string) => boolean;
+
+/**
+ * The static part of the reserved set, every entry a path something in this
+ * build already writes: `p` and `index` are `mirror.ts`'s wire trees; `data`
+ * carries `data/catalog/catalog.json`; `docs` is the docs mount; `assets`,
+ * `404`, `public` and `_astro` are the static-site output's own;
+ * `sitemap-*` and `favicon*` are wildcard families (the sitemap integration's
+ * `sitemap-index.xml`/`sitemap-0.xml`, a favicon in any format); `robots.txt`,
+ * `_headers` and `config.json` are files written at the root; `c` is the wire
+ * `c/index.json` tree and `pagefind` the search bundle.
+ */
+const STATIC_RESERVED: ReadonlySet<string> = new Set([
+  "p",
+  "index",
+  "data",
+  "docs",
+  "assets",
+  "404",
+  "public",
+  "_astro",
+  "robots.txt",
+  "_headers",
+  "config.json",
+  "c",
+  "pagefind",
+]);
+const RESERVED_PREFIXES = ["sitemap-", "favicon"] as const;
+
+export const staticReservedNames: ReservedNames = (name) => {
+  const lower = name.toLowerCase();
+  return STATIC_RESERVED.has(lower) || RESERVED_PREFIXES.some((prefix) => lower.startsWith(prefix));
+};
+
+/**
+ * The per-build predicate: the static set, plus the `brand.logo` and `css`
+ * file names (the build copies each to the output root under its own basename) and every name in
+ * `writtenNames` — the top-level `publicDir` entries and anything else the
+ * build writes at the output root. `brand` itself is not reserved: no
+ * `brand/` directory is written.
+ */
+export function reservedNames(config: CatalogConfig, writtenNames: readonly string[]): ReservedNames {
+  // The build copies `brand.logo` and `css` to the output root under their basenames.
+  const copied = [config.brand?.logo, config.css].filter((file) => file !== undefined).map((file) => basename(file));
+  const written = new Set([...writtenNames, ...copied].map((name) => name.toLowerCase()));
+  return (name) => written.has(name.toLowerCase()) || staticReservedNames(name);
+}
 
 /**
  * Validates that `label` is safe to use as exactly ONE filesystem path

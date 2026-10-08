@@ -1,0 +1,52 @@
+---
+// The consumer docs mount, injected at `/docs/[...slug]` (C-020). One page per
+// `**/*.md` entry of the `docs` content collection (written by the build only
+// when `docs` is set); the Sätteri processor renders the body, which sits in the
+// theme's `.ocx-prose`. VitePress-only syntax (`::: details`, `{#id}`) is not
+// interpreted: it shows as text.
+import { getEntry, render } from "astro:content";
+import site from "virtual:ocx-catalog/site";
+import DocsSidebar from "../components/DocsSidebar.astro";
+import Page from "../layouts/Page.astro";
+
+// An `index.md` is served at its directory: the docs root has slug `""`, which a
+// rest param spells `undefined`. `id` is the collection id (the file's path).
+export function getStaticPaths() {
+  return site.docs.pages.map(({ slug, id, title }) => ({
+    params: { slug: slug === "" ? undefined : slug },
+    props: { slug, id, title },
+  }));
+}
+
+const { slug, id, title } = Astro.props;
+const entry = await getEntry("docs", id);
+if (entry === undefined) throw new Error(`docs: no content entry for "${id}"`);
+const { Content } = await render(entry);
+---
+
+<Page title={title}>
+  <div class="docs">
+    <DocsSidebar groups={site.docs.groups} current={slug} />
+    <article class="ocx-prose docs__content"><Content /></article>
+  </div>
+</Page>
+
+<style>
+  .docs {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--ocx-space-6);
+    max-width: calc(var(--ocx-prose-width) + 16rem + var(--ocx-space-6));
+    margin: 0 auto;
+    padding: var(--ocx-space-6) var(--ocx-space-4);
+  }
+  .docs__content {
+    min-width: 0;
+    max-width: var(--ocx-prose-width);
+  }
+  @media (min-width: 48rem) {
+    .docs {
+      grid-template-columns: 16rem minmax(0, 1fr);
+    }
+  }
+</style>

@@ -11,21 +11,19 @@
  *   4. Install the tarball into a fresh `mkdtemp` sandbox with npm scripts
  *      disabled (`--ignore-scripts`), then run `ocx-catalog --version` from
  *      the installed bin to prove the `bin` entry survived packing (it must
- *      print the version from this repo's package.json).
+ *      print the version from this repo's package.json). The theme (a `file:`
+ *      dependency) is packed separately and swapped in through `overrides`,
+ *      and the installed `engines.node` must equal EXPECTED_ENGINES_NODE.
  *   5. From that same sandbox, `import.meta.resolve("@ocx-sh/catalog/theme")`
- *      to prove the theme subpath export + its `files` entry survived
- *      packing too — a full VitePress evaluation of the theme needs a
- *      Vue/Vite pipeline this script doesn't have, but resolution alone
- *      already fails on exactly the regression that matters here: the
- *      `exports["./theme"]` entry missing, or its target file absent from
- *      the tarball (e.g. a `files` edit that drops `src/theme`).
+ *      must FAIL (C-030): the Vue theme subpath is gone and no compat layer
+ *      replaces it, so a resolvable `./theme` means a stale `exports` entry.
  *   6. From that same sandbox, walk every shipped source file (`.js`,
- *      `.mjs`, `.ts`, `.mts`, `.vue` — not `.d.ts`/`.d.mts`, which are
+ *      `.mjs`, `.ts`, `.mts` — not `.d.ts`/`.d.mts`, which are
  *      type-only and already covered by attw) under
  *      `node_modules/@ocx-sh/catalog`, extract every static AND dynamic
  *      import specifier, and resolve each one with `import.meta.resolve()`
  *      — dependency completeness. This is the class WP-08 caught by hand:
- *      `ReadmePane.vue` imports `markdown-it`/`highlight.js` only via
+ *      a README renderer imports `markdown-it`/`highlight.js` only via
  *      dynamic `import()`, which a static-import grep misses. The sandbox's
  *      `node_modules` holds only what `dependencies`/`peerDependencies`
  *      declare (npm installs from the packed tarball, never this repo's own
@@ -54,16 +52,31 @@
  *      publishes a version that does not exist yet, so its own copy is
  *      unaffected and must keep failing hard.
  *   8. Assert the npm major version this script runs under EQUALS
- *      `EXPECTED_NPM_MAJOR` and fail otherwise, so a pack-format change in a
- *      future npm major does not silently pass.
+ *      `EXPECTED_NPM_MAJOR` and the Node major EQUALS `EXPECTED_NODE_MAJOR`, and
+ *      fail otherwise, so a pack-format change in a future major does not
+ *      silently pass.
+ *   9. From that same sandbox, run the INSTALLED `ocx-catalog build` over a
+ *      copy of the `root` fixture (S-016) and assert `index.html` and a detail
+ *      page exist — proof that the tarball ships the Astro site (`dist/site`)
+ *      and not just a bin that prints its version. The installed manifest must
+ *      also carry no `./theme` export (C-030).
  */
 
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  cpSync,
+  existsSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { builtinModules } from "node:module";
 import { tmpdir } from "node:os";
 import { extname, join, relative } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const repoRoot = fileURLToPath(new URL("..", import.meta.url));
 
@@ -91,6 +104,20 @@ function run(step, command, args, options = {}) {
  * `release.yml` installs `npm@11.x` explicitly in the publish job, and
  * `actions/setup-node` with node 24 ships npm 11 in the gate job. */
 const EXPECTED_NPM_MAJOR = 11;
+/** The Node major CI and the release lane run (`node-version: "24"`); npm 11
+ * ships with it. Asserted for the same reason as the npm major. */
+const EXPECTED_NODE_MAJOR = 24;
+
+function assertNodeMajor() {
+  const major = Number(process.versions.node.split(".")[0]);
+  if (major !== EXPECTED_NODE_MAJOR) {
+    throw new Error(
+      `assert node version: this script is verified against Node ${String(EXPECTED_NODE_MAJOR)}.x, ` +
+        `but it is running under Node ${process.versions.node} — re-verify the whole script under ` +
+        `the new major, then bump EXPECTED_NODE_MAJOR in scripts/pack-smoke.mjs.`,
+    );
+  }
+}
 
 function assertNpmMajor() {
   const result = spawnSync("npm", ["--version"], { encoding: "utf8" });
@@ -142,54 +169,94 @@ function packTarball(step, packDir) {
   return join(packDir, entry.filename);
 }
 
+/** The theme is a `file:` dependency of this repo, and a `file:` spec in the
+ * packed catalog tarball can never resolve for a consumer. Pack the installed
+ * theme (resolved through the symlink, never a hardcoded sibling path) into a
+ * tarball the sandbox install substitutes via `overrides`. `--ignore-scripts`
+ * and `--pack-destination` keep the pack from writing anything into the
+ * theme directory. */
+function packTheme(step, packDir) {
+  const themeDir = realpathSync(join(repoRoot, "node_modules", "@ocx-sh", "theme"));
+  const result = run(
+    step,
+    "npm",
+    ["pack", "--ignore-scripts", "--pack-destination", packDir, "--json"],
+    { cwd: themeDir },
+  );
+  const [entry] = JSON.parse(result.stdout);
+  return join(packDir, entry.filename);
+}
+
+/** publint's complaint about the theme's `file:` spec. Tolerated until the
+ * theme ships on npm and the spec becomes a semver range (plan step U.3); it is
+ * the ONLY publint error allowed, matched by wording, so any other error still
+ * fails. `installAndRunBin` proves a tarball install resolves without it. */
+const THEME_FILE_SPEC_ERROR = /^\d+\. The "@ocx-sh\/theme" dependency references "file:/;
+
 function runPublint(step, tarballPath) {
   const publintBin = join(repoRoot, "node_modules", ".bin", "publint");
-  run(step, publintBin, ["run", tarballPath], { cwd: repoRoot });
+  // NO_COLOR: publint colours its output under CI / FORCE_COLOR, and ANSI codes
+  // would hide the "Errors:" header the section match below anchors on.
+  const result = spawnSync(publintBin, ["run", tarballPath], {
+    cwd: repoRoot,
+    encoding: "utf8",
+    env: { ...process.env, NO_COLOR: "1" },
+  });
+  if (result.error) {
+    throw new Error(`${step}: failed to spawn "${publintBin}": ${result.error.message}`);
+  }
+  if (result.status === 0) return;
+  const errorsSection = /^Errors:\n((?:\d+\. .*\n?)+)/m.exec(result.stdout);
+  const errors = errorsSection ? errorsSection[1].split("\n").filter(Boolean) : [];
+  const unexpected = errors.filter((line) => !THEME_FILE_SPEC_ERROR.test(line));
+  if (errors.length === 0 || unexpected.length > 0) {
+    throw new Error(
+      `${step}: "publint run" exited ${String(result.status)}\n` +
+        `stdout:\n${result.stdout}\nstderr:\n${result.stderr}`,
+    );
+  }
 }
 
 function runAttw(step, tarballPath) {
   // The pure-ESM "require call resolved to an ESM file" warning class
   // (rule: cjs-resolves-to-esm) is expected and tolerated for this package
   // (type: module, no CJS entrypoint) — every other rule must still pass.
-  //
-  // "./theme" is excluded from attw's own resolution check (not from the
-  // package's `exports` — it's still there for real consumers): attw
-  // resolves imports through TypeScript's module graph, which doesn't
-  // understand `.vue`/`.css` specifiers, so it reports every relative
-  // import inside the theme as unresolvable. That's a limitation of attw's
-  // resolver, not a real problem — VitePress's own Vite-based bundler
-  // resolves those specifiers just fine. `installAndRunBin`'s
-  // `import.meta.resolve` check is what actually guards this entrypoint.
   const attwBin = join(repoRoot, "node_modules", ".bin", "attw");
   run(
     step,
     attwBin,
-    [tarballPath, "--ignore-rules", "cjs-resolves-to-esm", "--exclude-entrypoints", "./theme"],
+    [tarballPath, "--ignore-rules", "cjs-resolves-to-esm"],
     { cwd: repoRoot },
   );
 }
 
-/** Resolves (never evaluates) `specifier` from inside `installDir` — a bare
- * `node -e` child process, so it only sees what `require`/`import` resolution
- * from that sandbox's `node_modules` would see. Throws with the child's own
- * error text on any resolution failure (missing `exports` entry, or an
- * `exports` entry whose target file isn't actually in the tarball). */
-function assertSubpathResolves(step, installDir, specifier) {
+/** C-030: `specifier` must NOT resolve from inside `installDir`. A bare `node
+ * -e` child process, so it only sees what `import` resolution from that
+ * sandbox's `node_modules` would see. */
+function assertSubpathDoesNotResolve(step, installDir, specifier) {
   const script = `
-    const url = await import.meta.resolve(${JSON.stringify(specifier)});
-    const { existsSync } = await import("node:fs");
-    const { fileURLToPath } = await import("node:url");
-    if (!existsSync(fileURLToPath(url))) {
-      throw new Error("resolved to " + url + " but that file does not exist");
+    try {
+      console.log(await import.meta.resolve(${JSON.stringify(specifier)}));
+    } catch {
+      process.exit(3);
     }
-    console.log(url);
   `;
-  const result = run(step, "node", ["--input-type=module", "-e", script], { cwd: installDir });
-  return result.stdout.trim();
+  const result = spawnSync("node", ["--input-type=module", "-e", script], {
+    cwd: installDir,
+    encoding: "utf8",
+  });
+  if (result.status !== 3) {
+    throw new Error(
+      `${step}: "${specifier}" must not resolve (no compat layer), but exited ` +
+        `${String(result.status)} with stdout: ${result.stdout.trim()}`,
+    );
+  }
 }
 
 const PACKAGE_NAME = "@ocx-sh/catalog";
-const SHIPPED_SOURCE_EXTENSIONS = new Set([".js", ".mjs", ".ts", ".mts", ".vue"]);
+/** jsdom ^29's Node floor; Astro 7's own floor (22.12) is lower. */
+const EXPECTED_ENGINES_NODE = ">=22.13";
+const SHIPPED_SOURCE_EXTENSIONS = new Set([".js", ".mjs", ".ts", ".mts"]);
 const DECLARATION_SUFFIXES = [".d.ts", ".d.mts"];
 
 /** Recursively collects shipped source files under `dir` — anything with a
@@ -214,7 +281,7 @@ function collectShippedSourceFiles(dir) {
   return files;
 }
 
-/** Strips line, block and `.vue` template comments from `text`, replacing them with
+/** Strips line and block comments from `text`, replacing them with
  * whitespace so the rest of the file keeps its shape; string/template
  * literal contents pass through untouched. Without this, a prose comment
  * like "derived from 'upstream data'" would extract "upstream data" as a
@@ -243,30 +310,6 @@ function stripComments(text) {
       }
       out += "  ";
       i += 2;
-    } else if (text.slice(i, i + 4) === "<!--" && text.indexOf("-->", i + 4) !== -1) {
-      // A `.vue` template comment, and only a CLOSED one — the `indexOf`
-      // guard above matters because this branch runs on every shipped source
-      // file, not just `.vue`. An unterminated `<!--` (a stray sequence in a
-      // `.ts` file, where `a<!--b` is legal as `a < --b`) would otherwise
-      // blank the rest of the file, hiding every import below it from
-      // `extractSpecifiers` — a dependency-completeness gate that silently
-      // stops looking is indistinguishable from one that passed.
-      //
-      // Not optional prose-stripping: an ordinary
-      // apostrophe in one ("the button's own label") reads as a string
-      // opener to the branch below, which then runs to the next apostrophe
-      // anywhere in the file and can swallow a real `/*` on the way — after
-      // which that block comment's body is scanned as code. That is exactly
-      // how a CSS comment mentioning `from "github"` became a phantom
-      // dependency on a package called `github`.
-      out += "    ";
-      i += 4;
-      while (i < text.length && text.slice(i, i + 3) !== "-->") {
-        out += text[i] === "\n" ? "\n" : " ";
-        i++;
-      }
-      out += "   ";
-      i += 3;
     } else if (text[i] === "'" || text[i] === '"' || text[i] === "`") {
       const quote = text[i];
       out += text[i];
@@ -322,8 +365,7 @@ function findCallSpecifiers(text, name) {
 // `import ... from "spec"` / `export ... from "spec"` — both share the
 // trailing ` from "spec"` shape, so one pattern covers both keywords.
 const IMPORT_FROM = /\bfrom\s*(['"])((?:(?!\1)[^\\\n]|\\.)*)\1/g;
-// Side-effect-only `import "spec"` — also matches CSS `@import "spec";`
-// inside a `.vue` `<style>` block (same "import" token followed by a quote).
+// Side-effect-only `import "spec"`.
 const SIDE_EFFECT_IMPORT = /\bimport\s*(['"])((?:(?!\1)[^\\\n]|\\.)*)\1/g;
 
 /** Extracts every import specifier from one shipped file's `text` (comments
@@ -355,20 +397,26 @@ function extractSpecifiers(relPath, text) {
 
 // Real npm scoped packages are always `@scope/name` — a bare `@word` with no
 // slash can't be an installable dependency, so it must be a build-time
-// virtual module (e.g. VitePress's `@localSearchIndex`, resolved only by its
-// Vite plugin, never by node's own resolver).
+// virtual module, never resolved by node's own resolver.
 const INVALID_SCOPED_SHAPE = /^@[^/]+$/;
+// Astro's framework virtual modules (`astro:content`, `astro:assets`, ...): the
+// generated content config names them in a source string and Astro's Vite
+// resolves them. A name is lowercase letters and hyphens after `astro:` only,
+// so `astro/x` (a real subpath) and `astro-evil` (a different package) stay
+// checked.
+const ASTRO_VIRTUAL_MODULE = /^astro:[a-z][a-z-]*$/;
 
 /** True when `specifier` names something `dependencies`/`peerDependencies`
  * could actually satisfy — filters out relative/absolute paths, `node:`
  * imports, bare Node builtins, this package's own name (self-reference
  * resolves via its own `exports`, not a dependency), and virtual-module
  * specifiers that can never resolve outside a bundler. */
-function isCheckableBareSpecifier(specifier) {
+export function isCheckableBareSpecifier(specifier) {
   if (specifier.startsWith(".") || specifier.startsWith("/")) return false;
   if (specifier.startsWith("node:")) return false;
   if (specifier === PACKAGE_NAME || specifier.startsWith(`${PACKAGE_NAME}/`)) return false;
   if (INVALID_SCOPED_SHAPE.test(specifier)) return false;
+  if (ASTRO_VIRTUAL_MODULE.test(specifier)) return false;
   const packageRoot = specifier.startsWith("@")
     ? specifier.split("/").slice(0, 2).join("/")
     : specifier.split("/")[0];
@@ -435,7 +483,30 @@ function assertDependencyCompleteness(step, installDir) {
   );
 }
 
-function installAndRunBin(step, tarballPath) {
+/** S-016: the installed bin builds the `root` fixture into a real site. The
+ * fixture tree is copied out of the repo first so the build reads nothing from
+ * `repoRoot` except the fixture files themselves. `cloud/helm-lite` is a
+ * package of that fixture's `index-a`; its detail page is `<ns>/<pkg>/index.html`. */
+const FIXTURE_DETAIL_PAGE = join("cloud", "helm-lite", "index.html");
+
+function buildFixtureFromInstall(step, installDir, binPath) {
+  const fixtureDir = join(installDir, "fixture");
+  cpSync(join(repoRoot, "test", "fixtures", "site"), fixtureDir, {
+    recursive: true,
+    filter: (source) => !/\.(test\.ts|mjs)$/.test(source),
+  });
+  const outDir = join(installDir, "site-out");
+  run(step, binPath, ["build", "--config", join(fixtureDir, "root.config.json"), "--out", outDir], {
+    cwd: installDir,
+  });
+  for (const page of ["index.html", FIXTURE_DETAIL_PAGE]) {
+    if (!existsSync(join(outDir, page))) {
+      throw new Error(`${step}: the installed ocx-catalog build produced no ${page}`);
+    }
+  }
+}
+
+function installAndRunBin(step, tarballPath, themeTarballPath) {
   const installDir = mkdtempSync(join(tmpdir(), "ocx-catalog-pack-smoke-install-"));
   try {
     // A bare `npm install <tarball>` in a directory with no package.json of
@@ -444,7 +515,13 @@ function installAndRunBin(step, tarballPath) {
     // package.json pins the install to installDir.
     writeFileSync(
       join(installDir, "package.json"),
-      JSON.stringify({ name: "ocx-catalog-pack-smoke-sandbox", private: true }),
+      JSON.stringify({
+        name: "ocx-catalog-pack-smoke-sandbox",
+        private: true,
+        // The catalog tarball depends on the theme by `file:` spec; the
+        // override swaps in the packed theme so that spec never resolves.
+        overrides: { "@ocx-sh/theme": `file:${themeTarballPath}` },
+      }),
     );
     run(step, "npm", ["install", "--ignore-scripts", tarballPath], { cwd: installDir });
     const binPath = join(installDir, "node_modules", ".bin", "ocx-catalog");
@@ -456,8 +533,20 @@ function installAndRunBin(step, tarballPath) {
         `${step}: expected installed bin to print "${expectedVersion}", got "${stdout}"`,
       );
     }
-    const themeUrl = assertSubpathResolves(step, installDir, "@ocx-sh/catalog/theme");
-    process.stderr.write(`pack-smoke: "@ocx-sh/catalog/theme" resolves to ${themeUrl}\n`);
+    const installedManifest = JSON.parse(
+      readFileSync(join(installDir, "node_modules", PACKAGE_NAME, "package.json"), "utf8"),
+    );
+    if (installedManifest.engines?.node !== EXPECTED_ENGINES_NODE) {
+      throw new Error(
+        `${step}: expected installed engines.node "${EXPECTED_ENGINES_NODE}", got ` +
+          `"${String(installedManifest.engines?.node)}"`,
+      );
+    }
+    if (installedManifest.exports && "./theme" in installedManifest.exports) {
+      throw new Error(`${step}: installed manifest still exports "./theme" (C-030)`);
+    }
+    assertSubpathDoesNotResolve(step, installDir, "@ocx-sh/catalog/theme");
+    buildFixtureFromInstall(step, installDir, binPath);
     assertDependencyCompleteness(step, installDir);
   } finally {
     rmSync(installDir, { recursive: true, force: true });
@@ -519,6 +608,7 @@ function runPublishDryRunGuard(step) {
 }
 
 function main() {
+  assertNodeMajor();
   const { version: npmVersion, major: npmMajor } = assertNpmMajor();
   process.stderr.write(`pack-smoke: running under npm ${npmVersion} (major ${String(npmMajor)})\n`);
 
@@ -527,18 +617,22 @@ function main() {
     const tarballPath = packTarball("npm pack", packDir);
     runPublint("publint", tarballPath);
     runAttw("attw", tarballPath);
-    installAndRunBin("install + run bin", tarballPath);
+    const themeTarballPath = packTheme("npm pack (theme)", packDir);
+    installAndRunBin("install + run bin", tarballPath, themeTarballPath);
     runPublishDryRunGuard("npm publish --dry-run");
   } finally {
     rmSync(packDir, { recursive: true, force: true });
   }
 }
 
-try {
-  main();
-  process.stderr.write("pack-smoke: OK\n");
-  process.exitCode = 0;
-} catch (err) {
-  process.stderr.write(`pack-smoke: FAILED — ${err instanceof Error ? err.message : String(err)}\n`);
-  process.exitCode = 1;
+// Importing this file (the specifier-rule test does) must not run the gate.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  try {
+    main();
+    process.stderr.write("pack-smoke: OK\n");
+    process.exitCode = 0;
+  } catch (err) {
+    process.stderr.write(`pack-smoke: FAILED — ${err instanceof Error ? err.message : String(err)}\n`);
+    process.exitCode = 1;
+  }
 }

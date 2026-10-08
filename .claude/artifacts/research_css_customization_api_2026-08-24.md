@@ -272,5 +272,5 @@ tokenized and which are not. `--space-1` is dead; delete or use it.
 
 Durable rules distilled from this:
 [`quality-design-tokens.md`](../rules/quality-design-tokens.md) (what values
-exist) and [`quality-css-overrides.md`](../rules/quality-css-overrides.md)
-(how a consumer wins the cascade).
+exist). The cascade-contract rule file it also fed was retired with the Vue
+theme in 0.6.0.

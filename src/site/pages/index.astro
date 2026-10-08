@@ -1,0 +1,28 @@
+---
+// The catalog landing page (C-010): the first window of the default scope,
+// server-rendered in its final state. The grid island takes over on first
+// interaction through the theme's lazy `mount` (L.4).
+import site from "virtual:ocx-catalog/site";
+import CatalogGrid from "../components/CatalogGrid.astro";
+import Page from "../layouts/Page.astro";
+
+const { base, chrome, landing } = site;
+---
+
+<Page title={chrome.siteName} description={chrome.description ?? undefined}>
+  <div class="landing">
+    <CatalogGrid view={landing} base={base} siteName={chrome.siteName} />
+  </div>
+</Page>
+
+<style>
+  @layer ocx {
+    .landing {
+      box-sizing: border-box;
+      inline-size: 100%;
+      max-inline-size: var(--ocx-page-max);
+      padding: var(--ocx-space-5) var(--ocx-space-6) var(--ocx-space-8);
+      margin-inline: auto;
+    }
+  }
+</style>

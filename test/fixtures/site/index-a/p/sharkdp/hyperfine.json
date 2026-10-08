@@ -1,0 +1,58 @@
+{
+  "name": "index-a/sharkdp/hyperfine",
+  "repository": "oci://ghcr.io/ocx-contrib/sharkdp/hyperfine",
+  "owners": [
+    {
+      "login": "ocx-bot",
+      "github": "ocx-bot",
+      "id": 309019509,
+      "github_id": 309019509
+    }
+  ],
+  "status": "active",
+  "deprecated_message": null,
+  "created": "2026-01-03",
+  "upstream": {
+    "org": "sharkdp",
+    "repository_url": "https://github.com/sharkdp/hyperfine",
+    "disclaimer": "Unaffiliated mirror of the upstream sharkdp/hyperfine project."
+  },
+  "desc": {
+    "digest": "sha256:7debf3a452d4934c3322e6bc030cdfff4722c9bb9a2802b11c3a4ac66a0c3b08",
+    "title": "hyperfine",
+    "description": "A command-line benchmarking tool.",
+    "keywords": [
+      "cli",
+      "benchmark",
+      "performance"
+    ],
+    "readme": "sha256:e224d781bae582987a7c6abceebdb0bb88d5a49e28e84456642b7be022d6ad57",
+    "logo": "sha256:25be7535f5659b3ba2785e8fa098ae52e498226efed44be8c454c9e9769b0326"
+  },
+  "tags": {
+    "1": {
+      "content": "sha256:2b05db34babf262e7a9d5ca3467c21d75df66a6dada55744c7193fc4a2f25b20",
+      "observed": "2026-01-03T09:00:00Z"
+    },
+    "1.0.0": {
+      "content": "sha256:4261051ef810daa8d6140afd118324ca0995f850a500b7cf1965e48cbc7ec1da",
+      "observed": "2026-01-03T09:00:00Z"
+    },
+    "1.1.0": {
+      "content": "sha256:4c8c20f9b84d244565735d81a867f62fdf986b0ae6dcdcffcd09d08562b7d430",
+      "observed": "2026-01-03T09:00:00Z"
+    },
+    "1.4.0": {
+      "content": "sha256:2b05db34babf262e7a9d5ca3467c21d75df66a6dada55744c7193fc4a2f25b20",
+      "observed": "2026-01-03T09:00:00Z"
+    },
+    "1.4": {
+      "content": "sha256:2b05db34babf262e7a9d5ca3467c21d75df66a6dada55744c7193fc4a2f25b20",
+      "observed": "2026-01-03T09:00:00Z"
+    },
+    "latest": {
+      "content": "sha256:2b05db34babf262e7a9d5ca3467c21d75df66a6dada55744c7193fc4a2f25b20",
+      "observed": "2026-01-03T09:00:00Z"
+    }
+  }
+}

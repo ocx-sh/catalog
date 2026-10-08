@@ -71,7 +71,7 @@ describe("mirrorSources — writes are bounded by a Semaphore (C-406)", () => {
     }
     const source: ResolvedSourceFiles = { label: "alpha", root: false, files: new Map(entries) };
 
-    await mirrorSources([source], distDir);
+    await mirrorSources([source], distDir, "/");
 
     expect(maxActiveWrites).toBeLessThanOrEqual(16);
     expect(maxActiveWrites).toBeGreaterThan(1);

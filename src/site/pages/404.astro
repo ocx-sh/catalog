@@ -1,0 +1,17 @@
+---
+// `404.html` (S-011): the static host serves it for any unknown URL, in the
+// same chrome as every page. The way home is `base`-joined so it works under
+// `/catalog/` as well as at `/`.
+import Button from "@ocx-sh/theme/components/ui/Button.astro";
+import site from "virtual:ocx-catalog/site";
+import { joinBase } from "../../viewmodel/url.js";
+import Page from "../layouts/Page.astro";
+---
+
+<Page title="Page not found" description="The page you asked for does not exist.">
+  <div class="ocx-prose">
+    <h1>Page not found</h1>
+    <p>The page you asked for does not exist or has moved.</p>
+    <Button href={joinBase(site.base, "/")} variant="primary">Back to the catalog</Button>
+  </div>
+</Page>

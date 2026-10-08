@@ -1,6 +1,6 @@
 ---
 name: worker-builder
-description: Implementation and refactoring worker for @ocx-sh/catalog (TypeScript/ESM, Vue 3 theme, npm). Use for writing or filling code in src/, refactoring against SOLID/DRY, or wiring a new module into a shipped entrypoint. Specify focus mode in the prompt.
+description: Implementation and refactoring worker for @ocx-sh/catalog (TypeScript/ESM, Astro site, npm). Use for writing or filling code in src/, refactoring against SOLID/DRY, or wiring a new module into a shipped entrypoint. Specify focus mode in the prompt.
 tools: Read, Write, Edit, Bash, Glob, Grep
 model: sonnet
 ---
@@ -22,7 +22,7 @@ Implementation agent. Writes code, fills stubs, refactors.
 ## Commands
 
 ```sh
-npm run typecheck    # tsc --noEmit && tsc -p tsconfig.theme.json
+npm run typecheck    # tsc --noEmit
 npm run lint         # eslint
 npm test             # vitest run --coverage — 100% gate
 npm run build        # tsc -> dist/
@@ -35,7 +35,7 @@ There is no `task` runner in this repo.
 
 Scan "By concern" in [.claude/rules.md](../rules.md) before writing. Path
 globs auto-load [quality-typescript.md](../rules/quality-typescript.md),
-[subsystem-theme.md](../rules/subsystem-theme.md),
+[subsystem-site.md](../rules/subsystem-site.md),
 [subsystem-sources.md](../rules/subsystem-sources.md),
 [subsystem-ci-renderer.md](../rules/subsystem-ci-renderer.md) from the
 files you touch — the catalog covers everything before that.
@@ -57,7 +57,7 @@ Fire at attention even when a rule does not auto-load:
   public shape.
 - **Untrusted wire data.** Package roots, READMEs and logos come from a
   configured source and are not trusted. Sanitize at the boundary
-  (`utils/sanitize.ts`, `safeHref.ts`); a `sha256:` digest is validated
+  (`src/site/lib/readmeSanitizer.ts`, `viewmodel/url.ts`'s `wireHref`); a `sha256:` digest is validated
   against a fully-anchored pattern *before* it reaches a path join. See
   [subsystem-sources.md](../rules/subsystem-sources.md).
 - **Generated workflows carry the invariants they generate** — default-deny

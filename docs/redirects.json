@@ -1,0 +1,31 @@
+{
+  "from": "https://ocx-sh.github.io/catalog/",
+  "to": "https://ocx.sh/apps/catalog/",
+  "anchors": "Fragments (#...) are not redirected: a meta-refresh stub is a static file per path and never sees the visitor's #fragment, so a deep link to an old section lands at the top of the new page.",
+  "removed": "how-to/customize-components/ and reference/theme-tokens/ were deleted with the removed ./theme contract; their stubs point at the nearest surviving page.",
+  "redirects": {
+    "": "",
+    "explanation/": "explanation/",
+    "explanation/index-vs-catalog/": "explanation/index-vs-catalog/",
+    "explanation/multi-source-model/": "explanation/multi-source-model/",
+    "explanation/security-and-trust-model/": "explanation/security-and-trust-model/",
+    "how-to/": "how-to/",
+    "how-to/configure-sources/": "how-to/configure-sources/",
+    "how-to/customize-branding-and-docs/": "how-to/customize-branding-and-docs/",
+    "how-to/customize-components/": "how-to/customize-branding-and-docs/",
+    "how-to/deploy-on-github-pages/": "how-to/deploy-on-github-pages/",
+    "how-to/deploy-on-gitlab-pages/": "how-to/deploy-on-gitlab-pages/",
+    "how-to/preview-locally-with-dev/": "how-to/preview-locally-with-dev/",
+    "how-to/quickstart/": "how-to/quickstart/",
+    "ops/": "ops/",
+    "ops/hosting-and-headers/": "ops/hosting-and-headers/",
+    "ops/known-limitations/": "ops/known-limitations/",
+    "ops/troubleshooting/": "ops/troubleshooting/",
+    "reference/": "reference/",
+    "reference/ci-rendering/": "reference/ci-rendering/",
+    "reference/cli/": "reference/cli/",
+    "reference/config-schema/": "reference/config-schema/",
+    "reference/output-layout/": "reference/output-layout/",
+    "reference/theme-tokens/": "how-to/customize-branding-and-docs/"
+  }
+}

@@ -1,6 +1,6 @@
 /**
  * Spec tests for `footer.links[]` (WP-1) — a dedicated config key for the
- * footer's own link set, replacing `SiteFooter.vue`'s old `nav[]` reuse and
+ * footer's own link set, replacing the footer's old `nav[]` reuse and
  * hardcoded `/docs/privacy` anchor (C-602). Entries share `nav[]`'s exact
  * shape and validation (`buildNavEntry`, reused not duplicated) — this file
  * covers the `footer` wrapper object itself; `nav[].link`'s own allowlist

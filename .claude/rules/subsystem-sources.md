@@ -59,95 +59,79 @@ rule to a `/c/index.json` package id (a remote key) before it's used to build
 
 ## `url` source: conditional GET + CAS cache
 
-`readUrlSource` (`walker.ts`) is the `url` reader — there is no `url.ts` file;
-the sparse-index walker lives entirely in `walker.ts`. Conditional GET on
-`/c/index.json` (`If-None-Match`, sent verbatim including a weak `W/"…"`
-prefix — RFC 7232 weak comparison is the *server's* job, never this
-function's); a 304 serves the cached body. Every currently enumerated
-package's root and CAS refs are loaded content-addressed by digest — a cache
-hit *is* "unchanged since last run", so no separate diff against the
-previous index is kept.
+`readUrlSource` (`walker.ts`; there is no `url.ts`) does a conditional GET on
+`/c/index.json` (`If-None-Match` sent verbatim, weak `W/"…"` included; weak
+comparison is the *server's* job); a 304 serves the cached body. Roots and CAS
+refs are loaded content-addressed by digest, so a cache hit *is* "unchanged
+since last run" and no diff against the previous index is kept. Hard rules on
+every fetch:
 
-Hard rules baked into every fetch:
-
-- **https only** (`config/load.ts`'s `SOURCE_URL_PROTOCOLS`) — `/config.json`
-  and `/c/index.json` are the only fetched files never digest-verified, so
-  transport integrity is the only integrity they have.
-- **No redirects** (`redirect: "manual"`) — a 3xx on a required file fails
-  the build naming the refused hop; this is an SSRF guard (a hostile source
-  could otherwise bounce the builder at a host only it can reach, and those
-  bytes would land in published, undigested `config.json`/`c/index.json`).
-- **Bounded response body** (`MAX_RESPONSE_BYTES`, 8 MiB) — checked against
-  `Content-Length` up front and against the actual decompressed stream while
-  buffering, since a compressed body's declared length says nothing about
-  its inflated size.
+- **https only** (`config/load.ts`'s `SOURCE_URL_PROTOCOLS`): `/config.json` and
+  `/c/index.json` are the only fetched files never digest-verified, so transport
+  integrity is all they have.
+- **No redirects** (`redirect: "manual"`): a 3xx on a required file fails the
+  build naming the refused hop. An SSRF guard — a hostile source could bounce the
+  builder at a host only it can reach and land those bytes in published,
+  undigested files. A 3xx is never retried.
+- **Bounded body** (`MAX_RESPONSE_BYTES`, 8 MiB), checked against
+  `Content-Length` AND the decompressed stream while buffering.
 - Every fetched byte sequence is digest-verified before being cached or
-  returned — a mismatch is `SourceError("DIGEST_MISMATCH", …)`, never a
-  silent pass-through.
-- Concurrency capped at 16 (`Semaphore`) across the combined root+CAS fetch
-  queue; each request retries 3 times after its initial attempt (4 total)
-  with jittered exponential backoff. A 3xx is never retried — it's a
-  deterministic policy refusal, not a transient failure.
+  returned (`SourceError("DIGEST_MISMATCH", …)`), never a silent pass-through.
+- Concurrency capped at 16 (`Semaphore`); 3 retries after the first attempt with
+  jittered exponential backoff.
 
 ## Git source: option-injection guard + LFS detection
 
-`git.ts` passes `entry.git`/`entry.ref`/`entry.dir` as array args to
-`execFile` (never a shell string — defeats shell injection), **and** inserts
-`--` before the first such positional in every `git` invocation, **and**
-rejects a leading-`-` value outright before it reaches `runGit` at all —
-belt-and-braces, since git itself parses a leading-`-` positional as an
-option (`--upload-pack=<cmd>` is git's own documented argument-injection
-vector, unrelated to shell quoting).
+`git.ts` passes `entry.git`/`entry.ref`/`entry.dir` as array args to `execFile`
+(never a shell string), inserts `--` before the first such positional in every
+`git` invocation, **and** rejects a leading-`-` value before it reaches
+`runGit`: git parses a leading-`-` positional as an option
+(`--upload-pack=<cmd>` is its documented argument-injection vector, unrelated to
+shell quoting). The clone lands in a `mkdtemp` scratch dir.
 
-A `--depth 1` clone never fetches LFS objects — an LFS-tracked file resolves
-to its pointer text, not real bytes. `git.ts` detects the LFS pointer prefix
-in every sourced blob and throws `SourceError("LFS_POINTER", …)` rather than
-silently serving pointer text as a package's logo/readme.
-
-`.gitmodules` presence triggers `options.warn` by name — submodules are
-never cloned, but the file's presence must never manifest as silent empty
-data.
+A `--depth 1` clone never fetches LFS objects, so an LFS file resolves to its
+pointer text. `git.ts` detects the pointer prefix in every sourced blob and
+throws `SourceError("LFS_POINTER", …)` rather than serve it as a logo/readme.
+`.gitmodules` presence triggers `options.warn` by name (submodules are never
+cloned; their absence must not read as silent empty data).
 
 ## Reserved-segment / label rules
 
-`labels.ts` is the deferred second half of label resolution `loadConfig`
-can't finish (an explicit label is checked pairwise there; a `null` label is
-derived from a source's own package roots, which needs fetched data
-`loadConfig` never touches). `resolveLabel`'s derived path collects distinct
-first-`/`-segment prefixes of every root's `name` in a source — exactly one
-⇒ that's the label; zero package roots or more than one distinct prefix is a
-hard error (`LABEL_DERIVATION_EMPTY`/`LABEL_DERIVATION_CONFLICT`), never a
-silently picked winner.
+`labels.ts` is the deferred second half of label resolution `loadConfig` can't
+finish (a `null` label is derived from fetched package roots). `resolveLabel`'s
+derived path collects the distinct first-`/`-segment prefixes of every root's
+`name`: exactly one is the label; zero roots or several prefixes is a hard error
+(`LABEL_DERIVATION_EMPTY`/`LABEL_DERIVATION_CONFLICT`), never a picked winner.
 
 An EXPLICIT label may only restate the name the index gives itself:
-`assertLabelMatchesPrefixes` holds it against that same first-`/`-segment set
-and throws `LABEL_PREFIX_MISMATCH` when they disagree. The label names the
-index in the scope tab row; the segment names it on every card — two names
-for one index is a page that contradicts itself. A source with zero package
-roots has nothing to contradict and keeps its explicit label (that is the
-legitimate empty-index case; only the DERIVED path needs roots to exist).
+`assertLabelMatchesPrefixes` throws `LABEL_PREFIX_MISMATCH` on a disagreement
+(the label names the index in the scope tabs, the segment names it on every
+card). A source with zero package roots keeps its explicit label.
 
 `resolveLabel`'s third parameter, `fallbackLabel`, is for a caller that
 INVENTED the source rather than reading it from a config — today only
-`dev_worker.ts`'s `--source` sugar. It applies to the derived branch alone
-and only when there is nothing to derive, so `dev` against an empty index
-still boots. It is NOT an explicit label: passing a default as one is what
-silently renamed every index `dev --source` was pointed at.
+`build/dev.ts`'s `--source` sugar. It applies to the derived branch alone and
+only when there is nothing to derive, so `dev` against an empty index still
+boots. It is NOT an explicit label: passing a default as one is what silently
+renamed every index `dev --source` was pointed at.
 
 `checkIndexNamespaceCollisions` is the second deferred cross-source pass,
 beside `checkLabelConflicts` and for the same reason (both need every source
 read): a non-root label that is also a ROOT-source namespace makes two things
 claim `/<label>/` — `INDEX_NAMESPACE_COLLISION`.
 
-`checkReservedIndexLabels` is the other claimant on that same prefix: a
-non-root label equal to a top-level path this build writes itself (`p`,
-`index`, `data`, `docs`, `assets`, `404`, `public`) — `INDEX_LABEL_RESERVED`.
-No hostile source needed; an index whose roots are named `docs/…` derives the
-label `docs` and lands its pages in the directory `pages.ts` mounts the docs
-tree at. Compared case-INSENSITIVELY: `SAFE_LABEL_RE` admits `Docs`, and macOS
-and Windows resolve that to the same directory, so a case-sensitive check
-passes CI and collides on a laptop. A root source is exempt — its packages keep
-bare routes, so its label is never a top-level segment.
+**Reserved names are computed per build (C-027).** `reservedNamesFor(loaded)`
+(`sources_pipeline.ts`) builds the predicate: the static list (`p index data
+docs assets 404 public _astro robots.txt _headers config.json c pagefind`, plus
+the `sitemap-*` and `favicon*` families) PLUS every top-level name this build
+puts at the output root — the consumer's `publicDir` entries and the basenames
+of `brand.logo` and `css`. `checkReservedIndexLabels` applies it to every
+non-root label and `checkReservedRootNamespaces` to every namespace of the root
+source (its packages keep bare routes, so each namespace is a top-level segment);
+both throw `INDEX_LABEL_RESERVED`. No hostile source is needed: an index whose
+roots are named `docs/…` derives the label `docs`. Compared case-INSENSITIVELY,
+since `SAFE_LABEL_RE` admits `Docs` and macOS/Windows resolve it to the same
+directory. An unreadable `publicDir` is a `BuildError("DATA")`.
 
 Both an explicit and a derived label go through `assertLabelPathSafe` — an
 **allowlist** (`^[A-Za-z0-9._-]+$`), not a blocklist: a derived label comes
@@ -157,13 +141,11 @@ block into the shared `_headers` file) through.
 
 ## Route shape and the merge
 
-`resolveCatalog` keeps EVERY source's packages — it no longer dedupes by
-`<namespace>/<package>`. That dedupe existed only because two copies would
-claim one detail-page route; routes are now index-qualified for every
-non-root source (`[label, namespace, ...package]`, the `root: true` source
-keeps the bare path), so both copies get their own page and both stay listed.
-Equal ids sort by index name, since `compareQualifiedIds` alone stopped being
-a total order once ids can repeat.
+`resolveCatalog` keeps EVERY source's packages and never dedupes by
+`<namespace>/<package>`: routes are index-qualified for every non-root source
+(`[label, namespace, ...package]`, the `root: true` source keeps the bare path),
+so two copies each get a page. Equal ids sort by index name, since
+`compareQualifiedIds` alone is not a total order once ids can repeat.
 
 `PackageRoute` therefore carries the ROUTE (`segments`) and the wire IDENTITY
 (`namespace`/`package`) separately. Never read identity back out of
@@ -173,28 +155,45 @@ source.
 ## Mirror placement rule
 
 `mirror.ts`'s `mirrorSources`: every source's tree is copied to
-`dist/index/<label>/**`, unconditionally. A `root: true` source's tree is
-**additionally** written verbatim at `dist/` itself (legacy-compat root
-placement) — never a substitute for the `index/<label>/` copy. Each source's
-own `catalog.json` lands at `data/catalog/catalog.json` (root) or
-`index/<label>/data/catalog/catalog.json` (otherwise); the **merged**
-multi-source catalog is written **last**, overwriting the root path, by
-`sources_pipeline.ts`'s `emitCatalogTree` — a deliberate last-write-wins so a
-consumer's own `publicDir` file at that path never shadows the real catalog.
+`<public>/index/<label>/**`, unconditionally. A `root: true` source's tree is
+**additionally** written verbatim at the root (legacy-compat root placement),
+never a substitute for the `index/<label>/` copy. Each source's own
+`catalog.json` lands at `data/catalog/catalog.json` (root) or
+`index/<label>/data/catalog/catalog.json`.
 
-## Scratch-root lifecycle (`src/build/scratch.ts`)
+**The mirror is write-once (C-027).** `assertAbsent` refuses any path already in
+the output, because `assemblePublic` (`build/assemble.ts`) has already put the
+consumer's `publicDir`, `brand.logo`, `css`, the ocx-chrome `favicon.svg` and
+`robots.txt` there; a mirrored path silently replacing one of them (a consumer
+`_headers` lost to ours) is the defect. The single exception is
+`data/catalog/catalog.json`: `emitCatalogTree` writes the **merged** catalog over
+the root source's own copy LAST, so no consumer file shadows the real catalog.
+`writeDistFile` also re-checks the resolved destination stays inside the output
+directory, a second gate behind `walker.ts`'s `assertSafeQualifiedId`.
+`_headers` patterns are prefixed by `base` (`renderHeaders(sources, base)`,
+C-006); the file is inert on hosts that do not read it (see `product-context.md`).
 
-Scratch roots (`createScratchRoot`) live under
-`<cwd>/node_modules/.cache/ocx-catalog/` (or `<cwd>/.ocx-catalog/` when no
-`node_modules` exists yet) — **never `os.tmpdir()`**. A bare tmpdir root has
-no `node_modules` ancestor chain, so Node's bare-specifier resolution for the
-generated config's `import ... from "vitepress"` can't reach this package's
-own install; a real build against such a root fails outright (confirmed by
-spike). Self-sweeping (a process-`exit` hook is the backstop, not the
-primary path — callers still call `dispose()` in a `finally`).
+## Scratch root, staging, and read-only builds (`src/build/scratch.ts`, `engine.ts`)
 
-The `url` source's fetch cache (`cacheBaseDir()` + `"url"` + a hash of the
-source URL) lives **beside** scratch roots under the same base directory,
-**never inside one** — its whole value is surviving *between* builds
-(ETag/CAS), and a self-sweeping scratch root would delete it every run,
-silently turning every build into a cold fetch while still looking correct.
+Scratch roots (`createScratchRoot`) live under `<cwd>/node_modules/.cache/ocx-catalog/`
+(or `<cwd>/.ocx-catalog/` when no `node_modules` exists) — **never `os.tmpdir()`**:
+the `astro` subprocess resolves its packages by walking up from the scratch
+root, and a bare tmpdir root has no `node_modules` ancestor, so the child dies
+with `Cannot resolve entry module astro/entrypoints/prerender`. Roots are per-pid
+(`ocx-catalog-<pid>-*`) and self-sweeping (an `exit` hook is the backstop;
+callers still `dispose()` in a `finally`). The root holds `astro.config.mjs`,
+`site.json`, `public/`, `readme/` and, with `docs`, `src/content.config.ts` —
+never `src/fetch.ts` or a page source (C-045).
+
+Builds are staged and read-only (C-007, C-036, C-038): `--out` is `realpath`'d and
+refused (`OUT_DIR_OVERLAPS_INPUT`, exit 65) when it overlaps the config dir, a
+`path` source, `docs`, `css`, `publicDir` or `brand.logo`; Astro renders into a
+sibling `<out>.staging-<pid>`, and only a fully successful build is promoted
+(old `outDir` renamed aside, staging into place, old removed, rolled back on a
+failed rename). A build therefore writes only `outDir`, its staging/retired
+siblings, the url cache, a git clone's `mkdtemp` dir and its scratch root.
+
+The `url` source's fetch cache (`cacheBaseDir()` + `"url"` + a hash of the URL)
+lives **beside** scratch roots, **never inside one**: its value is surviving
+*between* builds (ETag/CAS), and a self-sweeping root would delete it every run
+while still looking correct.

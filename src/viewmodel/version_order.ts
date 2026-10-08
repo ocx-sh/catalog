@@ -26,13 +26,12 @@
  *     `RegExp` syntax.
  *
  * DELIBERATE PORT — DO NOT MERGE OR REPLACE:
- * This module and `site/.vitepress/theme/utils/version.ts` (the catalog
- * theme's own version-display helper, in the `ocx-sh/index` repo) parse two
+ * This module and the version-display helpers in `@ocx-sh/theme` parse two
  * DIFFERENT grammars on purpose. `VERSION_RE` below (ported from the bot's
  * `_VERSION_RE`) stops at bare `major[.minor[.patch]]` — it predates
  * prerelease/build support. `OCX_VERSION_RE` (ported from the bot's
  * `_OCX_VERSION_RE`) parses the full grammar, prerelease and build segments
- * included. Reusing the theme's parser here (or vice versa) would silently
+ * included. Reusing a theme parser here (or vice versa) would silently
  * corrupt `latestVersion` — see the Python module's docstring for the full
  * rationale.
  */

@@ -1,16 +1,19 @@
 .agents/worktrees/
 .claude/state/
 node_modules/
+# TEMPORARY (plan step I.1): CI checks the ocx theme source out here
+.ocx-theme-src/
 dist/
 coverage/
 .lhci-site/
 .lhci-bulk/
 .lhci-bulk-src/
+.lhci-budget/
 .lighthouseci/
 .lighthouseci-bulk/
 
-# mkdocs build output (task docs:build)
-site/
+# docs site build output (task docs:build): docs/dist/ is covered by `dist/`
+# above, docs/.astro/ by docs/.gitignore.
 
 # lychee link-check cache (task lint:links)
 .lycheecache

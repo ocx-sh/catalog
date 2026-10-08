@@ -1,7 +1,9 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "lib": ["ES2022"],
+    // DOM: src/site/lib and src/site/client hold browser-side logic (dom.ts,
+    // the islands); the CLI code never touches it.
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "rootDir": "src",
@@ -14,9 +16,5 @@
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true
   },
-  "include": ["src"],
-  // src/theme is VitePress-theme source (bundler-resolved, extensionless
-  // relative imports, .vue SFCs) — not part of this package's Node-targeted
-  // `dist/` build. Typechecked separately by tsconfig.theme.json.
-  "exclude": ["src/theme"]
+  "include": ["src"]
 }

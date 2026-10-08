@@ -10,8 +10,9 @@ resolves packages through.
 
 `@ocx-sh/catalog` is a **renderer**, not a producer: point it at one or more
 indices (a local directory, an HTTP endpoint, or a git repository) and it
-builds a static [VitePress](https://vitepress.dev)-based site around them —
-a package grid, per-package detail pages, search, an optional docs mount.
+builds a static [Astro](https://astro.build) site around them, on the
+`@ocx-sh/theme` design system — a package grid, per-package detail pages,
+search, an optional docs mount.
 Producing the wire JSON tree is out of scope entirely. This package never
 writes to an index and never invents index data; it only reads and displays
 what's already there.
@@ -38,20 +39,34 @@ index's URL shapes or field semantics is not this repo's call to make —
 follow whatever the index's schema documents, and treat a malformed root as
 a data error to report, not a shape to silently coerce.
 
-## Deployment precondition: `_headers`
+## Deployment precondition: the `/p/*` sandbox
 
 Every mirrored `/p/*` prefix is untrusted, same-origin content (a README,
 logo, or package root a configured source handed this renderer, never
 authored by it). The one control sandboxing that content —
 `Content-Security-Policy: sandbox` + `X-Content-Type-Options: nosniff` on
-`/p/*` and `/index/<label>/p/*` — ships as a Cloudflare Pages/Netlify
-`_headers` file (`src/sources/mirror.ts`'s `renderHeaders`). It is a **hard
-deployment precondition**, not a nice-to-have: on a host that doesn't read
-`_headers` (GitHub Pages, a raw S3 bucket, nginx serving the `dist/` tree
-directly) the file ships but is inert, and in `ocx-catalog dev` it's never
-read at all. Deploying anywhere other than Cloudflare Pages/Netlify means
-translating `_headers`' rules into that host's own header mechanism
-yourself — this package does not.
+`<base>p/*` and `<base>index/<label>/p/*` — ships as a Cloudflare Pages/Netlify
+`_headers` file (`src/sources/mirror.ts`'s `renderHeaders`, every pattern
+prefixed by `base`). It is a **hard deployment precondition**, not a
+nice-to-have: on a host that doesn't read `_headers` (GitHub Pages, a raw S3
+bucket, nginx serving the `dist/` tree directly) the file ships but is inert,
+and in `ocx-catalog dev` it's never read at all. Deploying anywhere other than
+Cloudflare Pages/Netlify means translating `_headers`' rules into that host's
+own header mechanism yourself — this package does not.
+
+**Bunny CDN (`ocx.sh/catalog/`).** Bunny does not read `_headers`. The same two
+headers come from an edge rule named `catalog-sandbox`, owned by the ocx.sh
+website deploy, at `/catalog/p/*` and `/catalog/index/*/p/*`. Two consequences
+are documented user-facing (`docs/src/content/docs/ops/known-limitations`):
+the deploy prune deletes stale `.html` only, so a package removed from the
+index keeps its wire files reachable until a `bunny:gc` exists (takedown is a
+manual Bunny delete, C-034); and the **C-049 probe gate** — before
+`ocx.sh/catalog/` serves a new build, `curl -sI
+https://ocx.sh/catalog/p/<ns>/<pkg>.json` and the `…/catalog/index/<label>/p/…`
+equivalent must both show `content-security-policy: sandbox` and
+`x-content-type-options: nosniff`. This package documents the gate and never
+runs it; the deployer does. A page-level CSP (Astro `security.csp`) is a second,
+independent control and does not replace the sandbox (see `subsystem-site.md`).
 
 ## Non-goals
 
@@ -93,19 +108,25 @@ tf-static-registry (static files serving a registry protocol — closest
 precedent) · ecosyste.ms registry categorization · SLSA provenance ·
 sigstore/cosign attestation verification · CycloneDX vs SPDX SBOM formats
 (the supply-chain three matter once the catalog surfaces attestations) ·
-VitePress createContentLoader (the page-synthesis API this renderer builds
-on).
+Astro content collections and the programmatic-vs-CLI build question
+(`.claude/artifacts/research_astro_programmatic_renderer.md` is the record of
+why this renderer spawns the `astro` CLI as a subprocess).
 
 ## Status
 
-Pre-1.0, published. `latest` on the npm registry is `0.4.0` (verified via
-`npm view @ocx-sh/catalog version`), matching this repo's `v0.4.0` tag.
-`0.1.0` was a one-time manual bootstrap publish, since npm trusted
-publishing cannot pre-provision a package name that doesn't exist yet;
-`0.1.1` went out through the CI release lane on 2026-08-22 with a SLSA v1
-provenance attestation, the end-to-end proof that trusted publishing works
-for this package, and every release since (`0.2.0`, `0.2.1`, `0.3.0`,
-`0.4.0`) has gone out through that same lane. The GitHub remote
-[`ocx-sh/catalog`](https://github.com/ocx-sh/catalog) is public — a
-precondition for `--provenance` attaching anything at all. Any consumer, not
+Pre-1.0, published. `latest` on the npm registry is `0.5.3` (verified via
+`npm view @ocx-sh/catalog version`), matching this repo's `v0.5.3` tag.
+`0.1.0` was a one-time manual bootstrap publish, since npm trusted publishing
+cannot pre-provision a package name that doesn't exist yet; `0.1.1` went out
+through the CI release lane on 2026-08-22 with a SLSA v1 provenance
+attestation, the end-to-end proof that trusted publishing works for this
+package, and every release since has gone out through that same lane. The
+GitHub remote [`ocx-sh/catalog`](https://github.com/ocx-sh/catalog) is public —
+a precondition for `--provenance` attaching anything at all. Any consumer, not
 just `ocx-sh/index`, can `npm install @ocx-sh/catalog` from the registry.
+
+**`0.6.0` is unreleased** and is the Astro + `@ocx-sh/theme` port: it removes
+the VitePress/Vue renderer and the `@ocx-sh/catalog/theme` export, and stays
+pre-1.0. It cannot ship until `@ocx-sh/theme` 0.2.0 is on npm (the `file:`
+dependency is guarded off `main`, see `quality-security.md`) and the C-049
+probe gate has passed on the target host.

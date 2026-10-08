@@ -1,0 +1,72 @@
+---
+// A package's logo in a reserved box (C-015): the initials sit in the box and
+// the `<img>` (intrinsic width/height) stacks over them, so a slow, blocked or
+// absent logo never moves layout. Wire SVG is only ever `<img src>` here, never
+// inlined; `logoUrl` is catalog-root-relative (C-008) and joins `base`.
+import { joinBase } from "../../viewmodel/url.js";
+import { monogramInitials } from "../lib/monogram.js";
+
+interface Props {
+  /** Bare package leaf the initials derive from; `""` in a template. */
+  leaf: string;
+  logoUrl: string | null;
+  base: string;
+  /** Edge in px, also the img's intrinsic size; the box's CSS size is a token. */
+  size: 20 | 38;
+}
+const { leaf, logoUrl, base, size } = Astro.props;
+---
+
+<span class="logo-box" data-size={size} aria-hidden="true">
+  <span class="logo-initials" data-field="initials">{monogramInitials(leaf)}</span>
+  <img
+    class="logo-img"
+    data-field="logo"
+    width={size}
+    height={size}
+    alt=""
+    loading="lazy"
+    decoding="async"
+    hidden={logoUrl === null}
+    src={logoUrl === null ? undefined : joinBase(base, logoUrl)}
+  />
+</span>
+
+<style>
+  @layer ocx {
+    .logo-box {
+      position: relative;
+      display: inline-flex;
+      flex-shrink: 0;
+      align-items: center;
+      justify-content: center;
+      inline-size: var(--ocx-control-2xl);
+      block-size: var(--ocx-control-2xl);
+      overflow: hidden;
+      background: var(--ocx-color-surface-subtle);
+      color: var(--ocx-color-fg-muted);
+      border: var(--ocx-border-width) solid var(--ocx-color-border);
+      border-radius: var(--ocx-radius-lg);
+      font-family: var(--ocx-font-mono);
+      font-size: var(--ocx-text-xs);
+      font-weight: var(--ocx-font-weight-semibold);
+      line-height: var(--ocx-lh-none);
+    }
+    .logo-box[data-size='20'] {
+      inline-size: var(--ocx-control-sm);
+      block-size: var(--ocx-control-sm);
+      font-size: var(--ocx-text-2xs);
+    }
+    .logo-img {
+      position: absolute;
+      inset: 0;
+      inline-size: 100%;
+      block-size: 100%;
+      object-fit: contain;
+      background: var(--ocx-color-surface);
+    }
+    .logo-img[hidden] {
+      display: none;
+    }
+  }
+</style>

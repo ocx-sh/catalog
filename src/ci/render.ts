@@ -14,15 +14,22 @@ export interface RenderedFile {
 const GITHUB_FILE = ".github/workflows/catalog-ci.yml";
 const GITLAB_FILE = ".gitlab-ci/catalog.yml";
 
-/** Per-`ci.packageManager` install/exec commands + GitLab base image — the
- * lookup table `renderCi` uses to fill `{{installCmd}}`/`{{execPrefix}}`/
- * `{{image}}`. The `npm` row reproduces this renderer's pre-packageManager
- * output byte-for-byte (see render.test.ts); `bun` swaps in bun's own
- * install/exec/image since a bun repo has no `package-lock.json` for
- * `npm ci` to read. */
-const PACKAGE_MANAGER: Record<"npm" | "bun", { installCmd: string; execPrefix: string; gitlabImage: string }> = {
-  npm: { installCmd: "npm ci", execPrefix: "npx", gitlabImage: "node:22-alpine" },
-  bun: { installCmd: "bun install --frozen-lockfile", execPrefix: "bun x", gitlabImage: "oven/bun:1" },
+/** GitLab base image for every `packageManager`. The engine spawns
+ * `process.execPath` and `bun x ocx-catalog` follows the CLI's node shebang,
+ * so bun needs Node >= 22.13 too — `oven/bun:1` ships none. A node image plus
+ * `gitlabSetup` (below) gives both. */
+const GITLAB_IMAGE = "node:22-alpine";
+
+/** Per-`ci.packageManager` install/exec commands + GitLab pre-install lines —
+ * the lookup table `renderCi` uses to fill `{{installCmd}}`/`{{execPrefix}}`/
+ * `{{installSteps}}`. The `npm` row reproduces this renderer's
+ * pre-packageManager output byte-for-byte (see render.test.ts); `bun` swaps in
+ * bun's own install/exec since a bun repo has no `package-lock.json` for
+ * `npm ci` to read, and installs bun itself (`gitlabSetup`) onto the node
+ * image. */
+const PACKAGE_MANAGER: Record<"npm" | "bun", { installCmd: string; execPrefix: string; gitlabSetup: string[] }> = {
+  npm: { installCmd: "npm ci", execPrefix: "npx", gitlabSetup: [] },
+  bun: { installCmd: "bun install --frozen-lockfile", execPrefix: "bun x", gitlabSetup: ["npm install -g bun@1"] },
 };
 
 /** Collapses any run of trailing newlines to exactly one — an omitted
@@ -52,16 +59,19 @@ function warnUnusablePins({ conflicts, mutableRefs }: ScrapedPins): void {
 /** The GitHub Actions setup step(s) for `packageManager`, fully rendered
  * (pin already substituted) before it's handed to `renderTemplate` as a
  * value — a placeholder inside a substituted value is never re-scanned
- * (see templates.ts's own doc comment). npm needs `actions/setup-node`'s
- * `cache: npm`; bun ships its own runtime, so `oven-sh/setup-bun` replaces
- * setup-node outright rather than running alongside it. */
+ * (see templates.ts's own doc comment). both need Node
+ * (the engine spawns `process.execPath`, and `bun x ocx-catalog` follows the
+ * CLI's node shebang), so `actions/setup-node` always runs; npm adds
+ * `cache: npm`, bun has no `package-lock.json` to key a cache on and adds
+ * `oven-sh/setup-bun` after it. */
 function githubSetupSteps(packageManager: "npm" | "bun", pins: ReadonlyMap<string, string>): string {
+  const nodePin = pins.get("actions/setup-node") ?? (DEFAULT_PINS["actions/setup-node"] as string);
+  const setupNode = `      - uses: actions/setup-node@${nodePin}\n        with:\n          node-version: "22"`;
   if (packageManager === "bun") {
-    const pin = pins.get("oven-sh/setup-bun") ?? (DEFAULT_PINS["oven-sh/setup-bun"] as string);
-    return `      - uses: oven-sh/setup-bun@${pin}`;
+    const bunPin = pins.get("oven-sh/setup-bun") ?? (DEFAULT_PINS["oven-sh/setup-bun"] as string);
+    return `${setupNode}\n      - uses: oven-sh/setup-bun@${bunPin}`;
   }
-  const pin = pins.get("actions/setup-node") ?? (DEFAULT_PINS["actions/setup-node"] as string);
-  return `      - uses: actions/setup-node@${pin}\n        with:\n          node-version: "22"\n          cache: npm`;
+  return `${setupNode}\n          cache: npm`;
 }
 
 /**
@@ -91,14 +101,15 @@ export async function renderCi(ci: CiConfig, repoRoot: string): Promise<Rendered
   const scraped = scrapePins(discovered);
   const { pins } = scraped;
   warnUnusablePins(scraped);
-  const { installCmd, execPrefix, gitlabImage } = PACKAGE_MANAGER[packageManager];
+  const { installCmd, execPrefix, gitlabSetup } = PACKAGE_MANAGER[packageManager];
   const vars: Record<string, string> = {
     header: HEADER_LINE,
     checkoutPin: pins.get("actions/checkout") ?? (DEFAULT_PINS["actions/checkout"] as string),
     setupSteps: githubSetupSteps(packageManager, pins),
     installCmd,
     execPrefix,
-    image: gitlabImage,
+    image: GITLAB_IMAGE,
+    installSteps: [...gitlabSetup, installCmd].map((cmd) => `    - ${cmd}`).join("\n"),
   };
 
   if (ci.forge === "github") {

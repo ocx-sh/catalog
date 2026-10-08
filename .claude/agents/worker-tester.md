@@ -35,8 +35,8 @@ Write tests to validate existing implementation and close coverage gaps.
 **Coverage is not proof.** This repo's own history: a fully-covered module
 (`themeConfig.brand`) shipped read by **zero** real component. A new
 library-layer module's coverage must include — or be supplemented by — a
-test proving a **shipped entrypoint** reaches it (a CLI smoke test, a
-component-wiring test, a golden fixture), not only tests that call the
+test proving a **shipped entrypoint** reaches it (a CLI smoke test, an
+acceptance build asserting the rendered page, a golden fixture), not only tests that call the
 module directly. See [subsystem-tests.md](../rules/subsystem-tests.md).
 
 **`test/` is not typechecked.** `tsconfig.json`'s `include` is `["src"]`
@@ -58,8 +58,9 @@ rule — coverage exclusions, the golden-fixture convention
 - `npm test` — `vitest run --coverage`, the gate: 100% statements,
   branches, functions, lines.
 - `npx vitest run <path>` — target one file while iterating.
-- `@vue/test-utils` + `happy-dom`/`jsdom` for `src/theme/**` component
-  tests.
+- `happy-dom`/`jsdom` for `src/site/client` island tests; the `acceptance`
+  vitest project (real `astro build` over fixture configs) for built pages.
+  `.astro` templates have no unit coverage by design.
 - Golden fixtures: a new `test/golden/<case>/input.ts` plus a committed
   `expected/catalog.json` joins the suite with no edit to `golden.test.ts`
   itself.

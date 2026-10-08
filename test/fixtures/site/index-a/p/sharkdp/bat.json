@@ -1,0 +1,58 @@
+{
+  "name": "index-a/sharkdp/bat",
+  "repository": "oci://ghcr.io/ocx-contrib/sharkdp/bat",
+  "owners": [
+    {
+      "login": "ocx-bot",
+      "github": "ocx-bot",
+      "id": 309019509,
+      "github_id": 309019509
+    }
+  ],
+  "status": "active",
+  "deprecated_message": null,
+  "created": "2026-01-01",
+  "upstream": {
+    "org": "sharkdp",
+    "repository_url": "https://github.com/sharkdp/bat",
+    "disclaimer": "Unaffiliated mirror of the upstream sharkdp/bat project."
+  },
+  "desc": {
+    "digest": "sha256:d5c93c17827bb6c1c19eff7d2e23f2b413235e271128f07f8c6f580b625676f9",
+    "title": "bat",
+    "description": "A cat clone with syntax highlighting and Git integration.",
+    "keywords": [
+      "cli",
+      "pager",
+      "syntax"
+    ],
+    "readme": "sha256:477ed2c0d263c19050c06efb1714f70b9a672dc4067372db8726c16fc6c7fad3",
+    "logo": "sha256:1e4484063e3b5977f08e7b5c64f7d0b6cef2bd81f33336e1838bc2626ca7a16a"
+  },
+  "tags": {
+    "1": {
+      "content": "sha256:6c1ec3741dc2d5b001b2ce04d28e37a3bcd48b0b018004296fc572d32cb136c9",
+      "observed": "2026-01-01T09:00:00Z"
+    },
+    "1.0.0": {
+      "content": "sha256:c138f71f6f6a4d76b010be4597efa6ce7394d77ca627e902a952ec7c36c602e5",
+      "observed": "2026-01-01T09:00:00Z"
+    },
+    "1.1.0": {
+      "content": "sha256:cedcc399bf8426ae0890a0bfccc2d236ca6fb351781b5e1839ae4bed71c90293",
+      "observed": "2026-01-01T09:00:00Z"
+    },
+    "1.2.0": {
+      "content": "sha256:6c1ec3741dc2d5b001b2ce04d28e37a3bcd48b0b018004296fc572d32cb136c9",
+      "observed": "2026-01-01T09:00:00Z"
+    },
+    "1.2": {
+      "content": "sha256:6c1ec3741dc2d5b001b2ce04d28e37a3bcd48b0b018004296fc572d32cb136c9",
+      "observed": "2026-01-01T09:00:00Z"
+    },
+    "latest": {
+      "content": "sha256:6c1ec3741dc2d5b001b2ce04d28e37a3bcd48b0b018004296fc572d32cb136c9",
+      "observed": "2026-01-01T09:00:00Z"
+    }
+  }
+}

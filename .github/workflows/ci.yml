@@ -9,6 +9,16 @@ name: ci
 # equivalent). No `ocx run --` wrapper: setup-ocx ACTIVATES the project when
 # ocx.toml is present, exporting the pinned tools onto PATH for every
 # subsequent step — wrapping again would be redundant indirection.
+#
+# TEMPORARY until @ocx-sh/theme 0.2.0 on npm (removed by plan step I.1): the
+# manifests depend on the theme through a local `file:` path, which no runner
+# can resolve. Every job that installs npm dependencies therefore uses the
+# local `install-ocx-theme` action (a pinned ocx-sh/website checkout, packed
+# and installed over the `file:` dependency) instead of `npm ci`. The
+# `file-deps` job is the counterweight: it fails any pull request targeting
+# `main` that still carries a `file:` specifier. It WILL be red on the theme-
+# port branch's own PR until the `^0.2.0` swap; that is intended — the branch
+# must not merge before the theme is on npm.
 on:
   pull_request:
   push:
@@ -31,7 +41,7 @@ jobs:
           node-version: "24"
           cache: npm
       - uses: ocx-sh/setup-ocx@25fa771f8572572dc64528db89560de68a163a0e  # v1
-      - run: npm ci
+      - uses: ./.github/actions/install-ocx-theme
       - run: task lint
 
   typecheck:
@@ -48,7 +58,7 @@ jobs:
           node-version: "24"
           cache: npm
       - uses: ocx-sh/setup-ocx@25fa771f8572572dc64528db89560de68a163a0e  # v1
-      - run: npm ci
+      - uses: ./.github/actions/install-ocx-theme
       - run: task typecheck
 
   test:
@@ -65,7 +75,7 @@ jobs:
           node-version: "24"
           cache: npm
       - uses: ocx-sh/setup-ocx@25fa771f8572572dc64528db89560de68a163a0e  # v1
-      - run: npm ci
+      - uses: ./.github/actions/install-ocx-theme
       # `task test` runs `npm test` (`vitest run --coverage`) at 100% branch/
       # function/line/statement thresholds (vitest.config.ts) and builds dist/
       # itself via vitest's globalSetup — no separate build step needed here.
@@ -85,17 +95,36 @@ jobs:
           node-version: "24"
           cache: npm
       - uses: ocx-sh/setup-ocx@25fa771f8572572dc64528db89560de68a163a0e  # v1
-      - run: npm ci
+      - uses: ./.github/actions/install-ocx-theme
       # Pack-verification gate (`task pack-smoke`): npm pack -> publint -> attw
       # --pack -> install the tarball into a sandbox -> run the installed bin ->
-      # resolve the theme subpath export -> dependency-completeness. `npm pack`
-      # builds dist/ via this package's own prepack, so no separate build step.
+      # assert the theme subpath import fails (C-030) -> dependency-completeness.
+      # `npm pack` builds dist/ via this package's own prepack, so no separate
+      # build step.
       # This runner has registry access, so it opts into the stricter `npm
       # publish --dry-run` manifest check pack-smoke.mjs otherwise skips for
       # offline-safety (see its docblock).
       - run: task pack-smoke
         env:
           OCX_CATALOG_PACK_SMOKE_NETWORK: "1"
+
+  # C-026: no `file:` dependency may reach main. Red on the theme-port branch's
+  # own PR until plan step I.1 swaps the theme to `^0.2.0` — intended.
+  file-deps:
+    name: file-deps
+    if: github.event_name == 'pull_request' && github.base_ref == 'main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
+        with:
+          node-version: "24"
+      - uses: ocx-sh/setup-ocx@25fa771f8572572dc64528db89560de68a163a0e  # v1
+      - run: task check:no-file-deps
 
   workflows-lint:
     name: workflows-lint
@@ -128,10 +157,13 @@ jobs:
           node-version: "24"
           cache: npm
       - uses: ocx-sh/setup-ocx@25fa771f8572572dc64528db89560de68a163a0e  # v1
-      - run: npm ci
+      - uses: ./.github/actions/install-ocx-theme
       # `task audit:signatures` verifies every resolved dependency's registry
       # signature against npm's public key — supply-chain check, independent of
-      # `npm audit`'s vulnerability-database scan.
+      # `npm audit`'s vulnerability-database scan. It CANNOT verify a `file:`
+      # dependency (it only checks registry-resolved packages), so until the
+      # theme is on npm the `@ocx-sh/theme` tarball goes unchecked here; the
+      # `file-deps` job is what keeps that gap from reaching main.
       - run: task audit:signatures
 
   repo-checks:
@@ -167,8 +199,11 @@ jobs:
           node-version: "24"
           cache: npm
       - uses: ocx-sh/setup-ocx@25fa771f8572572dc64528db89560de68a163a0e  # v1
-      - run: npm ci
-      # `task quality:web` builds the fixture catalog site and runs Lighthouse
-      # CI (accessibility/SEO/best-practices as errors, performance as a warn)
-      # against it — see .lighthouserc.cjs and test/fixtures/quality-index/.
+      - uses: ./.github/actions/install-ocx-theme
+      # `task quality:web` builds the fixture catalog sites and runs Lighthouse
+      # CI (the four categories as errors), the C-017 page-budget probe, axe
+      # and the view-switch timings against them, then the first-interaction /
+      # lazy-load / CSP gates (scripts/quality-interaction.mjs) — see
+      # .lighthouserc.cjs, scripts/quality-budget.mjs and
+      # test/fixtures/quality-index/.
       - run: task quality:web

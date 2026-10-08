@@ -710,13 +710,33 @@ describe("C-002 favicon", () => {
   });
 
   // `favicon` is an HREF, not a path this package ever opens — unlike
-  // `css`/`docs`/`publicDir`/`brand.logo` it gets NO containment check, so a
-  // leading `..` is just an (odd) relative href, never PATH_ESCAPE.
-  it("favicon is not path-contained — a ../ href loads unchanged", async () => {
+  // `css`/`docs`/`publicDir`/`brand.logo` it gets NO containment check; it gets
+  // the `nav[].link` allowlist instead (the page shell renders it like one).
+  it.each(["/favicon.svg", "/icons/f.png", "https://cdn.example/icon.svg", "http://cdn.example/icon.ico"])(
+    "accepts favicon %s unchanged",
+    async (favicon) => {
+      await withTempDir(async (dir) => {
+        const configPath = await writeConfig(dir, { ...MINIMAL_VALID, favicon });
+        expect((await loadConfig(configPath)).config.favicon).toBe(favicon);
+      });
+    },
+  );
+
+  // Each of these used to load and then crash the Astro child (`joinBase` throws on
+  // a non-root-relative path), exiting 1 instead of 65.
+  it.each([
+    ["a relative href", "../shared/favicon.svg"],
+    ["a bare file name", "favicon.svg"],
+    ["a protocol-relative URL", "//cdn.example/icon.svg"],
+    ["a dot segment", "/assets/../favicon.svg"],
+    ["a dot segment before a query", "/assets/..?v=2"],
+    ["a dot segment before a fragment", "/..#x"],
+    ["a javascript: URL", "javascript:alert(1)"],
+  ])("rejects favicon as %s with INVALID_TYPE naming the key", async (_label, favicon) => {
     await withTempDir(async (dir) => {
-      const configPath = await writeConfig(dir, { ...MINIMAL_VALID, favicon: "../shared/favicon.svg" });
-      const loaded = await loadConfig(configPath);
-      expect(loaded.config.favicon).toBe("../shared/favicon.svg");
+      const error = await loadConfigError(await writeConfig(dir, { ...MINIMAL_VALID, favicon }));
+      expect(error.code).toBe("INVALID_TYPE");
+      expect(error.message).toContain("favicon");
     });
   });
 });

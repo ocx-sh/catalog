@@ -8,16 +8,28 @@
       "pinDigests": true
     },
     {
-      "description": "Group routine npm minor/patch bumps into one PR. vitepress/vue are excluded here and handled by the rule below.",
+      "description": "Group routine npm minor/patch bumps into one PR. astro and @astrojs/* are excluded here and handled by the rule below.",
       "matchManagers": ["npm"],
       "matchUpdateTypes": ["minor", "patch"],
-      "excludePackageNames": ["vitepress", "vue"],
+      "excludePackageNames": ["astro", "/^@astrojs\\//"],
       "groupName": "npm minor/patch"
     },
     {
-      "description": "vitepress ships on an alpha channel (2.0.0-alpha.*) and vue is pinned in step with it — deliberately NOT matched above, so each gets its own ungrouped PR for manual review before merge.",
+      "description": "astro and @astrojs/* (root package.json) move together in one PR. astro is pinned to a minor range (~7.3) and the integrations are exact pins; rangeStrategy replace keeps each range as written, so a patch stays inside it and a minor (~7.4) is a deliberate bump. Each such PR needs the acceptance build green before merge.",
       "matchManagers": ["npm"],
-      "matchPackageNames": ["vitepress", "vue"]
+      "matchFileNames": ["package.json"],
+      "matchPackageNames": ["astro", "/^@astrojs\\//"],
+      "groupName": "astro + @astrojs/*",
+      "rangeStrategy": "replace",
+      "automerge": false,
+      "prBodyNotes": ["Needs the acceptance build before merge: `npm test` (includes test/acceptance) and `task quality:web`."]
+    },
+    {
+      "description": "docs/ (Starlight site): astro and @astrojs/starlight are bounded by the ocx theme's peer ranges (starlight >=0.42 <0.43, astro ^7), so they move as one dedicated PR, merged only together with the matching @ocx-sh/theme release.",
+      "matchManagers": ["npm"],
+      "matchFileNames": ["docs/package.json"],
+      "matchPackageNames": ["astro", "@astrojs/starlight"],
+      "groupName": "docs astro + starlight"
     }
   ],
   "lockFileMaintenance": {

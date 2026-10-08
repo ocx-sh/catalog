@@ -5,9 +5,19 @@
   "description": "catalog.config.json — configures an @ocx-sh/catalog deployment (data sources, branding, nav, CI). See src/config/load.ts for the runtime validation contract this schema documents; validation itself is hand-rolled, not ajv-driven.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["sources", "brand"],
+  "required": ["sources"],
   "dependentRequired": {
     "docsNav": ["docs"]
+  },
+  "if": {
+    "properties": { "chrome": { "const": "ocx" } },
+    "required": ["chrome"]
+  },
+  "then": {
+    "properties": { "brand": false, "nav": false, "footer": false, "docsNav": false }
+  },
+  "else": {
+    "required": ["brand"]
   },
   "properties": {
     "$schema": {
@@ -30,7 +40,7 @@
     },
     "brand": {
       "$ref": "#/$defs/brand",
-      "description": "Site branding: title (required), and optional wordmark/logo. Drives <title>, og:site_name, and the header."
+      "description": "Site branding: title (required), and optional wordmark/logo. Drives <title>, og:site_name, and the header. Required, except under chrome ocx, where it is rejected."
     },
     "nav": {
       "type": "array",
@@ -59,7 +69,7 @@
     "publicDir": {
       "type": "string",
       "minLength": 1,
-      "description": "Static assets directory, resolved relative to this file's directory. Copied verbatim into VitePress's publicDir, served at the site root."
+      "description": "Static assets directory, resolved relative to this file's directory. Copied verbatim into the site's public directory, served at the site root."
     },
     "ci": {
       "$ref": "#/$defs/ci",
@@ -71,10 +81,8 @@
       "description": "Deployment origin (e.g. https://index.ocx.sh), feeding sitemap.hostname and per-page og:url. Must be an absolute http(s) URL — src/config/load.ts validates the shape beyond what this schema (minLength only) expresses."
     },
     "ownerUrl": {
-      "type": "string",
-      "minLength": 1,
-      "pattern": "^https?://(?:(?!\\{login\\})[\\s\\S])*\\{login\\}(?:(?!\\{login\\})[\\s\\S])*$",
-      "description": "Owner-profile link template for the package detail page's owners row: an absolute http(s) URL containing {login} exactly once (e.g. https://gitlab.com/{login}). Omit for https://github.com/{login}. src/config/load.ts additionally requires the template to parse as a URL."
+      "$ref": "#/$defs/ownerUrl",
+      "description": "Owner-profile link template for the package detail page's owners row: an absolute http(s) URL containing {login} exactly once (e.g. https://gitlab.com/{login}). Omit for https://github.com/{login}. A source's own ownerUrl overrides it for that source's packages. src/config/load.ts additionally requires the template to parse as a URL."
     },
     "description": {
       "type": "string",
@@ -83,8 +91,17 @@
     },
     "favicon": {
       "type": "string",
-      "minLength": 1,
-      "description": "Site-root-relative href for the browser-tab icon, e.g. /favicon.svg for a favicon.svg shipped via publicDir. Emitted as <link rel=\"icon\"> on every page, with type derived from the extension (.svg/.png/.ico). Omit for no icon link."
+      "pattern": "^(?:/(?!/)|https?://)",
+      "description": "Href for the browser-tab icon: a site-root-relative path, e.g. /favicon.svg for a favicon.svg shipped via publicDir (joined onto base), or an absolute http(s) URL (used as written). src/config/load.ts also rejects a path with a dot segment. Emitted as <link rel=\"icon\"> on every page, with type derived from the extension (.svg/.png/.ico). Omit for no icon link."
+    },
+    "base": {
+      "type": "string",
+      "pattern": "^/(?:(?!\\.{1,2}/)[A-Za-z0-9._-]+/)*$",
+      "description": "URL path prefix the site is served under: a leading and trailing /, segments of letters, digits, '.', '_' and '-', no '.' or '..' segment, e.g. /catalog/. Defaults to the path of siteUrl, else /. When siteUrl also carries a path the two must be equal (loader-only check: JSON Schema cannot compare them)."
+    },
+    "chrome": {
+      "enum": ["neutral", "ocx"],
+      "description": "EXPERIMENTAL. Page chrome: neutral (default) or the ocx.sh shell. ocx rejects brand, nav, footer and docsNav (the shell owns the header and footer) and makes brand optional."
     }
   },
   "$defs": {
@@ -101,7 +118,8 @@
             "label": { "$ref": "#/$defs/label" },
             "root": { "type": "boolean" },
             "default": { "type": "boolean" },
-            "excludeFromAll": { "$ref": "#/$defs/excludeFromAll" }
+            "excludeFromAll": { "$ref": "#/$defs/excludeFromAll" },
+            "ownerUrl": { "$ref": "#/$defs/sourceOwnerUrl" }
           }
         },
         {
@@ -118,7 +136,8 @@
             "label": { "$ref": "#/$defs/label" },
             "root": { "type": "boolean" },
             "default": { "type": "boolean" },
-            "excludeFromAll": { "$ref": "#/$defs/excludeFromAll" }
+            "excludeFromAll": { "$ref": "#/$defs/excludeFromAll" },
+            "ownerUrl": { "$ref": "#/$defs/sourceOwnerUrl" }
           }
         },
         {
@@ -132,12 +151,22 @@
             "label": { "$ref": "#/$defs/label" },
             "root": { "type": "boolean" },
             "default": { "type": "boolean" },
-            "excludeFromAll": { "$ref": "#/$defs/excludeFromAll" }
+            "excludeFromAll": { "$ref": "#/$defs/excludeFromAll" },
+            "ownerUrl": { "$ref": "#/$defs/sourceOwnerUrl" }
           }
         }
       ]
     },
     "label": { "type": "string", "minLength": 1 },
+    "ownerUrl": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^https?://(?:(?!\\{login\\})[\\s\\S])*\\{login\\}(?:(?!\\{login\\})[\\s\\S])*$"
+    },
+    "sourceOwnerUrl": {
+      "$ref": "#/$defs/ownerUrl",
+      "description": "Owner-profile link template for this source's package pages, overriding the top-level ownerUrl — same shape: an absolute http(s) URL containing {login} exactly once. Omit to inherit the top-level ownerUrl (else https://github.com/{login})."
+    },
     "excludeFromAll": {
       "type": "boolean",
       "description": "Keep this source's packages out of the catalog's \"all\" tab (grid, table, filters, keyword rail and the tab's count). The index keeps its own tab and its package pages still route; the ⌘K command palette still searches it. Omit or false to include it."

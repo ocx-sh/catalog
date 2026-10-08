@@ -1,19 +1,20 @@
 ---
 paths:
-  - "**/vite.config.*"
   - "**/vitest.config.*"
-  - "**/.vitepress/config.*"
+  - "src/site/astro_config.ts"
+  - "docs/astro.config.mjs"
 ---
 
-# Vite / VitePress Build Tool Quality
+# Vite / Vitest / Astro Build Tool Quality
 
-This repo has no hand-authored `vite.config.*` or committed `.vitepress/config.*`
-— it programmatically *generates* a VitePress config (`src/build/config_gen.ts`,
-a `defineConfig({...})` call emitted as source text) into a per-invocation scratch
-root (`src/build/scratch.ts`, `mkdtemp`-based, always disposed). The one config
-file that glob-matches in this repo today is `vitest.config.ts`. Everything below
-still applies to both: the generator when you touch `config_gen.ts`, and
-`vitest.config.ts` directly.
+This repo has no hand-authored `vite.config.*`. The site is built by Astro
+(which drives Vite, Vite 8 / Rolldown): `src/site/astro_config.ts`'s pure
+`astroConfig(input)` returns the whole `AstroUserConfig`, and
+`src/build/astro_config_file.ts` writes a two-line `astro.config.mjs` into a
+per-invocation scratch root that imports it and feeds it the `SiteInput` from
+`site.json` (`src/build/scratch.ts`, always disposed). The config files that
+glob-match here are `vitest.config.ts`, `astro_config.ts` and the docs site's own
+`docs/astro.config.mjs` (a separate Starlight project with its own toolchain).
 
 Universal review checklist: `quality-core.md`. TypeScript specifics:
 `quality-typescript.md`.
@@ -24,78 +25,84 @@ Universal review checklist: `quality-core.md`. TypeScript specifics:
 
 ### Block (must fix before merge)
 
-1. **Hardcoded credentials or secrets** in any Vite/Vitest config — use env vars,
-   never commit.
-2. **Browser API at module scope** in a `src/theme/**/*.vue` component —
-   `window`/`document` at import time crashes VitePress's Node pre-render. This
-   repo's real pattern (`src/theme/utils/sanitize.ts`): guard with
-   `typeof window === 'undefined'` and throw a clear error rather than access
-   `undefined`; components that need `document` do it inside `onMounted`
-   (`Layout.vue`), never at the top level of `<script setup>`.
-3. **A generated config writing outside its scratch root, or an `outDir` that
-   nests the scratch root** — `engine.ts`'s `assertOutDirSafe` exists precisely to
-   refuse this before the real `vitepress build()` call runs; don't work around it.
-4. **Missing env var validation** at config load — validate before use, fail the
-   build on invalid/missing values rather than passing `undefined` through.
+1. **Hardcoded credentials or secrets** in any Vite/Vitest/Astro config.
+2. **Interpolating data into generated config source.** `astro_config_file.ts`
+   interpolates exactly two strings, both through `JSON.stringify` (C-040); every
+   other value travels in `site.json`. A third interpolation, or one without
+   `JSON.stringify`, lets a path or wire value break out of its string literal.
+3. **A render writing outside its scratch root or into `outDir` directly.** Astro
+   builds into a fresh sibling staging dir and only a successful build is
+   promoted (`engine.ts`, C-038); the output guard (`cli/out_dir.ts`, C-036)
+   refuses an `--out` overlapping the inputs. Do not work around either.
+4. **A programmatic Astro import.** Only `astro_runner.ts` resolves the `astro`
+   bin and spawns it; no other `src/**` file value-imports `build|dev|preview|sync`
+   from `"astro"` (`import type` and `astro:*` virtual modules are fine).
+   `test/build/astro_isolation.test.ts` enforces it (C-025): Vite must never
+   share a process with vitest's own module transform.
+5. **Missing env validation** at config load: validate, fail the build, never
+   pass `undefined` through.
 
 ### Warn (should fix)
 
-- `optimizeDeps.include` as a workaround instead of fixing the underlying ESM
-  incompatibility
-- No explicit `build.outDir` in a hand-written config — defaults differ between
-  app mode and library mode
-- `resolve.alias` with absolute paths — use `fileURLToPath(new URL(..., import.meta.url))`
-  for portability across the scratch-root/consumer split this repo relies on
+- `optimizeDeps.include` as a workaround instead of fixing the ESM incompatibility.
+- `resolve.alias` with absolute paths; use `fileURLToPath(new URL(..., import.meta.url))`.
+- A pinned Astro setting changed silently. C-045 fixes `compressHTML`,
+  `build.inlineStylesheets: "never"`, `build.concurrency: 1`,
+  `trailingSlash: "always"`, `build.format: "directory"`,
+  `devToolbar.enabled: false` and `markdown.syntaxHighlight: false` with an
+  explicit processor; `test/site/astro_config.test.ts` pins them.
 
 ---
 
-## VitePress-Specific Gotchas
+## Astro / Vite gotchas this config encodes
 
-1. **SSR compat is mandatory** — VitePress pre-renders every page in Node at
-   build time. Any browser API touched at import time crashes the build; the
-   fix is a runtime guard (see Block #2 above) or deferring the access into a
-   lifecycle hook that only fires client-side.
-2. **`<ClientOnly>`** for a component that genuinely can't be made SSR-safe
-   (third-party charting/rendering libs).
-3. **One `.vitepress/config.ts` per site** — VitePress ignores a root
-   `vite.config.ts` entirely. `config_gen.ts` is the sole author of the generated
-   config in this repo; don't add a second config-emission path.
-4. **`vite:` sub-object inside the generated `defineConfig`** — `config_gen.ts`
-   sets `vite: { cacheDir: ... }` there rather than emitting a separate Vite
-   config, matching how VitePress itself expects Vite options to arrive.
+1. **Bundler options live under `vite.build.rolldownOptions` only.** A
+   `rollupOptions` key is a silent no-op under Vite 8.
+2. **`ssr.noExternal: true` (build only) plus the prerender environment's
+   `resolve.noExternal: true`.** Left external, the prerender chunk's bare
+   imports resolve from the staging dir upward and can hit an unrelated hoisted
+   copy of a package (a `cookie@0.7.2` pulled in by a dev dependency) instead of
+   Astro's own. `dev` must NOT set it: the module runner would load CommonJS
+   dependencies as ESM and every request dies with `require is not defined`.
+3. **`resolve.dedupe: ["astro"]`.** The `file:`-linked theme resolves its own
+   copy of Astro; two runtimes make components see a foreign `Astro` global.
+4. **The runner strips `BASE_URL` from the child's env.** Vite lets that variable
+   shadow the configured `base`; vitest and many CI images export it.
+5. **`security.csp` does not hash `is:inline` scripts**, so the theme's hashes are
+   passed in (see `subsystem-site.md`).
+6. **Dev confinement (C-044):** `127.0.0.1`, `vite.server.fs.strict` with `allow`
+   limited to the scratch root, this package's dir and the resolved theme dir.
+   Vite's watcher skips `node_modules` (where the scratch root lives), so dev
+   re-includes the scratch root with a negated `watch.ignored` glob.
 
 ---
 
 ## Env Var Discipline
 
-- **`VITE_*` prefix = client-exposure switch** — a prefixed var is inlined into
-  the browser bundle at build time. Never prefix a secret `VITE_`.
-- Validate env vars at config load; fail fast on missing/invalid rather than
-  letting `undefined` propagate into generated config text.
-- Never read `process.env` at module scope in `src/theme/**` (client code) — it
-  resolves at build time on the machine that ran the build, not per-visitor.
+- **`VITE_*` prefix = client-exposure switch**: inlined into the browser bundle.
+  Never prefix a secret `VITE_`.
+- Never read `process.env` at module scope in `src/site/client/**` or `lib/`
+  code that ships to the browser: it resolves on the build machine, not per
+  visitor.
 
 ---
 
-## Config Structure Recommendations
+## Vitest config
 
-- Extract reusable plugin arrays to a local helper — don't duplicate them between
-  `vitest.config.ts` and any future `vite.config.ts`.
-- Vitest coverage config (`vitest.config.ts`) should keep `coverage.exclude`
-  entries commented with *why* (subprocess-only, SSR-render-only, ambient
-  `.d.ts`) — this repo's own file does this; match that standard when adding a
-  new exclusion rather than adding a bare glob.
+`vitest.config.ts` defines two projects, `unit` and `acceptance`, and the 100%
+coverage thresholds; `coverage.exclude` is a pinned list, each entry commented
+with why (`test/vitest_config.test.ts`). See `subsystem-tests.md`. A new exclude
+is a reviewed change to that test and the ADR, never a bare glob.
 
 ---
 
-## Code Review Checklist (Vite/VitePress-Specific)
+## Code Review Checklist (Vite/Astro-Specific)
 
 See `quality-core.md` for the universal checklist. Additions:
 
-- [ ] No secrets or credentials in any Vite/Vitest config
-- [ ] No `VITE_` prefix on a server-only env var
-- [ ] Browser API access in `src/theme/**/*.vue` guarded for SSR (module-scope
-      access is the bug; `onMounted`/lifecycle-hook access is fine)
-- [ ] `config_gen.ts` stays the single source that emits the generated
-      `.vitepress/config.ts` — no second generator introduced
-- [ ] New `vitest.config.ts` coverage excludes carry a comment explaining why
+- [ ] No secrets in any config; no `VITE_` prefix on a server-only variable
+- [ ] `astro_config_file.ts` still interpolates two `JSON.stringify`'d strings
+- [ ] `astroConfig` is still the only emitter of Astro settings (no second config path)
+- [ ] Bundler options under `rolldownOptions`; the C-045 settings unchanged
+- [ ] No new value import from `"astro"` outside `astro_runner.ts`
+- [ ] New `vitest.config.ts` coverage excludes carry a comment and a test update

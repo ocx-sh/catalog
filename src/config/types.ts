@@ -44,6 +44,14 @@ interface SourceEntryCommon {
    * included, as before this key existed.
    */
   excludeFromAll?: boolean;
+  /**
+   * Owner-profile link template for THIS source's package pages — same shape
+   * as the top-level `CatalogConfig.ownerUrl`, which it overrides. For an
+   * aggregating catalog whose indexes' owner logins live on different forges
+   * (one GitLab-backed corporate mirror next to `index.ocx.sh`). Absent: the
+   * top-level `ownerUrl`, else `https://github.com/{login}`.
+   */
+  ownerUrl?: string;
 }
 
 /** A source read from a local directory, relative to the config file. */
@@ -105,7 +113,7 @@ export interface NavEntry {
 /**
  * Footer links (`footer.links[]`), a dedicated key rather than a reuse of
  * `nav[]`: the footer's own identity isn't the header's, and borrowing
- * `nav[]` (as `SiteFooter.vue` used to) meant a mirror with no `nav[]`
+ * `nav[]` (as the footer once did) meant a mirror with no `nav[]`
  * configured got no footer links either, coupling two unrelated surfaces.
  * Reuses `NavEntry` — same `text`/`link` shape, same `assertSafeNavLink`
  * validation, no second link type.
@@ -157,7 +165,9 @@ export interface CatalogConfig {
    */
   configVersion?: 1;
   sources: SourceEntry[];
-  brand: Brand;
+  /** Site branding. Required unless `chrome` is `"ocx"`, where the ocx.sh
+   * shell owns it and naming `brand` is a `CHROME_OCX_CONFLICT`. */
+  brand?: Brand;
   nav?: NavEntry[];
   /** Footer links, rendered in place of `nav[]` (see `FooterConfig`).
    * Absent -> the footer shows only the `raw data` link. */
@@ -177,15 +187,14 @@ export interface CatalogConfig {
   /** Custom stylesheet, resolved relative to the config file. */
   css?: string;
   /** Static assets directory, resolved relative to the config file — copied
-   * verbatim into the synthesized site's VitePress `publicDir`, so its
+   * verbatim into the Astro `publicDir` of the render, so its
    * contents are served at the site root (e.g. `favicon.svg` ->
    * `/favicon.svg`). Absent means no public assets are copied. */
   publicDir?: string;
   ci?: CiConfig;
-  /** Deployment origin (e.g. `https://index.ocx.sh`) — feeds
-   * `sitemap.hostname` and per-page `og:url` (`GeneratedConfigOptions.siteUrl`,
-   * `src/build/config_gen.ts`). Absent degrades to no sitemap + no `og:url`
-   * meta, never a build failure. Must be an absolute `http(s)` URL —
+  /** Deployment origin (e.g. `https://index.ocx.sh`) — feeds Astro's `site`
+   * (the sitemap, canonical links and per-page `og:url`; `src/site/astro_config.ts`).
+   * Absent degrades to no sitemap + no `og:url` meta, never a build failure. Must be an absolute `http(s)` URL —
    * `loadConfig` validates this, not just non-empty. */
   siteUrl?: string;
   /** Owner-profile link template for the package detail page's `owners`
@@ -193,20 +202,31 @@ export interface CatalogConfig {
    * `https://gitlab.com/{login}`. Absent -> `https://github.com/{login}`,
    * the behaviour before this key existed. `owners[]` on the wire is
    * forge-neutral, so the forge a login belongs to is deployment config,
-   * not something the theme can infer. */
+   * not something the theme can infer. A source's own `ownerUrl` overrides
+   * this for that source's packages. */
   ownerUrl?: string;
-  /** Site-wide tagline/meta description (VitePress's own `description`
-   * field) — distinct from `brand.title`. Free text, no shape check beyond
+  /** Site-wide tagline/meta description (the default page description) —
+   * distinct from `brand.title`. Free text, no shape check beyond
    * non-empty. */
   description?: string;
-  /** Site-root-relative href for the browser-tab icon, e.g. `/favicon.svg`
-   * for a `favicon.svg` inside `publicDir`. Emitted as a
+  /** Href for the browser-tab icon: site-root-relative (e.g. `/favicon.svg`
+   * for a `favicon.svg` inside `publicDir`) or an absolute `http(s)` URL. Emitted as a
    * `<link rel="icon">` on every page, with `type` derived from the
    * extension (`.svg`/`.png`/`.ico`; anything else emits no `type`). Not a
    * filesystem path — this package never reads it, it only bakes it into
    * the rendered HTML, so shipping the asset is the consumer's job
    * (`publicDir`). Absent means no icon link at all. */
   favicon?: string;
+  /** URL path prefix the site is served under (C-003), e.g. `/catalog/`.
+   * Always set after `loadConfig`: the written `base`, else the path of
+   * `siteUrl`, else `/`. Canonical form — leading and trailing `/`, no
+   * `.`/`..` segment (`BASE_INVALID`); equal to `siteUrl`'s path when both
+   * carry one (`BASE_SITEURL_MISMATCH`). */
+  base: string;
+  /** Page chrome (C-003, experimental): `"neutral"` (default when absent) or
+   * the ocx.sh `"ocx"` shell. `"ocx"` rejects `brand`, `nav` and `footer`
+   * (`CHROME_OCX_CONFLICT`). */
+  chrome?: "neutral" | "ocx";
 }
 
 /**

@@ -1,0 +1,89 @@
+---
+// The table-view row shape: rendered once into `<template data-grid-row>` and
+// cloned by the grid island (the table is built on the client only; the server
+// renders cards). Every part is present, the island sets `hidden` and fills
+// the platform slots (`client/grid.ts` documents the `data-field` contract).
+import Tag from "@ocx-sh/theme/components/ui/Tag.astro";
+import type { LandingCard } from "../model/landing.js";
+import LogoBox from "./LogoBox.astro";
+
+interface Props {
+  card: LandingCard;
+  base: string;
+}
+const { card, base } = Astro.props;
+---
+
+<a class="pkg-row" data-slot="package-row" data-card data-key={card.name} href={card.href}>
+  <LogoBox leaf="" logoUrl={card.logoUrl} base={base} size={20} />
+  <span class="row-name">
+    <span class="row-title" data-field="title">{card.title}</span>
+    <Tag variant="stamp" tone="warning" data-field="deprecated" hidden>deprecated</Tag>
+    <Tag variant="stamp" tone="danger" data-field="yanked" hidden>yanked</Tag>
+  </span>
+  <span class="row-ident" data-field="name">{card.name}</span>
+  <span class="row-desc" data-field="description">{card.description}</span>
+  <span class="row-version" data-field="version">{card.latestVersion}</span>
+  <span class="row-platforms" data-field="platforms"></span>
+  <span class="row-tags" data-field="tags">{card.tagCount} tags</span>
+</a>
+
+<style>
+  @layer ocx {
+    .pkg-row {
+      /* A subgrid item: the table's tracks are sized over every row, so a column lines up down the page.
+         Never `content-visibility` here: it implies layout containment, which turns a subgrid into none. */
+      display: grid;
+      grid-column: 1 / -1;
+      grid-template-columns: subgrid;
+      align-items: center;
+      column-gap: var(--ocx-space-4);
+      padding: var(--ocx-space-3) var(--ocx-space-5);
+      color: inherit;
+      text-decoration: none;
+      border-block-end: var(--ocx-border-width) solid var(--ocx-color-border);
+    }
+    .pkg-row:hover {
+      background: var(--ocx-color-hover);
+    }
+    .pkg-row:focus-visible {
+      outline: var(--ocx-focus-ring);
+      outline-offset: var(--ocx-focus-offset-inset);
+    }
+    .row-name {
+      display: flex;
+      align-items: baseline;
+      gap: var(--ocx-space-3);
+      min-inline-size: 0;
+    }
+    .row-title,
+    .row-ident,
+    .row-desc {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .row-title {
+      font-size: var(--ocx-text-md);
+      font-weight: var(--ocx-font-weight-semibold);
+    }
+    .row-ident,
+    .row-version,
+    .row-tags {
+      font-family: var(--ocx-font-mono);
+      font-size: var(--ocx-text-xs);
+      color: var(--ocx-color-fg-muted);
+    }
+    .row-desc {
+      font-size: var(--ocx-text-base);
+      color: var(--ocx-color-fg-muted);
+    }
+    .row-platforms {
+      /* One slot per OS the catalog publishes (--os-cols, set by the island), supported or not. */
+      display: grid;
+      grid-template-columns: repeat(var(--os-cols, 0), var(--ocx-icon-md));
+      gap: var(--ocx-space-3);
+      align-items: center;
+    }
+  }
+</style>

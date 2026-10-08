@@ -1,0 +1,65 @@
+---
+// The page shell, on the theme's `Shell` (C-032): props are `PageProps`, a
+// strict subset of Shell's. `neutral` chrome passes the mirror's brand, nav and
+// footer; `ocx` passes none, so Shell renders the nav.json header. Head tags
+// come from the pure `lib/seo.ts`; the consumer `css` is the last child of the
+// `head` slot, but Astro appends the bundled theme stylesheet links after the
+// whole head, so the consumer link is not last in the document. It need not
+// be: every theme rule sits in an `@layer`, which any unlayered consumer rule
+// beats in either order (asserted in `test/acceptance/seo.test.ts`).
+// `header-search` defaults to the palette trigger.
+import Shell from "@ocx-sh/theme/layouts/Shell.astro";
+import site from "virtual:ocx-catalog/site";
+import { joinBase } from "../../viewmodel/url.js";
+import Palette from "../components/Palette.astro";
+import { faviconType, seoHead } from "../lib/seo.js";
+import type { PageProps } from "./page_props.js";
+
+type Props = PageProps;
+const { title, description, canonical, activeSection } = Astro.props;
+const { base, chrome } = site;
+const { brand } = chrome;
+const logoHref = brand?.logoSrc === undefined ? null : joinBase(base, brand.logoSrc);
+const head = seoHead({
+  siteName: chrome.siteName,
+  siteDescription: chrome.description,
+  title,
+  description,
+  canonical,
+  pathname: Astro.url.pathname,
+  site: Astro.site,
+  logoHref,
+});
+const { favicon, css } = chrome;
+// Shell throws on nav/footer without brand, so the neutral props are spread only in neutral mode.
+// The Shell names the brand link `${brand.title} home`; with a wordmark the visible text is the wordmark,
+// and an accessible name that does not contain it fails WCAG 2.5.3 (axe `label-content-name-mismatch`), so
+// the wordmark is passed as the title the Shell names the link by.
+const neutral =
+  brand === null
+    ? {}
+    : {
+        brand: { ...brand, title: brand.wordmark ?? brand.title, ...(logoHref !== null && { logoSrc: logoHref }) },
+        nav: [...chrome.docsNav, ...chrome.nav],
+        footer: chrome.footer,
+      };
+---
+
+<Shell
+  title={head.title}
+  description={head.description}
+  canonical={head.url ?? undefined}
+  activeSection={activeSection}
+  {...neutral}
+>
+  <Fragment slot="head">
+    {favicon !== null && <link rel="icon" href={favicon} type={faviconType(favicon)} />}
+    {head.tags.map((tag) => <meta property={tag.property} name={tag.name} content={tag.content} />)}
+    <slot name="head" />
+    {css !== null && <link rel="stylesheet" href={joinBase(base, css)} />}
+  </Fragment>
+  <Fragment slot="header-search">
+    <slot name="header-search"><Palette /></slot>
+  </Fragment>
+  <slot />
+</Shell>

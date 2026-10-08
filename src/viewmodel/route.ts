@@ -1,5 +1,8 @@
 import type { CatalogIndexInfo } from "./types.js";
 
+/** The only fields the route rule reads: the wire type may omit the rest. */
+export type RouteIndex = Pick<CatalogIndexInfo, "name" | "root">;
+
 /**
  * The route rule, and the ONLY copy of it.
  *
@@ -16,19 +19,18 @@ import type { CatalogIndexInfo } from "./types.js";
  * ## Why this lives in `viewmodel/` and not on either side that uses it
  *
  * Two processes need this answer. `build/sources_pipeline.ts` needs it to
- * decide where to WRITE each page; the theme needs it to decide where to
+ * decide where to WRITE each page; the site needs it to decide where to
  * LINK. They ran as separate implementations of the same sentence, and the
  * branch that introduced qualified routes paid for that twice: the ⌘K
  * palette rebuilt the bare path by hand and 404'd on every non-root index,
- * and `DetailPage.vue` recovered `ns`/`pkg` by splitting the route, which
+ * and the detail page recovered `ns`/`pkg` by splitting the route, which
  * read an index label as a namespace and built 404ing CAS URLs. Neither was
  * caught by review, because a duplicated rule looks correct in each copy.
  *
  * `viewmodel/` is the seam that already carries value imports across that
- * boundary (`useImageIndex.ts` imports `readImageIndexAnnotations` from
- * `viewmodel/catalog.ts` under bundler resolution, `NodeNext` on the build
- * side), so this needs no new mechanism — just one function with two
- * importers.
+ * boundary (the site's `lib/cas.ts` imports `wirePrefix` from
+ * `viewmodel/catalog.ts`), so this needs no new mechanism — just one function
+ * with two importers.
  *
  * ## `indexes` is the single input, on both sides
  *
@@ -52,7 +54,7 @@ import type { CatalogIndexInfo } from "./types.js";
  * `default` index — it opens on one — and this function is deliberately
  * blind to it: a preselected tab must never move a page's URL.
  */
-export function isRootIndex(indexName: string, indexes: readonly CatalogIndexInfo[] | undefined): boolean {
+export function isRootIndex(indexName: string, indexes: readonly RouteIndex[] | undefined): boolean {
   if (indexes === undefined) return true;
   return indexes.find((entry) => entry.root)?.name === indexName;
 }
@@ -68,7 +70,7 @@ export function packageRouteSegments(
   indexName: string,
   namespace: string,
   pkg: string,
-  indexes: readonly CatalogIndexInfo[] | undefined,
+  indexes: readonly RouteIndex[] | undefined,
 ): string[] {
   const bare = [namespace, ...pkg.split("/")];
   return isRootIndex(indexName, indexes) ? bare : [indexName, ...bare];
@@ -83,7 +85,39 @@ export function packageRouteSegments(
  * whose label disagrees, so the qualified name already carries everything
  * this needs.
  */
-export function packageRoutePath(name: string, indexes: readonly CatalogIndexInfo[] | undefined): string {
+export function packageRoutePath(name: string, indexes: readonly RouteIndex[] | undefined): string {
   const [indexName, ...bare] = name.split("/");
   return isRootIndex(indexName!, indexes) ? `/${bare.join("/")}` : `/${name}`;
+}
+
+/**
+ * One synthesized package page: where it is served, which wire identity it
+ * carries, and which mount its wire files are fetched from. Built by
+ * `build/sources_pipeline.ts`, consumed by the site's `model/` builders.
+ */
+export interface PackageRoute {
+  /** Opaque 1..N path segments after the catalog root, in order — the URL
+   * this package's page is served at, and nothing else. For the `root: true`
+   * source that is `[namespace, ...package]`; for every other source it
+   * leads with that source's index label
+   * (`[label, namespace, ...package]`), so two indexes publishing the same
+   * id get two pages. Never assume `length === 2`, and never read identity
+   * back out of it — `namespace`/`package` below are the identity. */
+  readonly segments: readonly string[];
+  /** Wire identity: the package's namespace, independent of where the route
+   * puts it. Every CAS/wire URL is built from this and `package` (the "CAS
+   * gotcha" in `subsystem-site.md`), which is why it travels separately —
+   * an index-qualified route's first segment is a label, not a namespace,
+   * so splitting the route apart would build 404ing CAS URLs. */
+  readonly namespace: string;
+  /** Wire identity: the package path, 1..N `/`-joined segments. */
+  readonly package: string;
+  /** This package's per-source wire-fetch mount prefix — `""` for the
+   * root:true source, `"index/<label>"` otherwise. See `lib/cas.ts` and
+   * `sources/mirror.ts` for where the tree is mounted. */
+  readonly wireBase: string;
+  /** This package's source's own `ownerUrl` template, when it set one —
+   * read by `model/detail.ts`, which falls back to the top-level
+   * `ownerUrl` when absent. */
+  readonly ownerUrl?: string | undefined;
 }

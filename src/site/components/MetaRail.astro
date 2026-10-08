@@ -1,0 +1,139 @@
+---
+// The rail's metadata card. Every value is untrusted wire text rendered as text; the only links are
+// the model's `wireHref`-checked source and owner URLs (re-run through `wireHref` at the sink, C-042)
+// and keyword searches onto the landing page. A `null` owner URL is plain text.
+import site from "virtual:ocx-catalog/site";
+import { joinBase, wireHref } from "../../viewmodel/url.js";
+import type { DetailView } from "../model/detail.js";
+
+interface Props {
+  view: DetailView;
+}
+const { view } = Astro.props;
+const { base } = site;
+---
+
+<section class="rail-block" aria-labelledby="meta-heading" data-metadata>
+  <h2 id="meta-heading" class="rail-heading">Metadata</h2>
+  <div class="rail-card">
+    <dl class="meta-rows">
+      {
+        view.latestVersion !== null && (
+          <>
+            <dt>latest</dt>
+            <dd data-field="latest">{view.latestVersion}</dd>
+          </>
+        )
+      }
+      {
+        view.license !== null && (
+          <>
+            <dt>license</dt>
+            <dd data-field="license">{view.license}</dd>
+          </>
+        )
+      }
+      {
+        view.sourceHref !== null && (
+          <>
+            <dt>source</dt>
+            <dd data-field="source">
+              <a href={wireHref(view.sourceHref)} target="_blank" rel="noopener noreferrer">
+                {view.sourceHref}
+              </a>
+            </dd>
+          </>
+        )
+      }
+      {
+        view.revision !== null && (
+          <>
+            <dt>revision</dt>
+            <dd data-field="revision">
+              <code>{view.revision}</code>
+            </dd>
+          </>
+        )
+      }
+      {
+        view.owners.length > 0 && (
+          <>
+            <dt>owners</dt>
+            <dd data-field="owners">
+              {view.owners.map((owner, i) => (
+                <>
+                  {owner.href === null ? (
+                    <span data-owner>@{owner.login}</span>
+                  ) : (
+                    <a href={wireHref(owner.href)} target="_blank" rel="noopener noreferrer" data-owner>
+                      @{owner.login}
+                    </a>
+                  )}
+                  {i < view.owners.length - 1 && ", "}
+                </>
+              ))}
+            </dd>
+          </>
+        )
+      }
+      <dt>tags</dt>
+      <dd data-field="tags">{view.tagCount}</dd>
+      {
+        view.keywords.length > 0 && (
+          <>
+            <dt>keywords</dt>
+            <dd data-field="keywords" class="keywords">
+              {view.keywords.map((keyword) => (
+                <a
+                  class="keyword"
+                  data-keyword
+                  href={joinBase(base, `/?q=${encodeURIComponent(keyword)}`)}
+                  title={`search packages: ${keyword}`}
+                >
+                  {keyword}
+                </a>
+              ))}
+            </dd>
+          </>
+        )
+      }
+    </dl>
+  </div>
+</section>
+
+<style>
+  .meta-rows {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: var(--ocx-space-3) var(--ocx-space-5);
+    margin: 0;
+    font-size: var(--ocx-text-xs);
+  }
+  .meta-rows dt {
+    font-family: var(--ocx-font-mono);
+    color: var(--ocx-color-fg-subtle);
+  }
+  .meta-rows dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+    font-family: var(--ocx-font-mono);
+    color: var(--ocx-color-fg);
+  }
+  .meta-rows a {
+    color: var(--ocx-color-accent-fg);
+  }
+  .keywords {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--ocx-space-2) var(--ocx-space-3);
+  }
+  .keyword {
+    /* A link target of at least 24px (WCAG 2.5.8, axe `target-size`): the line box alone is 15px. */
+    display: inline-flex;
+    align-items: center;
+    min-block-size: var(--ocx-space-6);
+    padding: 0 var(--ocx-space-3);
+    background: var(--ocx-color-keyword-tint);
+    color: var(--ocx-color-keyword);
+  }
+</style>

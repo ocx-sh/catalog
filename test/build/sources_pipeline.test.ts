@@ -7,8 +7,8 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { BuildError } from "../../src/build/errors.js";
-import { cacheBaseDir } from "../../src/build/scratch.js";
-import { emitCatalogTree, resolveCatalog, warnToStderr } from "../../src/build/sources_pipeline.js";
+import { cacheBaseDir } from "../../src/build/cache_dir.js";
+import { emitCatalogTree, resolveCatalog, warnToStderr, type RemoteCache } from "../../src/build/sources_pipeline.js";
 import type { ResolvedSource } from "../../src/config/types.js";
 import { compareQualifiedIds } from "../../src/sources/mirror.js";
 import { readPathSource } from "../../src/sources/path.js";
@@ -24,9 +24,9 @@ import { rootJsonBytes, sha256Digest, utf8 } from "../sources/helpers.js";
  * the whole point of this module is that it composes the REAL readers, so a
  * test-only injection point here would prove nothing about the composition.
  *
- * `test/build/engine_sources_e2e.test.ts` is the end-to-end half (a real
- * `buildCatalog()` through a real `vitepress build()`); this file covers the
- * resolution/merge/error-mapping contract on its own.
+ * `test/build/astro_build.test.ts` is the end-to-end half (the compiled CLI
+ * through a real Astro build); this file covers the resolution/merge/
+ * error-mapping contract on its own.
  */
 
 const cleanupDirs: string[] = [];
@@ -182,6 +182,9 @@ describe("sources_pipeline resolveCatalog — path source", () => {
     ]);
 
     expect(catalog.descLookup(["acme", "widget"])).toEqual({ title: "Widget", description: "The widget." });
+    // One `detailWire` per route, keyed by the route key.
+    expect(Object.keys(catalog.wire)).toEqual(["acme/tools/gadget", "acme/widget"]);
+    expect(catalog.wire["acme/widget"]?.platforms).toEqual(["linux/amd64"]);
     // No `desc` block on the wire -> null, so config_gen falls back to its
     // own generic copy rather than baking in a made-up title.
     expect(catalog.descLookup(["acme", "tools", "gadget"])).toBeNull();
@@ -470,6 +473,29 @@ describe("sources_pipeline resolveCatalog — path source", () => {
     expect(parsed.indexes.map((entry) => entry.excludeFromAll)).toEqual([false]);
   });
 
+  // A source's own ownerUrl reaches ONLY that source's routes (the detail
+  // model reads it per route); the other source inherits the top-level
+  // template, so its routes carry nothing.
+  it("a source's ownerUrl rides only that source's routes", async () => {
+    const dir = await tempDir("catalog-pipeline-owner-url-");
+    await writeTree(join(dir, "first"), WIRE_TREE);
+    await writeTree(join(dir, "second"), { "p/beta/thing.json": CORP_BETA_ROOT });
+
+    const catalog = await resolveCatalog(
+      [
+        pathSource("first", { root: true }),
+        { entry: { path: "second", ownerUrl: "https://gitlab.corp.example/{login}" }, label: null },
+      ],
+      dir,
+    );
+
+    expect(catalog.routes.map((route) => [route.segments[0], route.ownerUrl])).toEqual([
+      ["acme", undefined],
+      ["acme", undefined],
+      ["corp.example", "https://gitlab.corp.example/{login}"],
+    ]);
+  });
+
   // Neither flag anywhere: no entry is default, and the theme opens on "all".
   it("with neither root nor default configured, no index is the default", async () => {
     const dir = await tempDir("catalog-pipeline-no-default-");
@@ -571,6 +597,104 @@ describe("sources_pipeline resolveCatalog — url source", () => {
   );
 });
 
+describe("sources_pipeline resolveCatalog — remoteCache (dev reload)", () => {
+  async function serveCounting(files: Readonly<Record<string, Uint8Array>>) {
+    const hits = { count: 0 };
+    const server = createHttpServer((req, res) => {
+      hits.count++;
+      const body = files[(req.url ?? "/").replace(/^\//, "")];
+      res.statusCode = body === undefined ? 404 : 200;
+      res.end(body === undefined ? undefined : Buffer.from(body));
+    });
+    await new Promise<void>((ready) => server.listen(0, "127.0.0.1", () => ready()));
+    const url = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+    cleanupDirs.push(join(await cacheBaseDir(), "url", createHash("sha256").update(url).digest("hex").slice(0, 16)));
+    return {
+      url,
+      hits,
+      close: () =>
+        new Promise<void>((closed) => {
+          server.closeAllConnections();
+          server.close(() => closed());
+        }),
+    };
+  }
+
+  const remoteFiles = {
+    "config.json": CONFIG_JSON,
+    "c/index.json": utf8(JSON.stringify({ format_version: 1, packages: { "acme/widget": sha256Digest(WIDGET_ROOT) } })),
+    "p/acme/widget.json": WIDGET_ROOT,
+    [`p/acme/widget/o/sha256/${IMAGE_INDEX_HEX}.json`]: IMAGE_INDEX,
+  };
+
+  it("serves a url source from the cache while its entry is unchanged, and reads it again when the entry changes", async () => {
+    const server = await serveCounting(remoteFiles);
+    try {
+      const cache: RemoteCache = new Map();
+      const entry = { url: server.url, label: "ocx.sh" };
+
+      const first = await resolveCatalog([{ entry, label: "ocx.sh" }], process.cwd(), undefined, undefined, cache);
+      const afterFirst = server.hits.count;
+      expect(afterFirst).toBeGreaterThan(0);
+
+      const second = await resolveCatalog([{ entry: { ...entry }, label: "ocx.sh" }], process.cwd(), undefined, undefined, cache);
+      expect(server.hits.count).toBe(afterFirst); // hit: nothing fetched
+      expect(second.catalogJson).toBe(first.catalogJson);
+
+      const edited = { ...entry, excludeFromAll: true };
+      await resolveCatalog([{ entry: edited, label: "ocx.sh" }], process.cwd(), undefined, undefined, cache);
+      expect(server.hits.count).toBeGreaterThan(afterFirst); // miss: a changed entry is a different key
+    } finally {
+      await server.close();
+    }
+  }, 30_000);
+
+  it("never caches a path source, so a local edit shows on the next resolve", async () => {
+    const dir = await tempDir("catalog-pipeline-nocache-");
+    await writeTree(join(dir, "index"), WIRE_TREE);
+    const cache: RemoteCache = new Map();
+    const sources = [pathSource("./index", { root: true, label: "ocx.sh" })];
+
+    const before = await resolveCatalog(sources, dir, undefined, undefined, cache);
+    await writeTree(join(dir, "index"), { "p/acme/extra.json": rootJsonBytes({ name: "ocx.sh/acme/extra", created: "2026-02-01" }) });
+    const after = await resolveCatalog(sources, dir, undefined, undefined, cache);
+
+    expect(cache.size).toBe(0);
+    expect(after.routes.length).toBe(before.routes.length + 1);
+  });
+
+  it("drops cached entries the config no longer names", async () => {
+    const server = await serveCounting(remoteFiles);
+    try {
+      const cache: RemoteCache = new Map();
+      await resolveCatalog([{ entry: { url: server.url, label: "ocx.sh" }, label: "ocx.sh" }], process.cwd(), undefined, undefined, cache);
+      expect(cache.size).toBe(1);
+
+      const dir = await tempDir("catalog-pipeline-prune-");
+      await writeTree(join(dir, "index"), WIRE_TREE);
+      await resolveCatalog([pathSource("./index", { root: true, label: "ocx.sh" })], dir, undefined, undefined, cache);
+
+      expect(cache.size).toBe(0);
+    } finally {
+      await server.close();
+    }
+  }, 30_000);
+
+  it("does not cache a failed read: the next resolve tries again", async () => {
+    const deadPort = await findFreePort();
+    const url = `http://127.0.0.1:${deadPort}`;
+    cleanupDirs.push(join(await cacheBaseDir(), "url", createHash("sha256").update(url).digest("hex").slice(0, 16)));
+    const cache: RemoteCache = new Map();
+
+    const error = await resolveCatalog([{ entry: { url }, label: "dead" }], process.cwd(), undefined, undefined, cache).catch(
+      (err: unknown) => err,
+    );
+
+    expect(error).toBeInstanceOf(BuildError);
+    expect(cache.size).toBe(0);
+  }, 30_000);
+});
+
 describe("sources_pipeline resolveCatalog — git source", () => {
   it("clones a git source and renders its packages", async () => {
     const repo = await tempDir("catalog-pipeline-git-");
@@ -656,6 +780,29 @@ describe("sources_pipeline resolveCatalog — failures map to the CLI's exit cod
     expect((error as BuildError).code).toBe("DATA");
     expect((error as BuildError).message).toContain("catalog:");
   });
+
+  it("a latest tag's image index with a malformed annotations value is DATA, naming the package and keeping the cause", async () => {
+    const dir = await tempDir("catalog-pipeline-annotations-");
+    const index = utf8(JSON.stringify({ ...JSON.parse(new TextDecoder().decode(IMAGE_INDEX)), annotations: "oops" }));
+    const digest = sha256Digest(index);
+    const root = rootJsonBytes({
+      name: "ocx.sh/acme/widget",
+      created: "2026-01-01",
+      tags: { "1.0.0": { content: digest, observed: "2026-01-02T00:00:00Z" } },
+    });
+    await writeTree(join(dir, "index"), {
+      "p/acme/widget.json": root,
+      [`p/acme/widget/o/sha256/${digest.slice("sha256:".length)}.json`]: index,
+    });
+
+    const error = await resolveCatalog([pathSource("index", { label: "ocx.sh" })], dir).catch((err: unknown) => err);
+
+    expect(error).toBeInstanceOf(BuildError);
+    expect((error as BuildError).code).toBe("DATA");
+    expect((error as BuildError).message).toContain("catalog (ocx.sh/acme/widget):");
+    expect((error as BuildError).message).toContain('malformed "annotations"');
+    expect((error as BuildError).cause).toBeInstanceOf(Error);
+  });
 });
 
 describe("sources_pipeline emitCatalogTree", () => {
@@ -669,7 +816,7 @@ describe("sources_pipeline emitCatalogTree", () => {
       [pathSource("primary", { root: true, label: "ocx.sh" }), pathSource("extra", { label: "corp.example" })],
       dir,
     );
-    await emitCatalogTree(catalog, outDir);
+    await emitCatalogTree(catalog, outDir, "/");
 
     // C-006: the root source at the dist root, EVERY source under index/<label>/.
     expect(await readFile(join(outDir, "p", "acme", "widget.json"))).toEqual(Buffer.from(WIDGET_ROOT));

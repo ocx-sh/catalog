@@ -5,14 +5,14 @@
  * `indexbot.model` and produce for `/data/catalog/catalog.json`.
  *
  * These are catalog-scoped SUBSETS, not full ports of the bot's dataclasses:
- * fields the catalog emitter never reads (`owners`, `upstream`, `source`, the
+ * fields the catalog emitter never reads (`upstream`, the
  * vestigial `variants` root field, `desc.digest`, `root_raw`) are omitted.
  * See `bot/src/indexbot/model.py` for the full wire-facing shapes.
  *
- * `repository` (C-501, 2026-08-22 WP5) is the one exception: it IS carried
- * on `CatalogPackageRoot`, faithfully, for package DETAIL pages — but
- * `catalogEntry` (`catalog.ts`) never copies it onto `CatalogEntry`, so it
- * still never reaches `/data/catalog/catalog.json` (C-503, byte-stable).
+ * `repository` (C-501, 2026-08-22 WP5), `owners` and `source` are the
+ * exceptions: they ARE carried on `CatalogPackageRoot`, faithfully, for
+ * package DETAIL pages — but `catalogEntry` (`catalog.ts`) never copies them
+ * onto `CatalogEntry`, so they still never reach `/data/catalog/catalog.json` (C-503, byte-stable).
  * `CatalogPackageDetail` below is the other detail-only addition (C-600) —
  * neither is a "catalog" field despite living in this catalog-scoped file,
  * which is the existing home for every `CatalogSourcePackage`-adjacent type.
@@ -71,6 +71,14 @@ export interface CatalogPackageRoot {
    * `CatalogEntry`, so it never reaches `/data/catalog/catalog.json`
    * (C-503). `null` when the wire root omits it; never fabricated. */
   readonly repository: string | null;
+  /** Owner logins in wire order (`ownerLogin`: `login`, else the pre-0.5.0
+   * `github`); an owner carrying neither is dropped. Detail-page data only,
+   * like `repository` — `catalogEntry` never copies it (C-503). */
+  readonly owners: readonly string[];
+  /** The wire root's `source` (the repository whose CI built the artifacts),
+   * `null` when unset. Detail-page data only; untrusted text — render it
+   * through `wireHref`. */
+  readonly source: string | null;
   readonly created: string;
   readonly desc: CatalogDesc | null;
   readonly tags: Readonly<Record<string, TagEntry>>;

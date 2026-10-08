@@ -37,7 +37,7 @@ checklists draw on:
   ESM, narrowing
 - [quality-security.md](../rules/quality-security.md) — this repo's CI/CD
   workflow checklist
-- [subsystem-theme.md](../rules/subsystem-theme.md),
+- [subsystem-site.md](../rules/subsystem-site.md),
   [subsystem-sources.md](../rules/subsystem-sources.md),
   [subsystem-ci-renderer.md](../rules/subsystem-ci-renderer.md),
   [subsystem-tests.md](../rules/subsystem-tests.md) — per-area invariants;

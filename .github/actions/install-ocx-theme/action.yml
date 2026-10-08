@@ -1,0 +1,48 @@
+name: install-ocx-theme
+description: >-
+  TEMPORARY until @ocx-sh/theme 0.2.0 on npm — removed by plan step I.1.
+  Installs a project's npm dependencies with @ocx-sh/theme taken from a packed
+  tarball of ocx-sh/website at one pinned commit, because package.json depends
+  on the theme through a local `file:` path (npm cannot install a git
+  subdirectory) and `npm ci` cannot follow the lockfile's local link.
+
+inputs:
+  prefix:
+    description: Directory holding the package.json to install (the repo root or docs).
+    required: false
+    default: "."
+
+runs:
+  using: composite
+  steps:
+    # TEMPORARY until @ocx-sh/theme 0.2.0 on npm — removed by plan step I.1.
+    # The SHA is the newest PUSHED commit of ocx-sh/website's feat/phase3-pilots
+    # that exports ./lazy and ./csp; bump it deliberately. Bump this ONE place and
+    # every workflow that uses this action follows.
+    - name: Check out the ocx theme source
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      with:
+        repository: ocx-sh/website
+        ref: 9543500a6c48d40df5c7a2bdf2379fea75d183c1
+        path: .ocx-theme-src
+        sparse-checkout: packages/theme
+        persist-credentials: false
+
+    # `npm pack --ignore-scripts` (not `pnpm pack`): the theme's `prepack` only
+    # generates .d.mts typings, needs the website's whole pnpm install (tsc,
+    # astro types) and none of it is read by an Astro build. The `file:` spec is
+    # rewritten with `npm pkg set` and installed with `npm install` (not `npm
+    # ci`), which reconciles the lockfile's local link with the tarball.
+    # `npm audit signatures` cannot verify a `file:` dependency, so the
+    # audit-signatures job covers every OTHER dependency until the swap.
+    - name: Install dependencies over the packed theme
+      shell: bash
+      env:
+        PREFIX: ${{ inputs.prefix }}
+        THEME_DIR: ${{ github.workspace }}/.ocx-theme-src/packages/theme
+        PACK_DIR: ${{ runner.temp }}
+      run: |
+        set -euo pipefail
+        tarball="$(npm pack "$THEME_DIR" --ignore-scripts --pack-destination "$PACK_DIR" | tail -n 1)"
+        npm --prefix "$PREFIX" pkg set "dependencies.@ocx-sh/theme=file:$PACK_DIR/$tarball"
+        npm --prefix "$PREFIX" install

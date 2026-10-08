@@ -1,19 +1,28 @@
 import { createHash } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import type { ResolvedSource, SourceEntry } from "../config/types.js";
+import type { LoadedConfig, ResolvedSource, SourceEntry } from "../config/types.js";
 import { readGitSource } from "../sources/git.js";
-import { checkIndexNamespaceCollisions, checkLabelConflicts, checkReservedIndexLabels, resolveLabel } from "../sources/labels.js";
+import {
+  checkIndexNamespaceCollisions,
+  checkLabelConflicts,
+  checkReservedIndexLabels,
+  checkReservedRootNamespaces,
+  reservedNames,
+  resolveLabel,
+  staticReservedNames,
+  type ReservedNames,
+} from "../sources/labels.js";
 import { compareQualifiedIds, mirrorSources } from "../sources/mirror.js";
 import { readPathSource } from "../sources/path.js";
 import { extractPackages, SourceError, type ResolvedSourceFiles, type WirePath } from "../sources/types.js";
 import { readUrlSource } from "../sources/walker.js";
 import { catalogIndex, serializeCatalog } from "../viewmodel/catalog.js";
-import { packageRouteSegments } from "../viewmodel/route.js";
+import { detailWire, type DetailWire } from "../site/model/detail.js";
+import { packageRouteSegments, type PackageRoute } from "../viewmodel/route.js";
 import type { CatalogIndexInfo, CatalogSourcePackage } from "../viewmodel/types.js";
 import { BuildError } from "./errors.js";
-import type { PackageRoute } from "./pages.js";
-import { cacheBaseDir } from "./scratch.js";
+import { cacheBaseDir } from "./cache_dir.js";
 
 /**
  * The source layer's wiring into the build (C-003 -> C-004/C-005/C-006):
@@ -31,10 +40,10 @@ import { cacheBaseDir } from "./scratch.js";
  * ## Two halves, two call sites
  *
  * `resolveCatalog()` runs BEFORE anything is written: it produces everything
- * `synthesizePages()`/`generateConfig()` need (`routes`, `descLookup`) plus
- * the bytes/trees `emitCatalogTree()` writes afterwards. `emitCatalogTree()`
- * runs AFTER the VitePress run (for `build`) or before `createServer()` (for
- * `dev`), against whichever directory that entrypoint serves from.
+ * the site model needs (`routes`, `descLookup`, `wire`) plus the bytes/trees
+ * `emitCatalogTree()` writes afterwards. `emitCatalogTree()` runs from
+ * `assemblePublic` (`assemble.ts`), BEFORE the Astro render, into the scratch
+ * root's `public/` — for `build` and `dev` alike.
  *
  * ## `/data/catalog/catalog.json` is the MERGED catalog, written LAST
  *
@@ -51,10 +60,9 @@ import { cacheBaseDir } from "./scratch.js";
  * wrote them.
  *
  * Same rule settles the other two writers that can touch that path: a
- * consumer's own `publicDir` (copied into the scratch root by
- * `synthesizePages()`, then into `dist/` by VitePress) and, in `dev`, the
- * scratch root's `public/` tree. In both cases the generated catalog is
- * written after everything else that could land on it, so a consumer file at
+ * consumer's own `publicDir` (copied into the scratch `public/` by
+ * `assemblePublic`, then into `dist/` by the Astro render). The generated
+ * catalog is written after everything else that could land on it, so a consumer file at
  * `public/data/catalog/catalog.json` never shadows the real catalog.
  *
  * ## `url` sources: where the fetch cache lives
@@ -66,7 +74,7 @@ import { cacheBaseDir } from "./scratch.js";
  * root would therefore be silently useless — disposed at the end of every
  * run, making every build a cold fetch that still looks correct. It lives in
  * the consumer's own `node_modules/.cache/ocx-catalog/url/<key>` instead
- * (`scratch.ts`'s `cacheBaseDir()`, the same base the scratch roots are
+ * (`cache_dir.ts`'s `cacheBaseDir()`, the same base the scratch roots are
  * created NEXT TO but never inside), keyed by a hash of the source URL so
  * two `url` sources never share one `index.etag`/`index.json` pair — those
  * two filenames are fixed per `cacheDir`, so a shared directory would make
@@ -100,6 +108,9 @@ export interface ResolvedCatalog {
   readonly descLookup: (segments: readonly string[]) => { title: string; description: string } | null;
   /** The merged `/data/catalog/catalog.json` bytes — see this module's doc. */
   readonly catalogJson: string;
+  /** Per-route wire facts (`detailWire`), keyed by the route key
+   * (`segments.join("/")`) — `siteModel`'s `wire` argument. */
+  readonly wire: Readonly<Record<string, DetailWire>>;
 }
 
 /** Surfaces a source reader's non-fatal warning (`types.ts`'s
@@ -141,7 +152,7 @@ async function readSource(entry: SourceEntry, configDir: string): Promise<Readon
 
 function asBuildError(err: unknown, context: string): BuildError {
   const unavailable = err instanceof SourceError && err.code === "FETCH_FAILED";
-  return new BuildError(unavailable ? "UNAVAILABLE" : "DATA", `${context}: ${(err as Error).message}`);
+  return new BuildError(unavailable ? "UNAVAILABLE" : "DATA", `${context}: ${(err as Error).message}`, { cause: err });
 }
 
 /** One package plus the identity of the source it came from — the merge
@@ -152,9 +163,10 @@ interface MergedPackage {
   readonly wireBase: string;
   readonly label: string;
   readonly root: boolean;
+  readonly ownerUrl: string | undefined;
 }
 
-interface SourceResult {
+export interface SourceResult {
   readonly resolved: ResolvedSourceFiles;
   readonly packages: readonly CatalogSourcePackage[];
   /** `PackageRoute.wireBase` for every package this source contributes —
@@ -162,6 +174,13 @@ interface SourceResult {
    * root), `index/<label>` for every other (`mirror.ts`'s placement). */
   readonly wireBase: string;
 }
+
+/**
+ * `url`/`git` reads memoised across calls (`ocx-catalog dev`'s reload loop):
+ * keyed by the source entry's content, so only an edited entry is read again.
+ * Never holds `path` sources (a local edit must show) or failures.
+ */
+export type RemoteCache = Map<string, SourceResult>;
 
 async function readOneSource(
   source: ResolvedSource,
@@ -223,11 +242,25 @@ export async function resolveCatalog(
   sources: readonly ResolvedSource[],
   configDir: string,
   fallbackLabel?: string,
+  isReserved: ReservedNames = staticReservedNames,
+  remoteCache?: RemoteCache,
 ): Promise<ResolvedCatalog> {
+  const cache: RemoteCache = remoteCache ?? new Map();
   const results: SourceResult[] = [];
+  const used = new Set<string>();
   for (const [index, source] of sources.entries()) {
-    results.push(await readOneSource(source, index, configDir, fallbackLabel));
+    if (source.entry.path !== undefined) {
+      results.push(await readOneSource(source, index, configDir, fallbackLabel));
+      continue;
+    }
+    const key = JSON.stringify(source.entry);
+    used.add(key);
+    const result = cache.get(key) ?? (await readOneSource(source, index, configDir, fallbackLabel));
+    cache.set(key, result);
+    results.push(result);
   }
+  // Entries the config no longer names are dropped, so the cache cannot outgrow it.
+  for (const key of cache.keys()) if (!used.has(key)) cache.delete(key);
 
   try {
     // The deferred second pass `labels.ts` documents: `loadConfig` can only
@@ -240,25 +273,34 @@ export async function resolveCatalog(
       label: result.resolved.label,
       root: result.resolved.root,
     }));
-    checkIndexNamespaceCollisions(
-      labelsAndRoots,
-      new Set(
-        results
-          .filter((result) => result.resolved.root)
-          .flatMap((result) => result.packages.map((pkg) => pkg.packageId.namespace)),
-      ),
+    const rootNamespaces = new Set(
+      results
+        .filter((result) => result.resolved.root)
+        .flatMap((result) => result.packages.map((pkg) => pkg.packageId.namespace)),
     );
+    checkIndexNamespaceCollisions(labelsAndRoots, rootNamespaces);
     // Third claimant on `/<label>/`, after a root namespace: a path this
-    // build writes itself (`docs`, `data`, `assets`, …).
-    checkReservedIndexLabels(labelsAndRoots);
+    // build writes itself (`docs`, `data`, `assets`, a `publicDir` entry, the
+    // logo file, …), for a non-root label AND for a root-source namespace
+    // (C-027).
+    checkReservedIndexLabels(labelsAndRoots, isReserved);
+    checkReservedRootNamespaces(rootNamespaces, isReserved);
   } catch (err) {
     throw asBuildError(err, "sources");
   }
 
   const merged: MergedPackage[] = [];
-  for (const result of results) {
+  for (const [i, result] of results.entries()) {
+    // `sources` and `results` are index-parallel (see `defaultAt` below).
+    const source = sources[i];
     for (const pkg of result.packages) {
-      merged.push({ pkg, wireBase: result.wireBase, label: result.resolved.label, root: result.resolved.root });
+      merged.push({
+        pkg,
+        wireBase: result.wireBase,
+        label: result.resolved.label,
+        root: result.resolved.root,
+        ownerUrl: source.entry.ownerUrl,
+      });
     }
   }
   // No dedupe by `<namespace>/<package>`: routes are index-qualified for
@@ -296,7 +338,9 @@ export async function resolveCatalog(
 
   const routes: PackageRoute[] = [];
   const descTable = new Map<string, { title: string; description: string }>();
-  for (const { pkg, wireBase, label } of merged) {
+  const wire: Record<string, DetailWire> = {};
+  const wireSources: [key: string, pkg: CatalogSourcePackage][] = [];
+  for (const { pkg, wireBase, label, ownerUrl } of merged) {
     // `viewmodel/route.ts` owns the rule; this asks it rather than restating
     // it, and asks it against `indexes` — the same array the theme resolves
     // links from and the same one this function is about to publish. The
@@ -309,7 +353,9 @@ export async function resolveCatalog(
       namespace: pkg.packageId.namespace,
       package: pkg.packageId.package,
       wireBase,
+      ownerUrl,
     });
+    wireSources.push([segments.join("/"), pkg]);
     const desc = pkg.root.desc;
     if (desc !== null) {
       descTable.set(segments.join("/"), { title: desc.title, description: desc.description });
@@ -336,13 +382,41 @@ export async function resolveCatalog(
     // image index — source-data problems, exit 65, not an internal crash.
     throw asBuildError(err, "catalog");
   }
+  // Reads the same source data (the latest tag's image index), so it fails
+  // the same way — a data error, not a crash — and names the package.
+  for (const [key, pkg] of wireSources) {
+    try {
+      wire[key] = detailWire(pkg);
+    } catch (err) {
+      throw asBuildError(err, `catalog (${pkg.root.name})`);
+    }
+  }
 
   return {
     sources: results.map((result) => result.resolved),
     routes,
     descLookup: (segments) => descTable.get(segments.join("/")) ?? null,
     catalogJson,
+    wire,
   };
+}
+
+/**
+ * The reserved-name predicate for one build (C-027): the static list, the
+ * `brand.logo` file name and every top-level entry of the consumer's
+ * `publicDir` — the names the output root will already hold when the mirror
+ * writes into it. Pass the result to `resolveCatalog`.
+ */
+export async function reservedNamesFor(loaded: LoadedConfig): Promise<ReservedNames> {
+  const { publicDir } = loaded.config;
+  if (publicDir === undefined) {
+    return reservedNames(loaded.config, []);
+  }
+  try {
+    return reservedNames(loaded.config, await readdir(join(loaded.configDir, publicDir)));
+  } catch (err) {
+    throw new BuildError("DATA", `publicDir "${publicDir}" cannot be read: ${(err as Error).message}`);
+  }
 }
 
 /**
@@ -353,14 +427,18 @@ export async function resolveCatalog(
  * `<dir>/data/catalog/catalog.json` (see this module's doc for why that one
  * is written last).
  *
- * `dir` is the caller's OUTPUT directory: `outDir` for `build` (after the
- * VitePress run, so nothing the build itself emits can clobber it), or the
- * scratch root's `<srcDir>/public/` for `dev`, where Vite serves it as
- * static content — that is what makes `dev` show live wire data (S-003)
- * without a build step.
+ * `dir` is the scratch root's `public/` (`assemblePublic`): the Astro render
+ * copies it into the output as static content, and `dev` serves it as is —
+ * that is what makes `dev` show live wire data (S-003) without a build step.
  */
-export async function emitCatalogTree(catalog: ResolvedCatalog, dir: string): Promise<void> {
-  await mirrorSources(catalog.sources, dir);
+export async function emitCatalogTree(catalog: ResolvedCatalog, dir: string, base: string): Promise<void> {
+  try {
+    await mirrorSources(catalog.sources, dir, base);
+  } catch (err) {
+    // A path collision is a data problem (a consumer `_headers` in `publicDir`), exit 65, not a crash.
+    if (err instanceof SourceError) throw asBuildError(err, "mirror");
+    throw err;
+  }
   const catalogDir = join(dir, "data", "catalog");
   await mkdir(catalogDir, { recursive: true });
   await writeFile(join(catalogDir, "catalog.json"), catalog.catalogJson, "utf8");

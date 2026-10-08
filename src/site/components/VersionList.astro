@@ -1,0 +1,118 @@
+---
+// The versions card, rendered to the DOM contract at the top of `client/versions.ts`: the newest
+// `SSR_TAG_LIMIT` live tags are in the HTML (no JS needed for any listed tag); "show all", the tag
+// hover preview and the copy menu are the island's. Tag names are untrusted text: attributes and
+// text only, never markup.
+import ActionMenu from "@ocx-sh/theme/components/ui/ActionMenu.astro";
+import site from "virtual:ocx-catalog/site";
+import { DEFAULT_INSTALL_FLAVORS } from "../lib/installFlavors.js";
+import { INSTALL_ICON_NAMES } from "../lib/installIcons.js";
+import { SSR_TAG_LIMIT, type DetailView } from "../model/detail.js";
+
+interface Props {
+  view: DetailView;
+}
+const { view } = Astro.props;
+// The labels `buildTagCopyActions` returns, in its order; `value` is the label (the island matches on it).
+const items = [
+  { value: "Copy identifier", label: "Copy identifier", icon: "copy" },
+  { value: "Copy tag", label: "Copy tag", icon: "pin" },
+  { value: "Copy link", label: "Copy link", icon: "external" },
+  ...DEFAULT_INSTALL_FLAVORS.map(({ label, icon }) => ({ value: label, label, icon: INSTALL_ICON_NAMES[icon] })),
+] as const;
+// A full page of live tags may have more behind it; fewer cannot.
+const maybeMore = view.tags.length >= SSR_TAG_LIMIT;
+---
+
+<section
+  class="versions"
+  aria-labelledby="versions-heading"
+  data-versions
+  data-zag-root="versions"
+  data-base={site.base}
+  data-ns={view.namespace}
+  data-pkg={view.package}
+  data-wire-base={view.wireBase}
+  data-name={view.name}
+>
+  <h2 id="versions-heading" class="rail-heading">Versions · {view.tagCount}</h2>
+  <div class="rail-card">
+    {
+      view.tags.length === 0 && <p class="versions-empty">No versions available.</p>
+    }
+    <ActionMenu label="Version actions" items={[...items]} context>
+      <ul class="versions-list" data-versions-list>
+        {
+          view.tags.map((tag) => (
+            <li class="version-tag" data-tag={tag} tabindex="0">
+              <span data-tag-name>{tag}</span>
+            </li>
+          ))
+        }
+      </ul>
+    </ActionMenu>
+    <template data-versions-tag>
+      <li class="version-tag" data-tag tabindex="0"><span data-tag-name></span></li>
+    </template>
+    <button type="button" class="versions-more" data-versions-more hidden={!maybeMore}>Show all versions</button>
+    <p class="versions-preview" data-versions-preview role="status" hidden></p>
+    <p class="versions-status" data-versions-status aria-live="polite"></p>
+  </div>
+</section>
+
+<script>
+  import { mount as lazyMount } from "@ocx-sh/theme/lazy";
+  import { mount } from "../client/versions.js";
+
+  const root = document.querySelector<HTMLElement>("[data-versions]");
+  if (root) mount(root, { lazy: { mount: lazyMount } });
+</script>
+
+<style>
+  .versions-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--ocx-space-3);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .version-tag {
+    padding: var(--ocx-space-1) var(--ocx-space-4);
+    font-family: var(--ocx-font-mono);
+    font-size: var(--ocx-text-xs);
+    color: var(--ocx-color-fg);
+    background: var(--ocx-color-surface-subtle);
+    border: var(--ocx-border-width) solid var(--ocx-color-border);
+    border-radius: var(--ocx-radius-sm);
+  }
+  .version-tag:hover {
+    background: var(--ocx-color-hover);
+    border-color: var(--ocx-color-hover-border);
+  }
+  .versions-more {
+    margin-top: var(--ocx-space-4);
+    padding: var(--ocx-space-2) var(--ocx-space-4);
+    font-family: var(--ocx-font-mono);
+    font-size: var(--ocx-text-xs);
+    color: var(--ocx-color-accent-fg);
+    background: none;
+    border: var(--ocx-border-width) solid var(--ocx-color-border-control);
+    cursor: pointer;
+  }
+  .versions-more[hidden],
+  .versions-preview[hidden] {
+    display: none;
+  }
+  .versions-empty,
+  .versions-preview,
+  .versions-status {
+    margin: var(--ocx-space-3) 0 0;
+    font-family: var(--ocx-font-mono);
+    font-size: var(--ocx-text-xs);
+    color: var(--ocx-color-fg-subtle);
+  }
+  .versions-status:empty {
+    display: none;
+  }
+</style>

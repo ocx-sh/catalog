@@ -14,14 +14,14 @@ Fast, read-only search agent.
 - Find files matching patterns.
 - Search for code patterns, symbols, call sites.
 - Map dependencies and relationships across
-  `src/{cli,config,sources,build,ci,theme,viewmodel}`.
+  `src/{cli,config,sources,build,ci,site,viewmodel}`.
 
 ## Search notes
 
 - ESM: relative imports carry a `.js` extension even though the source is
   `.ts` — grep `from "./foo.js"`, not `from "./foo"`.
-- `.vue` SFCs hold TypeScript in `<script setup lang="ts">`. A symbol
-  search globbing only `**/*.ts` misses 36 files.
+- `.astro` templates (18 under `src/site`) hold TypeScript in their
+  frontmatter fence. A symbol search globbing only `**/*.ts` misses them.
 
 ## Output Format
 

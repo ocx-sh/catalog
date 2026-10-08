@@ -37,6 +37,10 @@
  * rule on the sibling `default` flag, and needs its own `contains`: a schema
  * object may hold only one, so `sources` carries both inside `allOf`. `docsNav` requiring `docs`
  * is likewise expressible (`dependentRequired`), so it agrees too.
+ * BASE_SITEURL_MISMATCH is the last deliberate disagreement: comparing
+ * `base` with `siteUrl`'s path is a cross-field string relation JSON Schema
+ * cannot state. `base`'s own shape (pattern) and the `chrome: "ocx"`
+ * brand/nav/footer conflict (`if`/`then`/`else`) ARE expressible and agree.
  * Each remaining disagreement is asserted explicitly (schema valid, loader
  * rejects) rather than skipped, so schema/loader drift in the *dangerous*
  * direction (schema rejecting something the loader accepts) still fails
@@ -335,6 +339,84 @@ const FIXTURES: readonly Fixture[] = [
     // PATH_ESCAPE header comment calls out as typically unexpressable.
     name: "docsNav[].link outside /docs/ rejected by both",
     config: { ...MINIMAL_VALID, docs: "docs", docsNav: [{ text: "Setup", link: "/other/" }] },
+    loader: "INVALID_TYPE",
+    schemaValid: false,
+  },
+  {
+    name: "base: canonical prefix accepted by both",
+    config: { ...MINIMAL_VALID, base: "/catalog/" },
+    loader: "valid",
+    schemaValid: true,
+  },
+  {
+    name: "base: dot segment rejected by schema AND loader",
+    config: { ...MINIMAL_VALID, base: "/catalog/../" },
+    loader: "BASE_INVALID",
+    schemaValid: false,
+  },
+  {
+    name: "base: missing trailing slash rejected by schema AND loader",
+    config: { ...MINIMAL_VALID, base: "/catalog" },
+    loader: "BASE_INVALID",
+    schemaValid: false,
+  },
+  {
+    name: "BASE_SITEURL_MISMATCH (schema is weaker — see file header)",
+    config: { ...MINIMAL_VALID, siteUrl: "https://example.test/catalog/", base: "/other/" },
+    loader: "BASE_SITEURL_MISMATCH",
+    schemaValid: true,
+  },
+  {
+    name: "favicon: a root-relative path and an absolute https URL are accepted by both",
+    config: { ...MINIMAL_VALID, favicon: "https://cdn.test/icon.svg" },
+    loader: "valid",
+    schemaValid: true,
+  },
+  {
+    name: "favicon: a bare file name is rejected by schema AND loader",
+    config: { ...MINIMAL_VALID, favicon: "favicon.svg" },
+    loader: "INVALID_TYPE",
+    schemaValid: false,
+  },
+  {
+    name: "chrome: ocx without brand is accepted by both",
+    config: { sources: [{ path: "a" }], chrome: "ocx" },
+    loader: "valid",
+    schemaValid: true,
+  },
+  {
+    name: "chrome: ocx beside brand is rejected by schema AND loader",
+    config: { ...MINIMAL_VALID, chrome: "ocx" },
+    loader: "CHROME_OCX_CONFLICT",
+    schemaValid: false,
+  },
+  {
+    name: "chrome: ocx beside nav is rejected by schema AND loader",
+    config: { sources: [{ path: "a" }], chrome: "ocx", nav: [{ text: "x", link: "/x" }] },
+    loader: "CHROME_OCX_CONFLICT",
+    schemaValid: false,
+  },
+  {
+    name: "chrome: ocx beside footer is rejected by schema AND loader",
+    config: { sources: [{ path: "a" }], chrome: "ocx", footer: { links: [] } },
+    loader: "CHROME_OCX_CONFLICT",
+    schemaValid: false,
+  },
+  {
+    name: "chrome: ocx beside docsNav is rejected by schema AND loader",
+    config: { sources: [{ path: "a" }], chrome: "ocx", docs: "./docs", docsNav: [{ text: "x", link: "/docs/x" }] },
+    loader: "CHROME_OCX_CONFLICT",
+    schemaValid: false,
+  },
+  {
+    name: "chrome: neutral without brand is rejected by schema AND loader",
+    config: { sources: [{ path: "a" }], chrome: "neutral" },
+    loader: "INVALID_TYPE",
+    schemaValid: false,
+  },
+  {
+    name: "chrome outside neutral|ocx is rejected by schema AND loader",
+    config: { ...MINIMAL_VALID, chrome: "bogus" },
     loader: "INVALID_TYPE",
     schemaValid: false,
   },

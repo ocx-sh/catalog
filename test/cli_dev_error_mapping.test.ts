@@ -1,15 +1,15 @@
+import { resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { BuildError } from "../src/build/errors.js";
-import { DATA } from "../src/cli/exit.js";
+import { BuildError, RenderError } from "../src/build/errors.js";
+import { ConfigError } from "../src/config/errors.js";
+import { DATA, FAIL, UNAVAILABLE } from "../src/cli/exit.js";
 
 /*
- * Focused unit coverage for `cli/dev.ts`'s `runDev` `BuildError` mapping —
- * the two branches `test/cli_dev.test.ts`'s REAL (unmocked) port-in-use
- * case can't reach: a `BuildError` whose `code` is `DATA` (not
- * `UNAVAILABLE` — `devServer()` itself never actually raises this today,
- * same reasoning as `test/cli_build_error_mapping.test.ts`'s equivalent
- * `runBuild` gap), and a non-`ConfigError`/`BuildError` propagating instead
- * of being swallowed.
+ * `cli/dev.ts`'s `runDev` against a mocked `devServer` (C-001, S-012): the
+ * options it hands over, and one exit code per error class — including the
+ * ones the real supervisor only raises mid-session (a `DATA` `BuildError`,
+ * a `RenderError` from a dying child), which test/cli_dev.test.ts's
+ * pre-spawn failures cannot reach.
  */
 
 const hoisted = vi.hoisted(() => ({ devServerMock: vi.fn() }));
@@ -17,28 +17,75 @@ vi.mock("../src/build/dev.js", () => ({ devServer: hoisted.devServerMock }));
 
 const { runDev } = await import("../src/cli/dev.js");
 
+let stderr: string[];
 beforeEach(() => {
   hoisted.devServerMock.mockReset();
   process.exitCode = undefined;
+  stderr = [];
+  vi.spyOn(process.stderr, "write").mockImplementation((chunk) => {
+    stderr.push(String(chunk));
+    return true;
+  });
 });
 afterEach(() => {
+  vi.restoreAllMocks();
   process.exitCode = undefined;
 });
 
-describe("C-001 cli/dev.ts runDev — BuildError mapping", () => {
-  it("a BuildError with code DATA maps to exit 65 (not the UNAVAILABLE default)", async () => {
-    hoisted.devServerMock.mockRejectedValueOnce(new BuildError("DATA", "a root's name mismatches its path"));
-    const errSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
-    try {
-      await runDev({ source: ".", smoke: true });
-      expect(process.exitCode).toBe(DATA);
-    } finally {
-      errSpy.mockRestore();
-    }
+describe("what runDev hands to devServer", () => {
+  it("--config, --port and --smoke: an absolute config path, a numeric port, no source", async () => {
+    hoisted.devServerMock.mockResolvedValueOnce(undefined);
+    await runDev({ config: "site/catalog.config.json", port: "4400", smoke: true });
+    expect(hoisted.devServerMock).toHaveBeenCalledWith({
+      configPath: resolve("site/catalog.config.json"),
+      sourcePath: undefined,
+      port: 4400,
+      smoke: true,
+    });
+    expect(process.exitCode).toBeUndefined();
   });
 
-  it("a non-ConfigError/BuildError propagates instead of being swallowed", async () => {
+  it("--source alone: an absolute source path and no config path", async () => {
+    hoisted.devServerMock.mockResolvedValueOnce(undefined);
+    await runDev({ source: "../index" });
+    expect(hoisted.devServerMock).toHaveBeenCalledWith({
+      configPath: undefined,
+      sourcePath: resolve("../index"),
+      port: undefined,
+      smoke: false,
+    });
+  });
+
+  it("neither flag: ./catalog.config.json", async () => {
+    hoisted.devServerMock.mockResolvedValueOnce(undefined);
+    await runDev({});
+    expect(hoisted.devServerMock).toHaveBeenCalledWith(
+      expect.objectContaining({ configPath: resolve("catalog.config.json"), sourcePath: undefined }),
+    );
+  });
+
+  it("--source with --config never reaches devServer", async () => {
+    await runDev({ source: ".", config: "c.json" });
+    expect(hoisted.devServerMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("exit codes (C-001)", () => {
+  it.each([
+    ["a ConfigError", new ConfigError("INVALID_JSON", "catalog.config.json: bad"), DATA],
+    ["a DATA BuildError", new BuildError("DATA", "a root's name mismatches its path"), DATA],
+    ["an UNAVAILABLE BuildError", new BuildError("UNAVAILABLE", "port 4321 is already in use"), UNAVAILABLE],
+    ["a RenderError (the child died or never came up)", new RenderError("astro dev exited unexpectedly (code 1)"), FAIL],
+  ])("%s prints the message with the CLI prefix and exits with its code", async (_name, error, code) => {
+    hoisted.devServerMock.mockRejectedValueOnce(error);
+    await runDev({ source: "." });
+    expect(process.exitCode).toBe(code);
+    expect(stderr.join("")).toBe(`ocx-catalog dev: ${error.message}\n`);
+  });
+
+  it("any other error propagates, for index.ts to exit 1", async () => {
     hoisted.devServerMock.mockRejectedValueOnce(new Error("totally unexpected"));
-    await expect(runDev({ source: ".", smoke: true })).rejects.toThrow("totally unexpected");
+    await expect(runDev({ source: "." })).rejects.toThrow("totally unexpected");
+    expect(process.exitCode).toBeUndefined();
   });
 });

@@ -1,0 +1,16 @@
+{
+  "$schema": "../../../src/config/schema/catalog.config.schema.json",
+  "sources": [
+    { "path": "./index-a", "root": true },
+    {
+      "path": "./index-b",
+      "default": true,
+      "excludeFromAll": true,
+      "ownerUrl": "https://{login}.forge.test/u?next=\"><img src=x onerror=alert(1)>"
+    }
+  ],
+  "ownerUrl": "https://forge.example/{login}",
+  "siteUrl": "https://fixture.ocx.test",
+  "base": "/catalog/",
+  "chrome": "ocx"
+}

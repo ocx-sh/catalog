@@ -181,25 +181,31 @@ function casRelpath(namespace: string, pkg: string, digest: string, ext: string)
  * multi-source catalog looked like a catalog whose packages publish no
  * `__ocx.desc` at all.
  *
- * Exported for the browser side too: `src/theme/utils/cas.ts` re-exports it
+ * Exported for the browser side too: `src/site/lib/cas.ts` re-exports it
  * and builds its own CAS URLs through it, so both halves of a build agree by
  * construction rather than by two copies staying in step. A live import is
  * safe here where `WIRE_ASSET_EXTENSIONS`'s could not be — the dependency
- * runs theme -> viewmodel, and `useImageIndex.ts` already pulls this module
- * into the browser bundle for `readImageIndexAnnotations`.
+ * runs site -> viewmodel, and `cas.ts`, which the versions island loads,
+ * already pulls this module into the browser bundle.
  */
 export function wirePrefix(wireBase: string): string {
   return wireBase === "" ? "" : `/${wireBase}`;
 }
 
 /**
- * Ported from Python `_cas_url` (`core/render.py:136-149`). `null` when no
+ * Ported from Python `_cas_url` (`core/render.py:136-149`).
+ *
+ * The result is CATALOG-ROOT-RELATIVE (C-008, C-039): `/p/…` for the root
+ * source (`wireBase` `""` never yields `//p/`), `/index/<label>/p/…` for any
+ * other. It never contains the site's `base` — `catalog.json` is byte-identical
+ * for every `base`, and a client joins the prefix with `joinBase` (`url.ts`).
+ * `null` when no
  * digest is configured. A configured digest missing from `extLookup` is a
  * dangling reference — trusted away upstream (`check_no_dangling_references`,
  * G-15); this throws rather than silently degrading the entry, matching the
  * Python `KeyError` propagation this function's doc comment describes.
  */
-function casUrl(
+export function casUrl(
   namespace: string,
   pkg: string,
   digest: string | null,
@@ -527,14 +533,12 @@ function readAnnotation(annotations: Readonly<Record<string, unknown>>, key: str
  * Reads `org.opencontainers.image.{licenses,source,revision}` off ONE
  * already-parsed image-index object's `annotations` (C-600).
  *
- * Its one shipped caller is the theme's client-side `useImageIndex.ts`
- * composable, which fetches exactly one image index at a time (whichever tag
- * is currently active/hovered) over HTTP and wraps this in a
- * malformed-degrades-to-`{}` guard — a decoration field must never take the
- * detail page down. It lives here, in the viewmodel, rather than in the
- * composable so the wire-shape validation rules below stay in the module
- * that owns every other wire read; a second hand-rolled annotation parser in
- * the theme is exactly the drift class `subsystem-theme.md` warns about.
+ * Its one shipped caller is `detailWire` (`src/site/model/detail.ts`), which
+ * parses the latest tag's image index at build time and reads the license,
+ * source and revision fallbacks off it. It lives here, in the viewmodel,
+ * rather than in the model so the wire-shape validation rules below stay in
+ * the module that owns every other wire read; a second hand-rolled annotation
+ * parser in the site is exactly the drift class `subsystem-site.md` warns about.
  *
  * An index carrying no `annotations` key at all returns `{}` (spec-legal:
  * `annotations` itself is optional) — this is NOT the same as "malformed";
