@@ -111,7 +111,9 @@ It is `[]` on any named index and on a one-index catalog (`hasScope`). The ⌘K
 palette (`SearchModal.vue`) deliberately does not read it. Never make a route
 ask it: an excluded index's pages still exist.
 
-**Owner links are `themeConfig.ownerUrl`.** `MetaRail.vue` builds them through
+**Owner links are `frontmatter.ownerUrl` ?? `themeConfig.ownerUrl`.** The
+frontmatter key is the page's source's `sources[].ownerUrl`, written by
+`build/pages.ts` (same channel as `wireBase`). `MetaRail.vue` builds them through
 `utils/ownerUrl.ts` (`{login}` template, `split`/`join` + `encodeURIComponent`,
 then `safeHref`); the GitHub default lives in that util, never in a component.
 
