@@ -20,9 +20,10 @@ export default tseslint.config(
       ".lhci-bulk-src/**",
       ".lighthouseci/**",
       ".lighthouseci-bulk/**",
-      // mkdocs build output (task docs:build) — ships minified JS bundles that
-      // js.configs.recommended would otherwise try to parse.
-      "site/**",
+      // docs site (task docs:build): its own Astro project with its own toolchain,
+      // and a build output that ships minified JS bundles js.configs.recommended
+      // would otherwise try to parse.
+      "docs/**",
       "src/theme/**/*.vue",
       // Agent worktrees (.agents/worktrees/<name>/) are full checkouts with
       // their own tsconfig.json: linting them from the main checkout makes

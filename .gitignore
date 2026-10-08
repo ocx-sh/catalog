@@ -9,8 +9,8 @@ coverage/
 .lighthouseci/
 .lighthouseci-bulk/
 
-# mkdocs build output (task docs:build)
-/site/
+# docs site build output (task docs:build): docs/dist/ is covered by `dist/`
+# above, docs/.astro/ by docs/.gitignore.
 
 # lychee link-check cache (task lint:links)
 .lycheecache

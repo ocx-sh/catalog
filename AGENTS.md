@@ -33,8 +33,10 @@ not restate it here.
 > this repo — the release lane has carried every version since `0.1.0`
 > through `0.2.0`, `0.2.1`, `0.3.0`, and `0.4.0`. The GitHub remote
 > [`ocx-sh/catalog`](https://github.com/ocx-sh/catalog) is public, and the
-> user documentation is a MkDocs Material site under `docs/`, published to
-> GitHub Pages (`README.md` is a pointer at it, not a second copy). The
+> user documentation is an Astro/Starlight site under `docs/` (ocx theme; built
+> for `https://ocx.sh/apps/catalog/`, while GitHub Pages still serves the last
+> MkDocs deployment until the owner's host hand-off; `README.md` is a pointer
+> at it, not a second copy). The
 > release lane is fully operational: `0.1.0` was a one-time manual bootstrap
 > publish (trusted publishing cannot pre-provision a new package name), and
 > every version since went out through CI with a real provenance
@@ -65,8 +67,9 @@ task typecheck      # npm run typecheck (tsc --noEmit && tsc -p tsconfig.theme.j
 task test           # npm test (vitest run --coverage — 100% gate)
 task pack-smoke     # node scripts/pack-smoke.mjs (publint + attw + real pack/install)
 task build          # npm run build (tsc -> dist/; postbuild chmods the CLI entry)
-task docs:build     # mkdocs build --strict (the docs site; standalone)
-task docs:serve     # local docs preview on 127.0.0.1:8000
+task docs:build     # npm --prefix docs run build (the Starlight docs site; standalone)
+task docs:check     # Pagefind bundle + ocx-site check + lychee over docs/dist
+task docs:serve     # local docs preview (Astro dev server)
 task changelog:preview   # git-cliff --unreleased
 task release:prepare BUMP=auto|patch|minor|major   # see Release
 task dev:indexes         # seed .dev-indexes/ (needs ../index checked out)
@@ -77,16 +80,17 @@ task dev:catalog CASE=multi-root   # serve one seeded multi-index case
 calling anything done. Repo-hygiene tasks (`lint:actions`, `lint:links`,
 `secrets`, `lint:workflows`), `quality:web` (Lighthouse CI over a fixture
 site), `dev:*` (the manual multi-index review harness — the one task that
-needs the sibling `ocx-sh/index` checkout) and `docs:*` (the MkDocs
+needs the sibling `ocx-sh/index` checkout) and `docs:*` (the Starlight
 documentation site) run standalone, not as part of `verify` — `verify` must
 stay runnable with the npm toolchain alone.
 
 CI (`.github/workflows/ci.yml`) runs: `lint`, `typecheck`, `test`,
 `pack-verify`, `workflows-lint` (zizmor), `audit-signatures`, `repo-checks`
 (actionlint/lychee/gitleaks), and `web-quality` (Lighthouse CI).
-`.github/workflows/pages.yml` builds `docs/` on every docs-touching PR
-(`mkdocs build --strict` is the dead-internal-link gate) and publishes it to
-GitHub Pages on `main`.
+`.github/workflows/pages.yml` builds and checks `docs/` on every docs-touching PR
+(`task docs:check`, lychee included, is the dead-link gate). It deploys nothing
+from `main` until the owner's host hand-off; the manual `redirect-stubs` job
+then replaces the old GitHub Pages site with meta-refresh stubs.
 
 ## Quality Gate
 
@@ -152,7 +156,7 @@ escalating tier.
 | `src/theme/` | The Vue 3 VitePress theme (components, composables, utils, styles) |
 | `src/viewmodel/` | The `/data/catalog/catalog.json` view-model emitter |
 | `templates/` | Rendered CI workflow templates (`ci/*.yml`) |
-| `docs/` | The user documentation site (MkDocs Material, `mkdocs.yml`) — published at `https://ocx-sh.github.io/catalog/` |
+| `docs/` | The user documentation site (Astro/Starlight, `docs/astro.config.mjs`) — published at `https://ocx-sh.github.io/catalog/` |
 | `test/` | Vitest suites, mirroring `src/` |
 | `scripts/pack-smoke.mjs` | Publish-shape verification (publint, attw, real pack + install) |
 

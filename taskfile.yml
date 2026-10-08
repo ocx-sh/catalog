@@ -9,10 +9,6 @@
 
 version: '3'
 
-vars:
-  # Single source of truth for the docs toolchain pin (see docs:build below).
-  MKDOCS_MATERIAL: 9.7.7
-
 tasks:
   default:
     desc: Fast feedback — the full local quality gate
@@ -52,32 +48,60 @@ tasks:
     cmds:
       - npm run build
 
-  # mkdocs-material is a Python library, not a droppable binary, so it has no
-  # OCX package to pin in ocx.lock the way task/git-cliff/actionlint/lychee/
-  # gitleaks are. `uv run --with` resolves it from PyPI into an ephemeral venv,
-  # pinned to an exact version for the same reason `lint:workflows` pins zizmor:
-  # a docs toolchain that silently changes between a local run and CI is not a
-  # gate you can reason about. Needs `uv` on PATH locally (same expectation as
-  # lint:workflows); CI provisions it with astral-sh/setup-uv.
-  #
-  # docs:* are STANDALONE, deliberately not part of `verify` — `verify` is the
-  # npm quality gate and must stay runnable without a Python toolchain. The
-  # pre-merge gate for docs is .github/workflows/pages.yml's build job, plus
-  # lychee in ci.yml's repo-checks for external links.
+  # The docs site is a private Astro/Starlight project in docs/ (own
+  # package.json, ocx theme dependency; see docs/astro.config.mjs). docs:* are
+  # STANDALONE, deliberately not part of `verify`: they need `npm --prefix docs
+  # install` first, and `verify` must stay runnable on the root npm install
+  # alone. The pre-merge gate for docs is .github/workflows/pages.yml (build +
+  # docs:check on every docs PR).
   docs:build:
-    desc: Build the docs site into site/ (strict — any dead internal link fails)
+    desc: Build the docs site into docs/dist/ (Starlight at /apps/catalog/, Pagefind bundle included)
     cmds:
-      - uv run --with mkdocs-material=={{.MKDOCS_MATERIAL}} mkdocs build --strict
+      - npm --prefix docs run build
 
   docs:serve:
-    desc: Live-reload docs preview at http://127.0.0.1:8000
+    desc: Live-reload docs preview (Astro dev server)
     cmds:
-      - uv run --with mkdocs-material=={{.MKDOCS_MATERIAL}} mkdocs serve -a 127.0.0.1:8000
+      - npm --prefix docs run dev
 
   docs:clean:
-    desc: Remove the generated site/ directory
+    desc: Remove the generated docs/dist/ and docs/.astro/ directories
     cmds:
-      - rm -rf site
+      - rm -rf docs/dist docs/.astro
+
+  # The three checks on a built docs/dist: the Pagefind bundle exists,
+  # `ocx-site check` (the theme's own build validation, run through the docs
+  # package's `check` script because `npx ocx-site --dist` is parsed by npm 11 as
+  # an npm flag), and lychee over the rendered HTML.
+  #
+  # lychee sees the site the way a browser does: dist is mounted under
+  # <stage>/apps/catalog so the root-relative `/apps/catalog/...` links resolve,
+  # and the absolute https://ocx.sh/apps/catalog/ URLs the theme writes (canonical,
+  # sitemap) are remapped onto the same tree, because the site is not live there
+  # yet. The excluded paths are the theme chrome's links into OTHER sections of
+  # ocx.sh (/docs/, /catalog/, /integrations/, /install/, /apps/): they do not
+  # exist in this build. `/404/` is the canonical of 404.html, which the build
+  # emits as 404.html only. External links go through lychee.toml as usual.
+  # lychee 0.24 cannot resolve a #fragment on a directory-index link, so anchors
+  # are not part of this gate.
+  docs:check:
+    desc: Check a built docs/dist (Pagefind bundle, ocx-site check, lychee over the rendered HTML)
+    cmds:
+      - test -d docs/dist/pagefind
+      - npm --prefix docs run check
+      - |
+        stage="$(mktemp -d)"
+        mkdir -p "$stage/apps"
+        ln -s "$PWD/docs/dist" "$stage/apps/catalog"
+        lychee --config lychee.toml --root-dir "$stage" \
+          --remap "^https://ocx.sh/apps/catalog/ file://$stage/apps/catalog/" \
+          --exclude "^file://$stage/(docs|catalog|integrations|install)(/|$)" \
+          --exclude "^file://$stage/apps/?$" \
+          --exclude "^file://$stage/apps/catalog/404/$" \
+          "$stage/apps/catalog"
+        rc=$?
+        rm -rf "$stage"
+        exit $rc
 
   lint:actions:
     desc: Lint GitHub Actions workflows

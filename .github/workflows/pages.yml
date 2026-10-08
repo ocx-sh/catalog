@@ -1,27 +1,43 @@
 name: pages
 
-# Builds the MkDocs Material documentation site and publishes it to GitHub
-# Pages at https://ocx-sh.github.io/catalog/.
+# Builds the Starlight documentation site in docs/ and checks it on every pull
+# request that touches the docs: `task docs:build`, then `task docs:check`
+# (Pagefind bundle present, `ocx-site check`, lychee over the rendered HTML), so
+# a dead link fails the PR.
 #
-# `build` runs on every pull request that touches the docs, so a dead internal
-# link (mkdocs --strict) fails the PR rather than the deploy. Only a push to
-# main uploads the artifact and runs `deploy`.
+# HOST HAND-OFF (owner-run, not automatic): the docs now build for
+# https://ocx.sh/apps/catalog/ (the website's deploy owns that URL), but
+# https://ocx-sh.github.io/catalog/ still serves the LAST MkDocs deployment.
+# Nothing here deploys from `main` any more: the old site cannot be rebuilt (its
+# MkDocs sources moved to docs/src/content/docs), and deploying the new
+# base-pathed output at the old URL would break every asset. GitHub Pages keeps
+# serving the old site until the owner runs `redirect-stubs` below, after the
+# website deploy has claimed /apps/catalog/.
 
 on:
   pull_request:
     paths:
       - "docs/**"
-      - "mkdocs.yml"
+      - "scripts/gen-docs-redirects.mjs"
       - "taskfile.yml"
+      - "lychee.toml"
       - ".github/workflows/pages.yml"
   push:
     branches: [main]
     paths:
       - "docs/**"
-      - "mkdocs.yml"
+      - "scripts/gen-docs-redirects.mjs"
       - "taskfile.yml"
+      - "lychee.toml"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
+    inputs:
+      handoff_done:
+        description: >-
+          redirect-stubs only. Tick ONLY after ocx.sh/apps/catalog/ serves the
+          docs: this REPLACES the old GitHub Pages site with redirect stubs.
+        type: boolean
+        default: false
 
 permissions: {}
 
@@ -33,52 +49,83 @@ jobs:
   build:
     name: build
     runs-on: ubuntu-latest
-    # `pages: write`/`id-token: write` are here ONLY so that
-    # actions/configure-pages can turn Pages on and select the Actions source
-    # on the very first run of this workflow — the repository has no Pages
-    # site until then, and `enablement: true` needs those scopes on the job
-    # that calls it. Nothing else in this job uses them; the artifact upload
-    # needs neither.
     permissions:
       contents: read
-      pages: write
-      id-token: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           persist-credentials: false
 
-      - name: Configure GitHub Pages
-        if: github.ref == 'refs/heads/main'
-        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d  # v6.0.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
         with:
-          enablement: true
-
-      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e  # v6.8.0
+          node-version: "24"
 
       - uses: ocx-sh/setup-ocx@25fa771f8572572dc64528db89560de68a163a0e  # v1
 
-      - name: Build docs (strict)
+      # TEMPORARY until @ocx-sh/theme 0.2.0 on npm — removed by plan step I.1.
+      # docs/package.json depends on the theme through a local `file:` path and
+      # npm cannot install a git subdirectory. So: check out ocx-sh/website at a
+      # pinned SHA, pack packages/theme, and install that tarball over the
+      # `file:` dependency. `npm pack --ignore-scripts` (not `pnpm pack`): the
+      # theme's `prepack` only generates .d.mts typings, needs the website's
+      # whole pnpm install (tsc, astro types) and none of it is read by
+      # an Astro build, so skipping it needs neither pnpm nor that install.
+      # The SHA is the website commit the local `file:` dependency was tested
+      # against; bump it deliberately.
+      - name: Check out the ocx theme source (TEMPORARY, plan step I.1)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          repository: ocx-sh/website
+          ref: 96bdae24323b947b04c8d3fbc194751fd3c8e7d2
+          path: .ocx-theme-src
+          sparse-checkout: packages/theme
+          persist-credentials: false
+
+      - name: Install docs dependencies over the packed theme (TEMPORARY, plan step I.1)
+        run: |
+          tarball="$(npm pack ./.ocx-theme-src/packages/theme --ignore-scripts --pack-destination "$RUNNER_TEMP" | tail -n 1)"
+          npm --prefix docs pkg set "dependencies.@ocx-sh/theme=file:$RUNNER_TEMP/$tarball"
+          npm --prefix docs install
+
+      - name: Build docs
         run: task docs:build
 
-      - name: Upload Pages artifact
-        if: github.ref == 'refs/heads/main'
-        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9  # v5.0.0
-        with:
-          path: site
+      - name: Check docs (Pagefind, ocx-site check, lychee)
+        run: task docs:check
 
-  deploy:
-    name: deploy
-    if: github.ref == 'refs/heads/main'
-    needs: build
+  # Manual, owner-run, AFTER the website deploy serves /apps/catalog/. Replaces
+  # the old MkDocs site on GitHub Pages with one meta-refresh stub per old URL
+  # (docs/redirects.json -> scripts/gen-docs-redirects.mjs). Never runs from a
+  # pull request or a push; the checkbox guards against a mis-click, because
+  # until the hand-off this deployment would delete the only live docs.
+  redirect-stubs:
+    name: redirect-stubs
+    if: github.event_name == 'workflow_dispatch' && inputs.handoff_done
     runs-on: ubuntu-latest
     permissions:
+      contents: read
       pages: write
       id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
+        with:
+          node-version: "24"
+
+      - name: Generate the redirect stubs
+        run: node scripts/gen-docs-redirects.mjs --out "$RUNNER_TEMP/stubs"
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9  # v5.0.0
+        with:
+          path: ${{ runner.temp }}/stubs
+
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128  # v5.0.0

@@ -10,7 +10,8 @@ paths:
 This repo's whole CI/CD security surface is three workflow files —
 `.github/workflows/ci.yml` and `.github/workflows/release.yml`, which build,
 test, and publish an npm package, and `.github/workflows/pages.yml`, which
-builds the MkDocs documentation site and deploys it to GitHub Pages. No SQL,
+builds and checks the Starlight documentation site and, by manual dispatch only,
+deploys the redirect stubs to GitHub Pages. No SQL,
 no user-facing auth, no server. The checklist below is scoped to what those
 three files actually do; verify every claim against them (and
 `.github/zizmor.yml`, `renovate.json`) before asserting it — this file is not
@@ -26,12 +27,9 @@ a generic OWASP checklist.
 - [ ] Top-level `permissions: {}` in every workflow; each job grants itself only
       what it needs (`contents: read` is the default; the `publish` job in
       `release.yml` additionally needs `id-token: write` for npm trusted
-      publishing, and `pages.yml`'s `deploy` job needs `pages: write` +
+      publishing, and `pages.yml`'s manual `redirect-stubs` job needs `pages: write` +
       `id-token: write` for the Pages deployment). `pages.yml`'s `build` job
-      also holds those two scopes, for one reason only: `actions/configure-pages`
-      with `enablement: true` turns Pages on during the first `main` run, and
-      needs them on the job that calls it. Drop them from `build` once the
-      Pages site exists and the `configure-pages` step is removed.
+      holds `contents: read` only.
 - [ ] No `NODE_AUTH_TOKEN` / npm auth token secret exists anywhere in this repo.
       Publishing is OIDC-based (`id-token: write` exchanged for a short-lived npm
       credential at publish time) — adding a stored token back would be a live
@@ -57,9 +55,14 @@ a generic OWASP checklist.
 - [ ] `workflows-lint` (`ci.yml`) runs `zizmor --min-severity medium --config
       .github/zizmor.yml .github/` via `uvx` (no dependency added to the
       package's own graph for a CI-only tool).
-- [ ] `pages.yml` never publishes anything from a pull request: `upload-pages-artifact`
-      and the whole `deploy` job are gated on `github.ref == 'refs/heads/main'`,
-      so a fork PR can build the docs but can never deploy them.
+- [ ] `pages.yml` never publishes anything from a pull request or a push: the
+      only deploying job, `redirect-stubs`, is gated on `workflow_dispatch` plus
+      an explicit `handoff_done` input, so a fork PR can build the docs but can
+      never deploy them.
+- [ ] A step that installs a dependency from another repository is marked
+      `TEMPORARY` with the plan step that removes it, checks that repository
+      out at a full 40-hex SHA with `persist-credentials: false`, and runs no
+      lifecycle script of it (`pages.yml`: the ocx theme, `npm pack --ignore-scripts`).
 
 ---
 

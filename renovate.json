@@ -18,6 +18,13 @@
       "description": "vitepress ships on an alpha channel (2.0.0-alpha.*) and vue is pinned in step with it — deliberately NOT matched above, so each gets its own ungrouped PR for manual review before merge.",
       "matchManagers": ["npm"],
       "matchPackageNames": ["vitepress", "vue"]
+    },
+    {
+      "description": "docs/ (Starlight site): astro and @astrojs/starlight are bounded by the ocx theme's peer ranges (starlight >=0.42 <0.43, astro ^7), so they move as one dedicated PR, merged only together with the matching @ocx-sh/theme release.",
+      "matchManagers": ["npm"],
+      "matchFileNames": ["docs/package.json"],
+      "matchPackageNames": ["astro", "@astrojs/starlight"],
+      "groupName": "docs astro + starlight"
     }
   ],
   "lockFileMaintenance": {
