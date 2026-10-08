@@ -3,7 +3,8 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { build } from "vitepress";
 import { createScratchRoot } from "../../src/build/scratch.js";
-import { synthesizePages, type PackageRoute } from "../../src/build/pages.js";
+import { synthesizePages } from "../../src/build/pages.js";
+import type { PackageRoute } from "../../src/viewmodel/route.js";
 import { generateConfig } from "../../src/build/config_gen.js";
 import { linkNodeModules, withTempDir } from "./helpers.js";
 

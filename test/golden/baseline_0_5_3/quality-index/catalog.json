@@ -1,0 +1,207 @@
+{
+  "generated": "2026-08-10T09:14:00Z",
+  "indexes": [
+    {
+      "name": "ocx.sh",
+      "root": true,
+      "default": true,
+      "excludeFromAll": false,
+      "count": 7
+    }
+  ],
+  "packages": [
+    {
+      "namespace": "acme",
+      "package": "gadget",
+      "name": "ocx.sh/acme/gadget",
+      "status": "active",
+      "deprecatedMessage": null,
+      "supersededBy": null,
+      "created": "2026-02-11",
+      "updated": "2026-08-10T09:14:00Z",
+      "title": "gadget",
+      "description": "Fast cross-platform CLI multitool for inspecting and transforming JSON, YAML and TOML.",
+      "keywords": [
+        "cli",
+        "json",
+        "yaml",
+        "toml",
+        "transform",
+        "data"
+      ],
+      "latestVersion": "1.4.0",
+      "variants": [
+        "musl"
+      ],
+      "tagCount": 7,
+      "platforms": [
+        "darwin/amd64",
+        "darwin/arm64",
+        "linux/amd64",
+        "linux/arm64",
+        "windows/amd64",
+        "windows/arm64"
+      ],
+      "logoUrl": "/p/acme/gadget/o/sha256/39e92f4255848135d225df352bd173c8aa58017b4c74a94b60ff543cdb9e48a9.svg",
+      "readmeUrl": "/p/acme/gadget/o/sha256/694faac6a65dce1b6f72c71b1af336a7328f39fc83c60bdb75151bbd87ef71b0.md"
+    },
+    {
+      "namespace": "acme",
+      "package": "husk",
+      "name": "ocx.sh/acme/husk",
+      "status": "yanked",
+      "deprecatedMessage": "All builds withdrawn: a packaging defect dropped runtime shared libraries on musl systems.",
+      "supersededBy": null,
+      "created": "2025-03-19",
+      "updated": "2025-04-01T00:00:00Z",
+      "title": "husk",
+      "description": "Withdrawn \u2014 every published build shipped a broken artifact. Retained for provenance only.",
+      "keywords": [
+        "cli",
+        "yanked"
+      ],
+      "latestVersion": "0.2.0",
+      "tagCount": 1,
+      "platforms": [
+        "linux/amd64",
+        "linux/arm64"
+      ],
+      "logoUrl": null,
+      "readmeUrl": "/p/acme/husk/o/sha256/a29236f50778a7e3f0e7f3e196cdbedf087e9de04b28d8a081bbf9712641e4d6.md"
+    },
+    {
+      "namespace": "acme",
+      "package": "legacy-tool",
+      "name": "ocx.sh/acme/legacy-tool",
+      "status": "deprecated",
+      "deprecatedMessage": "Superseded by acme/gadget, which covers every legacy-tool workflow. Receives security fixes only.",
+      "supersededBy": "acme/gadget",
+      "created": "2024-06-03",
+      "updated": "2025-11-02T18:20:00Z",
+      "title": "legacy-tool",
+      "description": "First-generation data-transform pipeline, superseded by acme/gadget.",
+      "keywords": [
+        "cli",
+        "json",
+        "transform",
+        "deprecated"
+      ],
+      "latestVersion": "2.1.0",
+      "tagCount": 4,
+      "platforms": [
+        "darwin/amd64",
+        "linux/amd64",
+        "linux/arm64"
+      ],
+      "logoUrl": "/p/acme/legacy-tool/o/sha256/63de9c23eb86027ea8f3b9f5cd2ec0e3568a1db9e97aa3203dd9afac59d8cb4f.svg",
+      "readmeUrl": "/p/acme/legacy-tool/o/sha256/2e2c35d7a3df312077ac220be2bd0681c4f9c3f97059f6b21ccdb51aae934e86.md"
+    },
+    {
+      "namespace": "acme",
+      "package": "portable",
+      "name": "ocx.sh/acme/portable",
+      "status": "active",
+      "deprecatedMessage": null,
+      "supersededBy": null,
+      "created": "2026-06-15",
+      "updated": "2026-06-15T09:00:00Z",
+      "title": "portable",
+      "description": "A platform-agnostic script package: one build for every host, published as any/any.",
+      "keywords": [
+        "cli",
+        "portable"
+      ],
+      "latestVersion": "1.0.0",
+      "tagCount": 2,
+      "platforms": [
+        "any/any"
+      ],
+      "logoUrl": null,
+      "readmeUrl": "/p/acme/portable/o/sha256/91be578958fd5ff5de879322c5fd70d2b882d4c74712d4f7f234be0c9972843e.md"
+    },
+    {
+      "namespace": "contrib",
+      "package": "mono",
+      "name": "ocx.sh/contrib/mono",
+      "status": "active",
+      "deprecatedMessage": null,
+      "supersededBy": null,
+      "created": "2026-05-30",
+      "updated": "2026-05-30T07:00:00Z",
+      "title": "mono",
+      "description": "A minimal package that ships a logo but no README, exercising the README empty state.",
+      "keywords": [
+        "example",
+        "logo"
+      ],
+      "latestVersion": "1.0.0",
+      "tagCount": 2,
+      "platforms": [
+        "linux/amd64"
+      ],
+      "logoUrl": "/p/contrib/mono/o/sha256/f3dadf056bf6512b72cfa1b1660a8bb4eb5f9875abe03e30cf99e210d2a51c75.svg",
+      "readmeUrl": null
+    },
+    {
+      "namespace": "oxidize",
+      "package": "ripgrep",
+      "name": "ocx.sh/oxidize/ripgrep",
+      "status": "active",
+      "deprecatedMessage": null,
+      "supersededBy": null,
+      "created": "2026-01-20",
+      "updated": "2026-07-15T14:05:00Z",
+      "title": "ripgrep",
+      "description": "Recursively search directories for a regex pattern while respecting .gitignore.",
+      "keywords": [
+        "search",
+        "grep",
+        "regex",
+        "cli",
+        "rust"
+      ],
+      "latestVersion": "14.1.1",
+      "tagCount": 4,
+      "platforms": [
+        "darwin/amd64",
+        "darwin/arm64",
+        "linux/amd64",
+        "linux/arm64"
+      ],
+      "logoUrl": null,
+      "readmeUrl": "/p/oxidize/ripgrep/o/sha256/9375a45e701af3609c2ec5829f551032aea9fce3fc5bef9dbc498b8490d2b133.md"
+    },
+    {
+      "namespace": "sharkdp",
+      "package": "bat",
+      "name": "ocx.sh/sharkdp/bat",
+      "status": "active",
+      "deprecatedMessage": null,
+      "supersededBy": null,
+      "created": "2026-08-04",
+      "updated": "2026-08-03T22:48:33Z",
+      "title": "bat",
+      "description": "A cat clone with syntax highlighting for 150+ languages, Git integration, and automatic paging.",
+      "keywords": [
+        "bat",
+        "cat",
+        "pager",
+        "syntax-highlighting",
+        "git",
+        "cli",
+        "rust"
+      ],
+      "latestVersion": "0.25.0",
+      "tagCount": 4,
+      "platforms": [
+        "darwin/amd64",
+        "darwin/arm64",
+        "linux/amd64",
+        "linux/arm64",
+        "windows/amd64"
+      ],
+      "logoUrl": "/p/sharkdp/bat/o/sha256/b1780af7d9674a19377804c2b8c1e1a76910ab0d5cef0279c5e2da3fad44a8e8.svg",
+      "readmeUrl": "/p/sharkdp/bat/o/sha256/1564e4071d28d33d1bfef0f753510b21a0610ca73c16b32f1048551c5928d558.md"
+    }
+  ]
+}

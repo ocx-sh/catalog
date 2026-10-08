@@ -1,6 +1,7 @@
 import { cp, mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { Semaphore } from "../sources/walker.js";
+import type { PackageRoute } from "../viewmodel/route.js";
 
 /**
  * Page synthesis (C-005, S-008) — writes one real `.md` file per package
@@ -98,33 +99,6 @@ import { Semaphore } from "../sources/walker.js";
  * page's frontmatter; it exists purely so VitePress emits `404.html`),
  * mirroring the current site's own `src/index.md`/`src/404.md`.
  */
-export interface PackageRoute {
-  /** Opaque 1..N path segments after the catalog root, in order — the URL
-   * this package's page is served at, and nothing else. For the `root: true`
-   * source that is `[namespace, ...package]`; for every other source it
-   * leads with that source's index label
-   * (`[label, namespace, ...package]`), so two indexes publishing the same
-   * id get two pages. Never assume `length === 2`, and never read identity
-   * back out of it — `namespace`/`package` below are the identity. */
-  readonly segments: readonly string[];
-  /** Wire identity: the package's namespace, independent of where the route
-   * puts it. Every CAS/wire URL is built from this and `package` (the "CAS
-   * gotcha" in `subsystem-theme.md`), which is why it travels separately —
-   * an index-qualified route's first segment is a label, not a namespace,
-   * so splitting the route apart would build 404ing CAS URLs. */
-  readonly namespace: string;
-  /** Wire identity: the package path, 1..N `/`-joined segments. */
-  readonly package: string;
-  /** This package's per-source wire-fetch mount prefix — `""` for the
-   * root:true source, `"index/<label>"` otherwise. See the file doc's
-   * "Multi-source wireBase" section. */
-  readonly wireBase: string;
-  /** This package's source's own `ownerUrl` template, when it set one —
-   * rides frontmatter to `MetaRail.vue`, which falls back to the top-level
-   * `themeConfig.ownerUrl` when absent. */
-  readonly ownerUrl?: string | undefined;
-}
-
 export interface SynthesizePagesOptions {
   /** Absolute path to the scratch root `createScratchRoot()` returned. */
   readonly scratchRoot: string;

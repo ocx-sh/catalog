@@ -1,6 +1,7 @@
 import { rmSync } from "node:fs";
-import { mkdir, mkdtemp, rm, stat } from "node:fs/promises";
+import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { join } from "node:path";
+import { cacheBaseDir } from "./cache_dir.js";
 
 /**
  * mkdtemp scratch-root lifecycle (C-005) — the per-invocation tree `engine.ts`
@@ -93,36 +94,6 @@ function registerCleanupHook(): void {
   if (cleanupHookRegistered) return;
   cleanupHookRegistered = true;
   process.on("exit", () => sweepScratchRoots(registry));
-}
-
-/** True when `dir` exists and is a directory. */
-async function isDirectory(dir: string): Promise<boolean> {
-  try {
-    return (await stat(dir)).isDirectory();
-  } catch {
-    return false;
-  }
-}
-
-/**
- * The base directory every scratch root is created under — see this module's
- * doc "Location" section for why it's the consumer's own `node_modules`
- * rather than `os.tmpdir()`.
- *
- * Exported for its second caller, `sources_pipeline.ts`, which puts the
- * `url` source layer's cross-build fetch cache in a sibling subdirectory:
- * that cache's whole value is surviving BETWEEN builds (ETag/conditional GET
- * + content-addressed blobs, `walker.ts`), so it must live NEXT TO the
- * scratch roots, never inside one — a self-sweeping root would delete it
- * every run and silently turn every build into a cold fetch.
- */
-export async function cacheBaseDir(): Promise<string> {
-  const cwd = process.cwd();
-  const nodeModules = join(cwd, "node_modules");
-  if (await isDirectory(nodeModules)) {
-    return join(nodeModules, ".cache", "ocx-catalog");
-  }
-  return join(cwd, ".ocx-catalog");
 }
 
 export async function createScratchRoot(): Promise<ScratchRoot> {

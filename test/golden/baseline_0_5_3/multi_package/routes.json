@@ -1,0 +1,20 @@
+[
+  {
+    "segments": [
+      "acme",
+      "apple"
+    ],
+    "namespace": "acme",
+    "package": "apple",
+    "wireBase": ""
+  },
+  {
+    "segments": [
+      "acme",
+      "zebra"
+    ],
+    "namespace": "acme",
+    "package": "zebra",
+    "wireBase": ""
+  }
+]

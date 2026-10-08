@@ -7,7 +7,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { BuildError } from "../../src/build/errors.js";
-import { cacheBaseDir } from "../../src/build/scratch.js";
+import { cacheBaseDir } from "../../src/build/cache_dir.js";
 import { emitCatalogTree, resolveCatalog, warnToStderr } from "../../src/build/sources_pipeline.js";
 import type { ResolvedSource } from "../../src/config/types.js";
 import { compareQualifiedIds } from "../../src/sources/mirror.js";

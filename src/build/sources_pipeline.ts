@@ -9,11 +9,10 @@ import { readPathSource } from "../sources/path.js";
 import { extractPackages, SourceError, type ResolvedSourceFiles, type WirePath } from "../sources/types.js";
 import { readUrlSource } from "../sources/walker.js";
 import { catalogIndex, serializeCatalog } from "../viewmodel/catalog.js";
-import { packageRouteSegments } from "../viewmodel/route.js";
+import { packageRouteSegments, type PackageRoute } from "../viewmodel/route.js";
 import type { CatalogIndexInfo, CatalogSourcePackage } from "../viewmodel/types.js";
 import { BuildError } from "./errors.js";
-import type { PackageRoute } from "./pages.js";
-import { cacheBaseDir } from "./scratch.js";
+import { cacheBaseDir } from "./cache_dir.js";
 
 /**
  * The source layer's wiring into the build (C-003 -> C-004/C-005/C-006):
@@ -66,7 +65,7 @@ import { cacheBaseDir } from "./scratch.js";
  * root would therefore be silently useless — disposed at the end of every
  * run, making every build a cold fetch that still looks correct. It lives in
  * the consumer's own `node_modules/.cache/ocx-catalog/url/<key>` instead
- * (`scratch.ts`'s `cacheBaseDir()`, the same base the scratch roots are
+ * (`cache_dir.ts`'s `cacheBaseDir()`, the same base the scratch roots are
  * created NEXT TO but never inside), keyed by a hash of the source URL so
  * two `url` sources never share one `index.etag`/`index.json` pair — those
  * two filenames are fixed per `cacheDir`, so a shared directory would make

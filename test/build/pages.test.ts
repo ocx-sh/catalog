@@ -2,7 +2,8 @@ import { describe, it, expect } from "vitest";
 import { readFile, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { createScratchRoot } from "../../src/build/scratch.js";
-import { synthesizePages, type PackageRoute } from "../../src/build/pages.js";
+import { synthesizePages } from "../../src/build/pages.js";
+import type { PackageRoute } from "../../src/viewmodel/route.js";
 import { parse as parseYaml } from "yaml";
 import { writeDocsFixture, writeNestedDocsFixture, writePublicDirFixture } from "./helpers.js";
 

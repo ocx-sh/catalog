@@ -8,7 +8,8 @@
  *
  * Case directories are discovered at collection time (`readdirSync`), not
  * hardcoded — a 10th case directory joins this suite automatically, no edit
- * here required.
+ * here required. `baseline_*` directories hold `baseline.test.ts`'s pinned
+ * outputs, not cases, and are skipped.
  */
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -20,7 +21,7 @@ import type { CatalogSourcePackage } from "../../src/viewmodel/types.js";
 const GOLDEN_ROOT = fileURLToPath(new URL(".", import.meta.url));
 
 const caseNames = readdirSync(GOLDEN_ROOT, { withFileTypes: true })
-  .filter((entry) => entry.isDirectory())
+  .filter((entry) => entry.isDirectory() && !entry.name.startsWith("baseline_"))
   .map((entry) => entry.name)
   .sort();
 
