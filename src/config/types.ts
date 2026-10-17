@@ -44,6 +44,14 @@ interface SourceEntryCommon {
    * included, as before this key existed.
    */
   excludeFromAll?: boolean;
+  /**
+   * Owner-profile link template for THIS source's package pages — same shape
+   * as the top-level `CatalogConfig.ownerUrl`, which it overrides. For an
+   * aggregating catalog whose indexes' owner logins live on different forges
+   * (one GitLab-backed corporate mirror next to `index.ocx.sh`). Absent: the
+   * top-level `ownerUrl`, else `https://github.com/{login}`.
+   */
+  ownerUrl?: string;
 }
 
 /** A source read from a local directory, relative to the config file. */
@@ -193,7 +201,8 @@ export interface CatalogConfig {
    * `https://gitlab.com/{login}`. Absent -> `https://github.com/{login}`,
    * the behaviour before this key existed. `owners[]` on the wire is
    * forge-neutral, so the forge a login belongs to is deployment config,
-   * not something the theme can infer. */
+   * not something the theme can infer. A source's own `ownerUrl` overrides
+   * this for that source's packages. */
   ownerUrl?: string;
   /** Site-wide tagline/meta description (VitePress's own `description`
    * field) — distinct from `brand.title`. Free text, no shape check beyond

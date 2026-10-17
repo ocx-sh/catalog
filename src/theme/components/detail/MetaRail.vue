@@ -211,7 +211,8 @@ async function copyRow(key: string, text: string) {
 
 const owners = computed(() => props.root.owners)
 
-// Owner profile links are `themeConfig.ownerUrl` (config `ownerUrl`, a
+// Owner profile links are the page's `frontmatter.ownerUrl` (the source's
+// `sources[].ownerUrl`) else `themeConfig.ownerUrl` (config `ownerUrl`, a
 // `{login}` template; absent -> `https://github.com/{login}`) around
 // wire-sourced username text. `utils/ownerUrl.ts` owns the substitution and
 // routes the result through `safeHref` (C-605), so this is not the one
@@ -223,10 +224,16 @@ const owners = computed(() => props.root.owners)
 //
 // `owners[]` is forge-neutral and the index does not say which forge its
 // logins belong to, so that is deployment config (`ownerUrl`), not something
-// this component can infer.
-const { theme } = useData()
+// this component can infer. A source can override it with its own
+// `sources[].ownerUrl`, which `build/pages.ts` writes into this page's
+// frontmatter — so an aggregating catalog links each index's owners to that
+// index's forge.
+const { theme, frontmatter } = useData()
+const ownerUrlTemplate = computed<string | undefined>(() =>
+  typeof frontmatter.value.ownerUrl === 'string' ? frontmatter.value.ownerUrl : theme.value.ownerUrl,
+)
 function ownerHref(owner: Owner): string | null {
-  return ownerProfileUrl(theme.value.ownerUrl, ownerLogin(owner))
+  return ownerProfileUrl(ownerUrlTemplate.value, ownerLogin(owner))
 }
 
 // `upstream.repository_url` is third-party metadata (wire-sourced, not

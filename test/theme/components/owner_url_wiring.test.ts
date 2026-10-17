@@ -10,7 +10,10 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import { ref } from "vue";
 
 const themeState = ref<Record<string, unknown>>({});
-vi.mock("vitepress", () => ({ useData: () => ({ theme: themeState, isDark: ref(false) }) }));
+const frontmatterState = ref<Record<string, unknown>>({});
+vi.mock("vitepress", () => ({
+  useData: () => ({ theme: themeState, frontmatter: frontmatterState, isDark: ref(false) }),
+}));
 
 const MetaRail = (await import("../../../src/theme/components/detail/MetaRail.vue")).default;
 
@@ -44,6 +47,7 @@ function ownerLinks(owners: Record<string, unknown>[]) {
 
 beforeEach(() => {
   themeState.value = {};
+  frontmatterState.value = {};
 });
 
 describe("owner profile links — themeConfig.ownerUrl", () => {
@@ -78,5 +82,36 @@ describe("owner profile links — themeConfig.ownerUrl", () => {
     const [link] = ownerLinks([{ login: "a/../b?x=$&" }]);
 
     expect(link!.attributes("href")).toBe("https://gitlab.com/a%2F..%2Fb%3Fx%3D%24%26");
+  });
+});
+
+// `sources[].ownerUrl` reaches the page as `frontmatter.ownerUrl`
+// (`build/pages.ts`), so each index of an aggregating catalog can link its
+// owners to its own forge.
+describe("owner profile links — per-source frontmatter.ownerUrl", () => {
+  test("the page's source template wins over the top-level themeConfig.ownerUrl", () => {
+    themeState.value = { ownerUrl: "https://github.com/{login}" };
+    frontmatterState.value = { ownerUrl: "https://gitlab.corp.example/{login}" };
+
+    const [link] = ownerLinks([{ login: "alice" }]);
+
+    expect(link!.attributes("href")).toBe("https://gitlab.corp.example/alice");
+  });
+
+  test("a source template applies even with no top-level ownerUrl", () => {
+    frontmatterState.value = { ownerUrl: "https://gitlab.com/{login}" };
+
+    const [link] = ownerLinks([{ login: "bob" }]);
+
+    expect(link!.attributes("href")).toBe("https://gitlab.com/bob");
+  });
+
+  test("a non-string frontmatter value is ignored, falling back to themeConfig", () => {
+    themeState.value = { ownerUrl: "https://gitlab.com/{login}" };
+    frontmatterState.value = { ownerUrl: 42 };
+
+    const [link] = ownerLinks([{ login: "carol" }]);
+
+    expect(link!.attributes("href")).toBe("https://gitlab.com/carol");
   });
 });

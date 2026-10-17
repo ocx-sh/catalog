@@ -98,6 +98,23 @@ A staging or development index you want reachable but not mixed into the aggrega
 
 The `dev.example` index keeps its own tab (with its own count), and its packages stay in the catalog with their qualified detail pages. Only the `all` tab omits them: its grid, table, filters, keyword rail and count all read the same reduced set. `?index=dev.example` links to the excluded index's tab as usual.
 
+## Link each index's owners to its own forge
+
+The top-level `ownerUrl` sets where a package page's owner logins link to. When the indexes you aggregate keep their owners on different forges, a source can override it with its own `ownerUrl`:
+
+```json
+{
+  "ownerUrl": "https://github.com/{login}",
+  "sources": [
+    { "url": "https://index.ocx.sh", "label": "ocx.sh" },
+    { "path": "./corp-index", "root": true, "ownerUrl": "https://gitlab.corp.example/{login}" }
+  ],
+  "brand": { "title": "My Catalog" }
+}
+```
+
+`corp-index`'s package pages link owners to `gitlab.corp.example`; every other source uses the top-level template (or `https://github.com/{login}` when that is absent too).
+
 Two edges. The ⌘K command palette is unchanged and still searches **every** index, excluded ones included. And there is nothing to exclude from on a one-index catalog (no tab row), while an aggregating catalog whose every source sets the flag shows an empty `all` tab — the config is followed literally.
 
 ## Self-host your own index

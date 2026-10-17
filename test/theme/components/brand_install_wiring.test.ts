@@ -19,7 +19,7 @@ const themeState = ref<Record<string, unknown>>({});
 // pulls in LogoTile -> MonogramTile, which reads `useData().isDark` (the
 // theme-aware monogram palette) — the pre-existing mock only ever needed
 // `theme` (Logo/InstallRow/MetaRail render no MonogramTile).
-vi.mock("vitepress", () => ({ useData: () => ({ theme: themeState, isDark: ref(false) }) }));
+vi.mock("vitepress", () => ({ useData: () => ({ theme: themeState, frontmatter: ref({}), isDark: ref(false) }) }));
 
 const Logo = (await import("../../../src/theme/components/layout/Logo.vue")).default;
 const InstallRow = (await import("../../../src/theme/components/catalog/InstallRow.vue")).default;

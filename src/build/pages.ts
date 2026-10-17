@@ -119,6 +119,10 @@ export interface PackageRoute {
    * root:true source, `"index/<label>"` otherwise. See the file doc's
    * "Multi-source wireBase" section. */
   readonly wireBase: string;
+  /** This package's source's own `ownerUrl` template, when it set one —
+   * rides frontmatter to `MetaRail.vue`, which falls back to the top-level
+   * `themeConfig.ownerUrl` when absent. */
+  readonly ownerUrl?: string | undefined;
 }
 
 export interface SynthesizePagesOptions {
@@ -154,6 +158,10 @@ export interface SynthesizePagesOptions {
  * `ReadmePane`/`IdentityBlock` via `utils/cas.ts`) are client-side and have
  * no other channel to it. Emitted only when non-empty.
  *
+ * `ownerUrl` (a source's own owner-profile template) rides the same channel
+ * for the same reason — the detail page is the only reader and has no other
+ * per-source handle. Emitted only when the source set one.
+ *
  * Every value is emitted with `JSON.stringify`, and that is a SECURITY
  * boundary, not a formatting preference. YAML 1.2 is a JSON superset, so a
  * JSON double-quoted scalar is a valid YAML scalar with `"`, `\` and every
@@ -183,7 +191,8 @@ export interface SynthesizePagesOptions {
  * would newly reject packages the build accepts today. */
 function packagePageContent(route: PackageRoute): string {
   const base = route.wireBase === "" ? "" : `wireBase: ${JSON.stringify(route.wireBase)}\n`;
-  return `---\nlayout: detail\nns: ${JSON.stringify(route.namespace)}\npkg: ${JSON.stringify(route.package)}\n${base}---\n`;
+  const owner = route.ownerUrl === undefined ? "" : `ownerUrl: ${JSON.stringify(route.ownerUrl)}\n`;
+  return `---\nlayout: detail\nns: ${JSON.stringify(route.namespace)}\npkg: ${JSON.stringify(route.package)}\n${base}${owner}---\n`;
 }
 
 /** Always synthesized — the catalog's own landing page (see the file doc's

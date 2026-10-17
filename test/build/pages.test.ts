@@ -179,6 +179,28 @@ describe("C-005/S-008 synthesizePages — depth-N -> file mapping", () => {
     });
   });
 
+  // A source's own owner-profile template has no other channel to the
+  // detail page — MetaRail reads it back off `useData().frontmatter`.
+  it("a source's ownerUrl is carried in frontmatter", async () => {
+    await withScratch(async (scratchRoot) => {
+      await synthesizePages({
+        scratchRoot,
+        srcDir: SRC_DIR,
+        packages: [
+          {
+            segments: ["corp", "kitware", "cmake"],
+            namespace: "kitware",
+            package: "cmake",
+            wireBase: "index/corp",
+            ownerUrl: "https://gitlab.corp.example/{login}",
+          },
+        ],
+      });
+      const content = await readFile(join(scratchRoot, SRC_DIR, "corp", "kitware", "cmake.md"), "utf8");
+      expect(content).toMatch(/^\s*ownerUrl:\s*"https:\/\/gitlab\.corp\.example\/\{login\}"\s*$/m);
+    });
+  });
+
   // The root:true source keeps byte-identical frontmatter to what this
   // function wrote before wireBase existed — an emitted `wireBase: ''` would
   // be dead weight on every page of the single-source case that is the

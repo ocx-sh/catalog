@@ -147,3 +147,77 @@ describe("sources[].excludeFromAll", () => {
     });
   });
 });
+
+describe("sources[].ownerUrl", () => {
+  it("absent -> undefined on every variant", async () => {
+    await withTempDir(async (dir) => {
+      const loaded = await loadConfig(
+        await writeConfig(dir, {
+          sources: [{ path: "a" }, { url: "https://example.com" }, { git: "https://example.com/r.git" }],
+          brand: { title: "x" },
+        }),
+      );
+      expect(loaded.sources.map((source) => source.entry.ownerUrl)).toEqual([undefined, undefined, undefined]);
+    });
+  });
+
+  it("is carried through on path, url and git entries, independent of the top-level ownerUrl", async () => {
+    await withTempDir(async (dir) => {
+      const loaded = await loadConfig(
+        await writeConfig(dir, {
+          ownerUrl: "https://github.com/{login}",
+          sources: [
+            { path: "a", ownerUrl: "https://gitlab.com/{login}" },
+            { url: "https://example.com", ownerUrl: "https://git.internal/{login}" },
+            { git: "https://example.com/r.git", ownerUrl: "http://forge.local:3000/{login}" },
+          ],
+          brand: { title: "x" },
+        }),
+      );
+      expect(loaded.config.ownerUrl).toBe("https://github.com/{login}");
+      expect(loaded.sources.map((source) => source.entry.ownerUrl)).toEqual([
+        "https://gitlab.com/{login}",
+        "https://git.internal/{login}",
+        "http://forge.local:3000/{login}",
+      ]);
+    });
+  });
+
+  it("rejects a template without {login}, naming sources[i].ownerUrl", async () => {
+    await withTempDir(async (dir) => {
+      const error = await loadConfigError(
+        await writeConfig(dir, {
+          sources: [{ path: "a" }, { path: "b", ownerUrl: "https://gitlab.com/people" }],
+          brand: { title: "x" },
+        }),
+      );
+      expect(error.code).toBe("INVALID_TYPE");
+      expect(error.message).toContain('"sources[1].ownerUrl"');
+      expect(error.message).toContain("found 0");
+    });
+  });
+
+  it("rejects a javascript: template, naming sources[i].ownerUrl", async () => {
+    await withTempDir(async (dir) => {
+      const error = await loadConfigError(
+        await writeConfig(dir, {
+          sources: [{ path: "a", ownerUrl: "javascript:alert(1)//{login}" }],
+          brand: { title: "x" },
+        }),
+      );
+      expect(error.code).toBe("INVALID_TYPE");
+      expect(error.message).toContain("sources[0].ownerUrl");
+      expect(error.message).toContain("an http(s) URL");
+    });
+  });
+
+  it("rejects a non-string ownerUrl", async () => {
+    await withTempDir(async (dir) => {
+      const error = await loadConfigError(
+        await writeConfig(dir, { sources: [{ path: "a", ownerUrl: 5 }], brand: { title: "x" } }),
+      );
+      expect(error.code).toBe("INVALID_TYPE");
+      expect(error.message).toContain("sources[0].ownerUrl");
+    });
+  });
+});

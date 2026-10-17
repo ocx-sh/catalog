@@ -91,9 +91,9 @@ const ALLOWED_FORGES = new Set(["github", "gitlab"]);
 const ALLOWED_PACKAGE_MANAGERS = new Set(["npm", "bun"]);
 
 const SOURCE_ENTRY_KEYS: Record<"path" | "url" | "git", readonly string[]> = {
-  path: ["path", "label", "root", "default", "excludeFromAll"],
-  url: ["url", "label", "root", "default", "excludeFromAll"],
-  git: ["git", "ref", "dir", "label", "root", "default", "excludeFromAll"],
+  path: ["path", "label", "root", "default", "excludeFromAll", "ownerUrl"],
+  url: ["url", "label", "root", "default", "excludeFromAll", "ownerUrl"],
+  git: ["git", "ref", "dir", "label", "root", "default", "excludeFromAll", "ownerUrl"],
 };
 
 /** Shared by every optional string field (label, docs, css, publicDir, brand.logo,
@@ -150,13 +150,13 @@ const OWNER_URL_PLACEHOLDER = "{login}";
  * carries the placeholder exactly once — zero would link every owner to the
  * same page, two is almost certainly a typo. `{login}` is legal anywhere the
  * WHATWG URL parser accepts it — path, query, or a subdomain label. */
-function assertOwnerUrlTemplate(value: string): void {
-  assertPlausibleUrl(value, "ownerUrl", SITE_URL_PROTOCOLS, "an http(s) URL");
+function assertOwnerUrlTemplate(value: string, key: string): void {
+  assertPlausibleUrl(value, key, SITE_URL_PROTOCOLS, "an http(s) URL");
   const occurrences = value.split(OWNER_URL_PLACEHOLDER).length - 1;
   if (occurrences !== 1) {
     throw new ConfigError(
       "INVALID_TYPE",
-      `"ownerUrl" must contain "${OWNER_URL_PLACEHOLDER}" exactly once (found ${occurrences} in "${value}")`,
+      `"${key}" must contain "${OWNER_URL_PLACEHOLDER}" exactly once (found ${occurrences} in "${value}")`,
     );
   }
 }
@@ -213,14 +213,18 @@ function buildSourceEntry(rawEntry: unknown, index: number): SourceEntry {
     raw.excludeFromAll === undefined
       ? undefined
       : expectBoolean(raw.excludeFromAll, `sources[${index}].excludeFromAll`);
+  const ownerUrl = optionalString(raw.ownerUrl, `sources[${index}].ownerUrl`);
+  if (ownerUrl !== undefined) {
+    assertOwnerUrlTemplate(ownerUrl, `sources[${index}].ownerUrl`);
+  }
 
   if (kind === "path") {
-    return { path: expectString(raw.path, `sources[${index}].path`), label, root, default: isDefault, excludeFromAll };
+    return { path: expectString(raw.path, `sources[${index}].path`), label, root, default: isDefault, excludeFromAll, ownerUrl };
   }
   if (kind === "url") {
     const url = expectString(raw.url, `sources[${index}].url`);
     assertPlausibleUrl(url, `sources[${index}].url`, SOURCE_URL_PROTOCOLS, "an https URL");
-    return { url, label, root, default: isDefault, excludeFromAll };
+    return { url, label, root, default: isDefault, excludeFromAll, ownerUrl };
   }
   const ref = optionalString(raw.ref, `sources[${index}].ref`);
   const dir = optionalString(raw.dir, `sources[${index}].dir`);
@@ -232,6 +236,7 @@ function buildSourceEntry(rawEntry: unknown, index: number): SourceEntry {
     root,
     default: isDefault,
     excludeFromAll,
+    ownerUrl,
   };
 }
 
@@ -460,6 +465,7 @@ function buildCi(value: unknown): CiConfig {
  * - `ownerUrl`, when given, must be an absolute `http(s)` URL containing
  *   `{login}` exactly once -> `INVALID_TYPE` otherwise. It is a template the
  *   theme fills per owner, so the URL check runs on the template as written.
+ *   `sources[].ownerUrl` gets the same check and overrides it per source.
  *   `sources[].excludeFromAll` is a plain optional boolean.
  * - Every `nav[].link` must be an absolute `http(s)` URL or a site-relative
  *   path starting with `/` (never `//`, protocol-relative) -> `INVALID_TYPE`
@@ -592,7 +598,7 @@ export async function loadConfig(configPath: string): Promise<LoadedConfig> {
     assertPlausibleUrl(siteUrl, "siteUrl", SITE_URL_PROTOCOLS, "an http(s) URL");
   }
   if (ownerUrl !== undefined) {
-    assertOwnerUrlTemplate(ownerUrl);
+    assertOwnerUrlTemplate(ownerUrl, "ownerUrl");
   }
 
   if (docs !== undefined) {

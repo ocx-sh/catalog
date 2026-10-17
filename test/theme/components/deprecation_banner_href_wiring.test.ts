@@ -8,7 +8,7 @@ import { describe, expect, test, vi } from 'vitest'
 import { ref } from 'vue'
 
 // MetaRail reads `themeConfig.ownerUrl` for its owner links.
-vi.mock('vitepress', () => ({ useData: () => ({ theme: ref({}) }) }))
+vi.mock('vitepress', () => ({ useData: () => ({ theme: ref({}), frontmatter: ref({}) }) }))
 
 import DeprecationBanner from '../../../src/theme/components/detail/DeprecationBanner.vue'
 import MetaRail from '../../../src/theme/components/detail/MetaRail.vue'

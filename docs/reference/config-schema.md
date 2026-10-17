@@ -159,7 +159,7 @@ other object here, unknown keys inside it are ignored rather than rejected
 Every entry is discriminated by exactly one of `path` | `url` | `git`; the
 schema expresses this as a closed `oneOf` over three shapes, and the loader
 enforces the same rule at runtime (`SOURCE_DISCRIMINANT` on zero or more
-than one discriminant key present). Four fields are common to every variant:
+than one discriminant key present). Five fields are common to every variant:
 
 | Field | Type | Required | Meaning |
 |---|---|---|---|
@@ -167,6 +167,7 @@ than one discriminant key present). Four fields are common to every variant:
 | `root` | boolean | no | Marks this source as the catalog's self-mirror, served at the site root in addition to `index/<label>/`. Its packages keep bare `/<ns>/<pkg>` routes; every other index's are qualified with their own name. At most one entry across `sources[]` may set this — `MULTIPLE_ROOT` otherwise. |
 | `default` | boolean | no | Marks this source as the index the catalog view **opens on** — preselected on arrival, badged `default` in the scope tabs. Purely presentational: it moves no page's URL. At most one entry may set this — `MULTIPLE_DEFAULT` otherwise. When no entry sets it, the `root: true` source (if any) is the default; a catalog with **no** root source needs this key to name one at all. |
 | `excludeFromAll` | boolean | no | Keeps this source's packages out of the catalog's `all` tab — the grid, table, filters, keyword rail and the tab's own count — for a development or staging index. The index still gets its own tab, and its packages stay in the catalog and keep their pages and routes. The command palette (⌘K) is **not** affected: it searches every index. Absent or `false` includes the index. Independent of `root` and `default`. On a one-index catalog there is no `all` tab, so the flag has no effect there; if every index of an aggregating catalog sets it, `all` is simply empty. |
+| `ownerUrl` | string | no | Owner-profile link template for **this source's** package pages, overriding the top-level `ownerUrl` — same shape and validation (an absolute `http(s)` URL containing `{login}` exactly once). For an aggregating catalog whose indexes' owners live on different forges. Absent: the top-level `ownerUrl`, else `https://github.com/{login}`. |
 
 === "path"
 
@@ -302,7 +303,7 @@ that loads a config (`build`, `dev`, `ci`) maps every one of them to exit
 | `MISSING_FILE` | Config file does not exist at the given path (`ENOENT`). |
 | `READ_ERROR` | Config path exists but couldn't be read — e.g. it names a directory, or a permission error. Distinct from `MISSING_FILE`, which is `ENOENT` only. |
 | `INVALID_JSON` | Config file exists but is not valid JSON. |
-| `INVALID_TYPE` | A field's JSON type doesn't match its expected type — includes an empty string on a field that requires non-empty, and an unparsable or wrong-protocol URL (`siteUrl`, `sources[].url`, `nav[].link`, `ownerUrl`), and an `ownerUrl` without exactly one `{login}`. |
+| `INVALID_TYPE` | A field's JSON type doesn't match its expected type — includes an empty string on a field that requires non-empty, and an unparsable or wrong-protocol URL (`siteUrl`, `sources[].url`, `nav[].link`, `ownerUrl`, `sources[].ownerUrl`), and an `ownerUrl` or `sources[].ownerUrl` without exactly one `{login}`. |
 | `UNKNOWN_KEY` | An unrecognized key at the top level, or inside a `sources[]` entry, `brand`, `footer`, or a `nav[]`/`footer.links[]`/`docsNav[]` entry. `ci`'s own keys are exempt. |
 | `UNSUPPORTED_VERSION` | `configVersion` names a version this loader doesn't support. |
 | `SOURCE_DISCRIMINANT` | A `sources[]` entry has zero, or more than one, of `path`/`url`/`git`. |

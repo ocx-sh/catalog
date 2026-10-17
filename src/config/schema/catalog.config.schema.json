@@ -71,10 +71,8 @@
       "description": "Deployment origin (e.g. https://index.ocx.sh), feeding sitemap.hostname and per-page og:url. Must be an absolute http(s) URL — src/config/load.ts validates the shape beyond what this schema (minLength only) expresses."
     },
     "ownerUrl": {
-      "type": "string",
-      "minLength": 1,
-      "pattern": "^https?://(?:(?!\\{login\\})[\\s\\S])*\\{login\\}(?:(?!\\{login\\})[\\s\\S])*$",
-      "description": "Owner-profile link template for the package detail page's owners row: an absolute http(s) URL containing {login} exactly once (e.g. https://gitlab.com/{login}). Omit for https://github.com/{login}. src/config/load.ts additionally requires the template to parse as a URL."
+      "$ref": "#/$defs/ownerUrl",
+      "description": "Owner-profile link template for the package detail page's owners row: an absolute http(s) URL containing {login} exactly once (e.g. https://gitlab.com/{login}). Omit for https://github.com/{login}. A source's own ownerUrl overrides it for that source's packages. src/config/load.ts additionally requires the template to parse as a URL."
     },
     "description": {
       "type": "string",
@@ -101,7 +99,8 @@
             "label": { "$ref": "#/$defs/label" },
             "root": { "type": "boolean" },
             "default": { "type": "boolean" },
-            "excludeFromAll": { "$ref": "#/$defs/excludeFromAll" }
+            "excludeFromAll": { "$ref": "#/$defs/excludeFromAll" },
+            "ownerUrl": { "$ref": "#/$defs/sourceOwnerUrl" }
           }
         },
         {
@@ -118,7 +117,8 @@
             "label": { "$ref": "#/$defs/label" },
             "root": { "type": "boolean" },
             "default": { "type": "boolean" },
-            "excludeFromAll": { "$ref": "#/$defs/excludeFromAll" }
+            "excludeFromAll": { "$ref": "#/$defs/excludeFromAll" },
+            "ownerUrl": { "$ref": "#/$defs/sourceOwnerUrl" }
           }
         },
         {
@@ -132,12 +132,22 @@
             "label": { "$ref": "#/$defs/label" },
             "root": { "type": "boolean" },
             "default": { "type": "boolean" },
-            "excludeFromAll": { "$ref": "#/$defs/excludeFromAll" }
+            "excludeFromAll": { "$ref": "#/$defs/excludeFromAll" },
+            "ownerUrl": { "$ref": "#/$defs/sourceOwnerUrl" }
           }
         }
       ]
     },
     "label": { "type": "string", "minLength": 1 },
+    "ownerUrl": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^https?://(?:(?!\\{login\\})[\\s\\S])*\\{login\\}(?:(?!\\{login\\})[\\s\\S])*$"
+    },
+    "sourceOwnerUrl": {
+      "$ref": "#/$defs/ownerUrl",
+      "description": "Owner-profile link template for this source's package pages, overriding the top-level ownerUrl — same shape: an absolute http(s) URL containing {login} exactly once. Omit to inherit the top-level ownerUrl (else https://github.com/{login})."
+    },
     "excludeFromAll": {
       "type": "boolean",
       "description": "Keep this source's packages out of the catalog's \"all\" tab (grid, table, filters, keyword rail and the tab's count). The index keeps its own tab and its package pages still route; the ⌘K command palette still searches it. Omit or false to include it."
