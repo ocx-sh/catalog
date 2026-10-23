@@ -1,6 +1,6 @@
 {
   "name": "@ocx-sh/catalog",
-  "version": "0.5.3",
+  "version": "0.6.0",
   "description": "Static Astro catalog renderer for OCX package indices (OCI-backed)",
   "keywords": [
     "ocx",

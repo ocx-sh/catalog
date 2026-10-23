@@ -5,6 +5,18 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.6.0] - 2026-10-23
+
+### Added
+
+- Add per-source ownerUrl override (#12) *(config)*
+- Render the catalog with Astro and @ocx-sh/theme **BREAKING**
+
+### Documentation
+
+- Move the documentation site from MkDocs to Starlight
+- Rewrite the rule set, ADR and defect ledger for the Astro port *(agents)*
+
 ## [0.5.3] - 2026-09-29
 
 ### Added
@@ -102,6 +114,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Added
 
 - Initial commit of @ocx-sh/catalog
+[0.6.0]: https://github.com/ocx-sh/catalog/compare/v0.5.3..v0.6.0
 [0.5.3]: https://github.com/ocx-sh/catalog/compare/v0.5.2..v0.5.3
 [0.5.2]: https://github.com/ocx-sh/catalog/compare/v0.5.1..v0.5.2
 [0.5.1]: https://github.com/ocx-sh/catalog/compare/v0.5.0..v0.5.1
