@@ -1,0 +1,95 @@
+---
+// One tag in the version tree. `tag` is the real tag every action targets (copy, hover preview); `label` is
+// what the chip reads when a group header stands in for it (a synthesised `3` over the newest `3.x.y`).
+// A yanked tag stays visible: struck through, dashed, its reason and date in the tooltip (D-054). The tag
+// is untrusted text: attributes and text only. `data-release` indexes the release table in MetaRail.
+// The chip is a native button: one Tab stop, Enter and Space click it, and a click copies `name:tag`
+// (D-055, `client/detail.ts`). It is also the host of the version list's `CopyMenu`: the island writes its
+// `data-copy` texts, the right-click, menu key and Shift+F10 open the menu on it and focus returns to it
+// (D-056). The title tells which gestures copy (D-082).
+import type { Yank } from "../../viewmodel/types.js";
+import { tagTitle } from "../lib/versionTable.js";
+
+interface Props {
+  tag: string;
+  label?: string;
+  yanked?: Yank | null;
+  /** A snapshot tag `ocx package prune` may delete: a keyword bar on its leading edge, the reason in the tooltip. */
+  ephemeral?: boolean;
+  /** A tag of a pre-release or build track: a keyword-tinted face, independent of `ephemeral`. */
+  prerelease?: boolean;
+  /** Index into `DetailView.releases`; absent for a tag the table does not know. */
+  release?: number | undefined;
+  variant?: "alias" | "rolling" | "minor" | "child";
+  /** The row's `latest` alias, drawn in the accent. */
+  latest?: boolean;
+}
+const { tag, label, yanked = null, ephemeral = false, prerelease = false, release, variant = "child", latest = false } = Astro.props;
+const title = tagTitle(yanked, ephemeral, prerelease);
+---
+
+<button
+  type="button"
+  class:list={["tag", variant, { yanked: yanked !== null, ephemeral, prerelease, latest }]}
+  data-tag={tag}
+  data-release={release}
+  data-yanked={yanked === null ? undefined : ""}
+  data-ephemeral={ephemeral ? "" : undefined}
+  data-prerelease={prerelease ? "" : undefined}
+  title={title}>{label ?? tag}</button
+>
+
+<style>
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    padding: var(--ocx-space-1) var(--ocx-space-4);
+    font-family: var(--ocx-font-mono);
+    font-size: var(--ocx-text-xs);
+    color: var(--ocx-color-fg-muted);
+    background: var(--ocx-color-surface-subtle);
+    border: var(--ocx-border-width) solid var(--ocx-color-border);
+    border-radius: var(--ocx-radius-sm);
+    cursor: pointer;
+    user-select: none;
+  }
+  .tag:hover,
+  .tag:focus-visible {
+    color: var(--ocx-color-accent-fg);
+    border-color: var(--ocx-color-accent);
+  }
+  /* The row's `latest`: the theme's selected look (accent tint, accent ink and edge), as a pressed toggle draws it. */
+  .tag.latest {
+    color: var(--ocx-color-accent-fg);
+    background: var(--ocx-color-accent-tint);
+    border-color: var(--ocx-color-accent);
+  }
+  /* Withdrawn: still real and still copyable, but unmistakably not the one to install. */
+  .tag.yanked {
+    text-decoration: line-through;
+    border-style: dashed;
+    border-color: var(--ocx-color-warning);
+  }
+  /* One mark per fact, so they compose: a pre-release is a keyword-tinted face, an ephemeral tag a keyword bar on
+     the leading edge (after the yank rule, so a yanked snapshot keeps its bar beside the dashed warning edge). */
+  .tag.prerelease {
+    background: var(--ocx-color-keyword-tint);
+  }
+  .tag.ephemeral {
+    border-inline-start: 3px solid var(--ocx-color-keyword);
+  }
+  /* Copied: the name gives way to a check for the guard window (`client/detail.ts`). */
+  .tag[data-copied] {
+    position: relative;
+    color: transparent;
+    border-color: var(--ocx-color-success);
+  }
+  .tag[data-copied]::after {
+    content: "✓";
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    color: var(--ocx-color-success);
+  }
+</style>

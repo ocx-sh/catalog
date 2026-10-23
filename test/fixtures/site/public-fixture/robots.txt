@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://fixture.ocx.test/sitemap.xml

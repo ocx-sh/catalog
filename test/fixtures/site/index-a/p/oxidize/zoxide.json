@@ -1,0 +1,57 @@
+{
+  "name": "index-a/oxidize/zoxide",
+  "repository": "oci://ghcr.io/ocx-contrib/oxidize/zoxide",
+  "owners": [
+    {
+      "login": "ocx-bot",
+      "github": "ocx-bot",
+      "id": 309019509,
+      "github_id": 309019509
+    }
+  ],
+  "status": "active",
+  "deprecated_message": null,
+  "created": "2026-01-06",
+  "upstream": {
+    "org": "oxidize",
+    "repository_url": "https://github.com/oxidize/zoxide",
+    "disclaimer": "Unaffiliated mirror of the upstream oxidize/zoxide project."
+  },
+  "desc": {
+    "digest": "sha256:8875c58e71afe46749cdab8a4393b8f3ee8e9902e8df0e4e8e48b7b4496e3a74",
+    "title": "zoxide",
+    "description": "A smarter cd command that learns your habits.",
+    "keywords": [
+      "cli",
+      "shell",
+      "navigation"
+    ],
+    "readme": "sha256:9c7a432fdec4f563ea06a842a5df604cf6d0d1e1d1ca37719bf113651d644631"
+  },
+  "tags": {
+    "1": {
+      "content": "sha256:5a638c36dbd4f03c4944172fc55040d750f77ffed1e8edcbaafdcac7cf1f8b2f",
+      "observed": "2026-01-06T09:00:00Z"
+    },
+    "1.0.0": {
+      "content": "sha256:9af8fbf0e6d93df9bbb9faa9d80a54a5da8a4dc14295357c7af9b420f4a92e18",
+      "observed": "2026-01-06T09:00:00Z"
+    },
+    "1.1.0": {
+      "content": "sha256:d3f4dab8b23f0fbb3fe9ffdf6b9ce73b1ee62cdc09478dd3afcb0ebb190d2be7",
+      "observed": "2026-01-06T09:00:00Z"
+    },
+    "1.4.0": {
+      "content": "sha256:5a638c36dbd4f03c4944172fc55040d750f77ffed1e8edcbaafdcac7cf1f8b2f",
+      "observed": "2026-01-06T09:00:00Z"
+    },
+    "1.4": {
+      "content": "sha256:5a638c36dbd4f03c4944172fc55040d750f77ffed1e8edcbaafdcac7cf1f8b2f",
+      "observed": "2026-01-06T09:00:00Z"
+    },
+    "latest": {
+      "content": "sha256:5a638c36dbd4f03c4944172fc55040d750f77ffed1e8edcbaafdcac7cf1f8b2f",
+      "observed": "2026-01-06T09:00:00Z"
+    }
+  }
+}

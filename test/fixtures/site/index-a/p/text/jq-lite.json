@@ -1,0 +1,57 @@
+{
+  "name": "index-a/text/jq-lite",
+  "repository": "oci://ghcr.io/ocx-contrib/text/jq-lite",
+  "owners": [
+    {
+      "login": "ocx-bot",
+      "github": "ocx-bot",
+      "id": 309019509,
+      "github_id": 309019509
+    }
+  ],
+  "status": "active",
+  "deprecated_message": null,
+  "created": "2026-01-20",
+  "upstream": {
+    "org": "text",
+    "repository_url": "https://github.com/text/jq-lite",
+    "disclaimer": "Unaffiliated mirror of the upstream text/jq-lite project."
+  },
+  "desc": {
+    "digest": "sha256:76e71b02d4bcf79c39607478390c194bac57aed4957c0408b317041db29e7c27",
+    "title": "jq-lite",
+    "description": "A lightweight JSON processor.",
+    "keywords": [
+      "json",
+      "query",
+      "cli"
+    ],
+    "readme": "sha256:13d8083090b1fff93b086d8678886582bf2229d047e47218f14937ab357b2c03"
+  },
+  "tags": {
+    "1": {
+      "content": "sha256:0ed0ff7c362009acb29486320adb6cc9aaee449cfdb624c595094c402ba9db0c",
+      "observed": "2026-01-20T09:00:00Z"
+    },
+    "1.0.0": {
+      "content": "sha256:0b9d1996fa1a84432cf3d35478545f976ab3c98717d3ce561898a7388640b017",
+      "observed": "2026-01-20T09:00:00Z"
+    },
+    "1.1.0": {
+      "content": "sha256:832c76b46c2f2e0b2b49b87dd47caa3cdd41c11c330128647d023bc95fe3b38f",
+      "observed": "2026-01-20T09:00:00Z"
+    },
+    "1.3.0": {
+      "content": "sha256:0ed0ff7c362009acb29486320adb6cc9aaee449cfdb624c595094c402ba9db0c",
+      "observed": "2026-01-20T09:00:00Z"
+    },
+    "1.3": {
+      "content": "sha256:0ed0ff7c362009acb29486320adb6cc9aaee449cfdb624c595094c402ba9db0c",
+      "observed": "2026-01-20T09:00:00Z"
+    },
+    "latest": {
+      "content": "sha256:0ed0ff7c362009acb29486320adb6cc9aaee449cfdb624c595094c402ba9db0c",
+      "observed": "2026-01-20T09:00:00Z"
+    }
+  }
+}

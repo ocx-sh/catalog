@@ -10,8 +10,8 @@ import { withTempDir } from "./helpers.js";
  * own `node_modules/.cache/ocx-catalog/` (or `.ocx-catalog/` when
  * `node_modules` doesn't exist yet), never `os.tmpdir()` — a bare mkdtemp
  * root under the OS temp dir has no `node_modules` chain of its own, so bare
- * imports in the generated config/theme shim (`vitepress`,
- * `@ocx-sh/catalog/theme`) can't resolve from it.
+ * imports in the generated Astro config (`astro`, `@ocx-sh/catalog/…`)
+ * can't resolve from it.
  */
 
 /** True once `path` no longer exists on disk. */

@@ -1,0 +1,74 @@
+---
+// `404.html` (S-011): the static host serves it for any unknown URL, in the
+// same chrome as every page. The way home is `base`-joined so it works under
+// `/catalog/` as well as at `/`. It declares no description and no canonical:
+// it is not a route, and a static host serves it for every unknown URL.
+import site from "virtual:ocx-catalog/site";
+import { joinBase } from "../../viewmodel/url.js";
+import Page from "../layouts/Page.astro";
+---
+
+<Page title="Page not found" canonical={null}>
+  <div class="not-found">
+    <h1 class="not-found-code">404</h1>
+    <p class="not-found-message" data-not-found-message>This page doesn't exist.</p>
+    <a class="not-found-link" data-not-found-back href={joinBase(site.base, "/")}>← back to catalog</a>
+  </div>
+</Page>
+
+<script>
+  // D-130: a `<ns>/<pkg>` URL under base names the package it did not find, as the old detail page did.
+  // The back link goes to base, so its href is the base the path is read against. Text only.
+  import { packageNameFromPath } from "../lib/notFound.js";
+  const message = document.querySelector<HTMLElement>("[data-not-found-message]");
+  const back = document.querySelector<HTMLAnchorElement>("[data-not-found-back]");
+  const name = packageNameFromPath(location.pathname, back?.getAttribute("href") ?? "/");
+  if (message !== null && back !== null && name !== null) {
+    message.textContent = `Package not found: ${name}`;
+    back.textContent = "← all packages";
+  }
+</script>
+
+<style>
+  @layer ocx {
+    /* D-128: `<main>` is a flex item of the Shell body, so its height is indefinite and a percentage cannot fill
+       it. It becomes a flex column itself, and the block grows to fill it and centres its content. */
+    :global(main:has(> .not-found)) {
+      display: flex;
+      flex-direction: column;
+    }
+    .not-found {
+      box-sizing: border-box;
+      flex: 1 0 auto;
+      display: grid;
+      place-content: center;
+      justify-items: center;
+      gap: var(--ocx-space-4);
+      padding: var(--ocx-space-10) var(--ocx-space-6);
+      text-align: center;
+    }
+    .not-found-code {
+      margin: 0;
+      font-family: var(--ocx-font-mono);
+      font-size: var(--ocx-text-2xl);
+      font-weight: var(--ocx-font-weight-semibold);
+      color: var(--ocx-color-fg-muted);
+    }
+    .not-found-message {
+      margin: 0;
+      font-family: var(--ocx-font-sans);
+      font-size: var(--ocx-text-sm);
+      color: var(--ocx-color-fg-subtle);
+    }
+    .not-found-link {
+      font-family: var(--ocx-font-mono);
+      font-size: var(--ocx-text-xs);
+      font-weight: var(--ocx-font-weight-medium);
+      color: var(--ocx-color-accent-fg);
+    }
+    .not-found-link:hover {
+      color: var(--ocx-color-accent-fg);
+      text-decoration: underline;
+    }
+  }
+</style>

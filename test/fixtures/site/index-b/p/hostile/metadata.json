@@ -1,0 +1,70 @@
+{
+  "name": "index-b/hostile/metadata",
+  "repository": "oci://ghcr.io/ocx-contrib/hostile/metadata",
+  "owners": [
+    {
+      "login": "\"><img src=x onerror=alert(1)>",
+      "github": "\"><img src=x onerror=alert(1)>",
+      "id": 1,
+      "github_id": 1
+    },
+    {
+      "login": "ocx-bot",
+      "github": "ocx-bot",
+      "id": 2,
+      "github_id": 2
+    }
+  ],
+  "status": "deprecated",
+  "deprecated_message": "x\" onmouseover=\"alert(1)\n---\ntitle: pwned\n</script><img src=x onerror=alert(1)> ${process.env.SECRET}",
+  "superseded_by": "x\" onmouseover=\"alert(1)\n---\ntitle: pwned\n</script><img src=x onerror=alert(1)> ${process.env.SECRET}",
+  "created": "2026-01-02",
+  "upstream": {
+    "org": "x\" onmouseover=\"alert(1)\n---\ntitle: pwned\n</script><img src=x onerror=alert(1)> ${process.env.SECRET}",
+    "repository_url": "javascript:alert(1)",
+    "disclaimer": "x\" onmouseover=\"alert(1)\n---\ntitle: pwned\n</script><img src=x onerror=alert(1)> ${process.env.SECRET}"
+  },
+  "desc": {
+    "digest": "sha256:16adac4683c80c0c72b9993749833572d06ae8d70a9edcdc8afdde62113c46a0",
+    "title": "metadata",
+    "description": "x\" onmouseover=\"alert(1)\n---\ntitle: pwned\n</script><img src=x onerror=alert(1)> ${process.env.SECRET}",
+    "keywords": [
+      "\"quoted\"",
+      "line\n---",
+      "</script>",
+      "${keyword}",
+      "<img src=x onerror=alert(1)>"
+    ],
+    "readme": "sha256:a36cd09398a5ed0c255d76656f51cfeffa2d9bcfe51d1aa31d467dc8727d5993"
+  },
+  "tags": {
+    "1.0.0": {
+      "content": "sha256:22bd253905259fccac177e543aecab1c7fb6525e1e491c4c439ce9f48557cf4f",
+      "observed": "2026-01-02T09:00:00Z"
+    },
+    "\"quoted\"": {
+      "content": "sha256:22bd253905259fccac177e543aecab1c7fb6525e1e491c4c439ce9f48557cf4f",
+      "observed": "2026-01-02T09:00:00Z"
+    },
+    "line\n---": {
+      "content": "sha256:22bd253905259fccac177e543aecab1c7fb6525e1e491c4c439ce9f48557cf4f",
+      "observed": "2026-01-02T09:00:00Z"
+    },
+    "</script>": {
+      "content": "sha256:22bd253905259fccac177e543aecab1c7fb6525e1e491c4c439ce9f48557cf4f",
+      "observed": "2026-01-02T09:00:00Z"
+    },
+    "${tag}": {
+      "content": "sha256:22bd253905259fccac177e543aecab1c7fb6525e1e491c4c439ce9f48557cf4f",
+      "observed": "2026-01-02T09:00:00Z"
+    },
+    "<img src=x onerror=alert(1)>": {
+      "content": "sha256:22bd253905259fccac177e543aecab1c7fb6525e1e491c4c439ce9f48557cf4f",
+      "observed": "2026-01-02T09:00:00Z"
+    },
+    "latest": {
+      "content": "sha256:22bd253905259fccac177e543aecab1c7fb6525e1e491c4c439ce9f48557cf4f",
+      "observed": "2026-01-02T09:00:00Z"
+    }
+  }
+}

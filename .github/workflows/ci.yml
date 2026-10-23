@@ -88,14 +88,32 @@ jobs:
       - run: npm ci
       # Pack-verification gate (`task pack-smoke`): npm pack -> publint -> attw
       # --pack -> install the tarball into a sandbox -> run the installed bin ->
-      # resolve the theme subpath export -> dependency-completeness. `npm pack`
-      # builds dist/ via this package's own prepack, so no separate build step.
+      # assert the theme subpath import fails (C-030) -> dependency-completeness.
+      # `npm pack` builds dist/ via this package's own prepack, so no separate
+      # build step.
       # This runner has registry access, so it opts into the stricter `npm
       # publish --dry-run` manifest check pack-smoke.mjs otherwise skips for
       # offline-safety (see its docblock).
       - run: task pack-smoke
         env:
           OCX_CATALOG_PACK_SMOKE_NETWORK: "1"
+
+  # C-026: no `file:` dependency may reach main.
+  file-deps:
+    name: file-deps
+    if: github.event_name == 'pull_request' && github.base_ref == 'main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
+        with:
+          node-version: "24"
+      - uses: ocx-sh/setup-ocx@25fa771f8572572dc64528db89560de68a163a0e  # v1
+      - run: task check:no-file-deps
 
   workflows-lint:
     name: workflows-lint
@@ -168,7 +186,10 @@ jobs:
           cache: npm
       - uses: ocx-sh/setup-ocx@25fa771f8572572dc64528db89560de68a163a0e  # v1
       - run: npm ci
-      # `task quality:web` builds the fixture catalog site and runs Lighthouse
-      # CI (accessibility/SEO/best-practices as errors, performance as a warn)
-      # against it — see .lighthouserc.cjs and test/fixtures/quality-index/.
+      # `task quality:web` builds the fixture catalog sites and runs Lighthouse
+      # CI (the four categories as errors), the C-017 page-budget probe, axe
+      # and the view-switch timings against them, then the first-interaction /
+      # lazy-load / CSP gates (scripts/quality-interaction.mjs) — see
+      # .lighthouserc.cjs, scripts/quality-budget.mjs and
+      # test/fixtures/quality-index/.
       - run: task quality:web

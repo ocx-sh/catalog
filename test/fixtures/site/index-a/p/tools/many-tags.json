@@ -1,0 +1,133 @@
+{
+  "name": "index-a/tools/many-tags",
+  "repository": "oci://ghcr.io/ocx-contrib/tools/many-tags",
+  "owners": [
+    {
+      "login": "ocx-bot",
+      "github": "ocx-bot",
+      "id": 309019509,
+      "github_id": 309019509
+    }
+  ],
+  "status": "active",
+  "deprecated_message": null,
+  "created": "2026-01-22",
+  "upstream": {
+    "org": "tools",
+    "repository_url": "https://github.com/tools/many-tags",
+    "disclaimer": "Unaffiliated mirror of the upstream tools/many-tags project."
+  },
+  "desc": {
+    "digest": "sha256:c74a25556d452d8fcd2ce43d4ea2d3efd036fa33acb4f0368663d59970ef35f3",
+    "title": "many-tags",
+    "description": "Ships every release as its own tag, to exercise long version lists.",
+    "keywords": [
+      "cli",
+      "versions"
+    ],
+    "readme": "sha256:828ee8fbd8575954a2926e60f5d1ff8b77c62502b97030ab397a6abddb00fcd6",
+    "logo": "sha256:aa3af48d52184d0ed1df7eca83b1d13c240f9bf9abb0313fbc3f6e474bf822ef"
+  },
+  "tags": {
+    "0.1.0": {
+      "content": "sha256:cc3c765b3a3ccb8dc0c1979073bf1ffb553d5e34d49f9151d1427915ff55d308",
+      "observed": "2026-01-22T09:00:00Z"
+    },
+    "0.2.0": {
+      "content": "sha256:7a4d4fc42c4e1107f278f6d8b0a14d83c8e852c69354d616564f41d7dd09f18b",
+      "observed": "2026-01-22T09:00:00Z"
+    },
+    "0.3.0": {
+      "content": "sha256:57abc3f3fb3842a01eaf2fa807a475fe03952d51b96d41f8945376b6eedc3ca9",
+      "observed": "2026-01-22T09:00:00Z"
+    },
+    "0.4.0": {
+      "content": "sha256:dffac497d2c6f95db313c935c775e9016003c899ca6678814ac280b85a529b03",
+      "observed": "2026-01-22T09:00:00Z"
+    },
+    "0.5.0": {
+      "content": "sha256:bde4d4adcfbd5054545625085de8f0b0f9e6297a6773910dfa869bad0547d5bc",
+      "observed": "2026-01-22T09:00:00Z"
+    },
+    "0.6.0": {
+      "content": "sha256:166a579ac605308fa551990ee411e12836142f94d8f2bde943371fac2fe43b0c",
+      "observed": "2026-01-22T09:00:00Z"
+    },
+    "0.7.0": {
+      "content": "sha256:df7e82774532f177db5cf5408448bfb297b9b6c5a4820bbdb58496d7fadeb456",
+      "observed": "2026-01-22T09:00:00Z"
+    },
+    "0.8.0": {
+      "content": "sha256:4082aac64c5555eee2b5b13cde65c32087693ebf9827fec26a897b726687e21e",
+      "observed": "2026-01-22T09:00:00Z"
+    },
+    "0.9.0": {
+      "content": "sha256:f56e78fa98fa51d835afdd9e674862290a9bc77b8bfd0f72f551d78947dfca29",
+      "observed": "2026-01-22T09:00:00Z"
+    },
+    "0.10.0": {
+      "content": "sha256:1ae02a2ebbb0266147b9401eb71ed990193ade8834b0a8474a308346325e83ee",
+      "observed": "2026-01-22T09:00:00Z"
+    },
+    "0.11.0": {
+      "content": "sha256:02c1705df77ed9cecc2754120aa551c50b4bb2b8734896fe68bc4d9f62837251",
+      "observed": "2026-01-22T09:00:00Z"
+    },
+    "0.12.0": {
+      "content": "sha256:e49261875bf4321a5c10f5a31e53625a0ae0ff7e96c27516a13a86047d2bf8e7",
+      "observed": "2026-01-22T09:00:00Z"
+    },
+    "0.13.0": {
+      "content": "sha256:ab02a5312d5807a3ce6b12845b7f6a4928f49c5b52663795e2505f8af983a5a1",
+      "observed": "2026-01-22T09:00:00Z"
+    },
+    "0.14.0": {
+      "content": "sha256:4ad64a6dd74c5bfe7bf19aa124e9bb129daae21520a25bb726858f7dd22eee1c",
+      "observed": "2026-01-22T09:00:00Z"
+    },
+    "0.15.0": {
+      "content": "sha256:8eb143a368bef10cb42da8be4216e1869ced22d2d56d9274107df78b8e9ca2f7",
+      "observed": "2026-01-22T09:00:00Z"
+    },
+    "0.16.0": {
+      "content": "sha256:0b1bbbff204b4bf1d6ceec1e26d5d96307a71e9e5a35dd9c9f2cf167b19ae327",
+      "observed": "2026-01-22T09:00:00Z"
+    },
+    "0.17.0": {
+      "content": "sha256:ca382ddb677869c7119bd9d94e9d3e68286c2227c4e1af4fab9ec5f4baf9a4ca",
+      "observed": "2026-01-22T09:00:00Z"
+    },
+    "0.18.0": {
+      "content": "sha256:3b22558c052b8dd5bfd2a25b471d581435d1b7290a7f0050524162cd7556bc93",
+      "observed": "2026-01-22T09:00:00Z"
+    },
+    "0.19.0": {
+      "content": "sha256:4f84bbb5ced87921798135d2bc5205a9927c91beebce722f750b68b3e2cdc2be",
+      "observed": "2026-01-22T09:00:00Z"
+    },
+    "0.20.0": {
+      "content": "sha256:03c59368b6bfce359708562c3f0828c7752a317779f4f82fb543a1209b2ba7dc",
+      "observed": "2026-01-22T09:00:00Z"
+    },
+    "0.21.0": {
+      "content": "sha256:8dd2296473ae53e8b085e3904b6093a18708bd28ce0bbb94a9d42110d4f91d46",
+      "observed": "2026-01-22T09:00:00Z"
+    },
+    "0.22.0": {
+      "content": "sha256:a6ed306806bdf3d0b74534f9286ac31b9ab29eafd7885960236b189c86b9686e",
+      "observed": "2026-01-22T09:00:00Z"
+    },
+    "0.23.0": {
+      "content": "sha256:cb540d597249ed8b9ca33b676cd0e90384a0907845c8e525f3a108f55840e4bd",
+      "observed": "2026-01-22T09:00:00Z"
+    },
+    "0.24.0": {
+      "content": "sha256:e2b11776d7885823df5e5110e1eb267c0e26e63edcd336a17ff1e50ecc5ea1b8",
+      "observed": "2026-01-22T09:00:00Z"
+    },
+    "latest": {
+      "content": "sha256:e2b11776d7885823df5e5110e1eb267c0e26e63edcd336a17ff1e50ecc5ea1b8",
+      "observed": "2026-01-22T09:00:00Z"
+    }
+  }
+}

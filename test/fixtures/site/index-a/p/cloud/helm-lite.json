@@ -1,0 +1,57 @@
+{
+  "name": "index-a/cloud/helm-lite",
+  "repository": "oci://ghcr.io/ocx-contrib/cloud/helm-lite",
+  "owners": [
+    {
+      "login": "ocx-bot",
+      "github": "ocx-bot",
+      "id": 309019509,
+      "github_id": 309019509
+    }
+  ],
+  "status": "active",
+  "deprecated_message": null,
+  "created": "2026-01-08",
+  "upstream": {
+    "org": "cloud",
+    "repository_url": "https://github.com/cloud/helm-lite",
+    "disclaimer": "Unaffiliated mirror of the upstream cloud/helm-lite project."
+  },
+  "desc": {
+    "digest": "sha256:52c10f617fd1482186d1a822abe848ff19faaa138ba2afaa5614cdc3d41604d6",
+    "title": "helm-lite",
+    "description": "A trimmed package manager for Kubernetes.",
+    "keywords": [
+      "kubernetes",
+      "charts",
+      "cli"
+    ],
+    "readme": "sha256:eaa5839cfe4d1ea58a8a29cffa154a03cbc35e11c4cab046e79a77f55d0cb795"
+  },
+  "tags": {
+    "1": {
+      "content": "sha256:f5c7306324d76fab0295c6795398925dc4c63ad8bcd3e0fdc9bfbdd4173636a4",
+      "observed": "2026-01-08T09:00:00Z"
+    },
+    "1.0.0": {
+      "content": "sha256:0e969605b1179b0ad5a4ab87594a4d6e46ebb5a4fe7c4a5401a63770ae3200c9",
+      "observed": "2026-01-08T09:00:00Z"
+    },
+    "1.1.0": {
+      "content": "sha256:46a6ca1de89b195bfe6604020e7bf5d4a80920fa93cd42d207bcc7994f7e4a3f",
+      "observed": "2026-01-08T09:00:00Z"
+    },
+    "1.3.0": {
+      "content": "sha256:f5c7306324d76fab0295c6795398925dc4c63ad8bcd3e0fdc9bfbdd4173636a4",
+      "observed": "2026-01-08T09:00:00Z"
+    },
+    "1.3": {
+      "content": "sha256:f5c7306324d76fab0295c6795398925dc4c63ad8bcd3e0fdc9bfbdd4173636a4",
+      "observed": "2026-01-08T09:00:00Z"
+    },
+    "latest": {
+      "content": "sha256:f5c7306324d76fab0295c6795398925dc4c63ad8bcd3e0fdc9bfbdd4173636a4",
+      "observed": "2026-01-08T09:00:00Z"
+    }
+  }
+}

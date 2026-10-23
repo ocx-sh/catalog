@@ -1,0 +1,129 @@
+---
+// The page shell, on the theme's `Shell` (C-032): props are `PageProps`, a
+// subset of Shell's. `neutral` chrome passes the mirror's brand, nav and
+// footer; `ocx` passes none, so Shell renders the nav.json header and gets the
+// consumer's own header and footer links as `extraNav`/`extraFooterLinks`. Head tags
+// come from the pure `lib/seo.ts`. The consumer `css` is not linked here: the
+// integration imports it into every page (`integration.ts`), so Vite bundles it
+// with the theme's sheets. Every theme rule sits in an `@layer`, which any
+// unlayered consumer rule beats in either order (`test/acceptance/seo.test.ts`).
+// `header-search` defaults to the palette trigger. The "Copy code" button on prose fences (`ProseCodeCopy`,
+// D-064, D-112) is not mounted here: its script would load on the landing page and the 404 too, which have
+// no prose. The README pane and the docs page mount it themselves.
+import Shell from "@ocx-sh/theme/layouts/Shell.astro";
+import ocxMark from "@ocx-sh/theme/logo.svg?no-inline";
+import site from "virtual:ocx-catalog/site";
+import { joinBase } from "../../viewmodel/url.js";
+import Palette from "../components/Palette.astro";
+import { seoHead } from "../lib/seo.js";
+import type { PageProps } from "./page_props.js";
+
+type Props = PageProps;
+const { title, description, canonical, packageName, activeSection, width, skipTarget } = Astro.props;
+const { base, chrome } = site;
+const { brand } = chrome;
+const logoHref = brand?.logoSrc === undefined ? null : joinBase(base, brand.logoSrc);
+const head = seoHead({
+  siteName: chrome.siteName,
+  siteDescription: chrome.description,
+  title,
+  description,
+  packageName,
+  canonical,
+  pathname: Astro.url.pathname,
+  site: Astro.site,
+  logoHref,
+});
+const { favicon, docsHref } = chrome;
+// Shell derives its own canonical from `Astro.site` whenever `canonical` is nullish; an empty string
+// suppresses that, which is how a page with `canonical={null}` (the 404 page) keeps no canonical.
+// Shell throws on nav/footer without brand, so the neutral props are spread only in neutral mode, and the
+// ocx extras only in ocx mode.
+// The Shell names the brand link `${brand.title} home`; with a wordmark the visible text is the wordmark,
+// and an accessible name that does not contain it fails WCAG 2.5.3 (axe `label-content-name-mismatch`), so
+// the wordmark is passed as the title the Shell names the link by.
+// A mirror with no logo of its own shows the OCX mark, as the retired header did. The `catalog` nav entry
+// leads the header (current on every page but the docs), and the `catalog json` pointer leads the footer,
+// with the tooltip the old footer gave it: this site's own view model, not the index wire format.
+const catalogJson = {
+  label: "catalog json",
+  href: joinBase(base, "/data/catalog/catalog.json"),
+  title: "This site's own rendered view model — not the index wire format",
+};
+// D-138: the catalog link is `match: "prefix"` so it stays current on the detail pages, but never under the
+// docs mount, whichever of its pages the `docsNav` links happen to prefix: there it matches `/` exactly, which
+// no docs path does.
+const underDocs = docsHref !== null && `${Astro.url.pathname.replace(/\/$/, "")}/`.startsWith(docsHref);
+const catalogLink = { label: "catalog", href: joinBase(base, "/"), ...(underDocs ? {} : { match: "prefix" as const }) };
+const chromeProps =
+  brand === null
+    ? {
+        extraNav: docsHref === null ? [] : [{ label: "docs", href: docsHref }],
+        extraFooterLinks: [catalogJson],
+      }
+    : {
+        brand: { ...brand, title: brand.wordmark ?? brand.title, logoSrc: logoHref ?? ocxMark },
+        nav: [catalogLink, ...chrome.docsNav, ...chrome.nav],
+        footer: { links: [catalogJson, ...chrome.footer.links] },
+      };
+---
+
+<Shell
+  title={head.title}
+  description={head.description ?? undefined}
+  canonical={head.url ?? ""}
+  activeSection={activeSection}
+  icon={favicon ?? undefined}
+  width={width}
+  skipTarget={skipTarget}
+  {...chromeProps}
+>
+  <Fragment slot="head">
+    <meta name="color-scheme" content="light dark" />
+    {chrome.generated !== null && <meta name="ocx-generated" content={chrome.generated} />}
+    {head.tags.map((tag) => <meta property={tag.property} name={tag.name} content={tag.content} />)}
+    <slot name="head" />
+  </Fragment>
+  <Fragment slot="header-search">
+    <slot name="header-search"><Palette /></slot>
+  </Fragment>
+  <slot />
+</Shell>
+
+<script>
+  // D-136: the footer's freshness stamp, read from this page's own `ocx-generated` meta. No fetch.
+  import { freshnessLabel } from "../lib/freshness.js";
+  const generated = document.querySelector<HTMLMetaElement>('meta[name="ocx-generated"]')?.content;
+  const footer = document.querySelector(".ocx-footer");
+  const label = generated === undefined ? null : freshnessLabel(generated, Date.now());
+  if (footer !== null && label !== null) {
+    const stamp = document.createElement("span");
+    stamp.textContent = label;
+    footer.append(stamp);
+  }
+</script>
+
+<style is:global>
+  /* ponytail: theme 0.2.1 draws the footer's edge-to-edge rule as a 100vmax shadow spread clipped only at the
+     bottom, so the rule colour fills both sides of the footer at full height. The line moves to a 1px pseudo-element
+     whose clip keeps its shadow to its own height; drop this block once the theme clips to the band above. In the
+     theme's layer (a consumer's unlayered css must still win), so `footer.` outranks the theme's `.ocx-footer`. */
+  @layer ocx {
+    footer.ocx-footer {
+      position: relative;
+      box-shadow: none;
+      clip-path: none;
+    }
+    footer.ocx-footer::before {
+      content: "";
+      position: absolute;
+      inset-inline: 0;
+      inset-block-start: calc(var(--ocx-border-width) * -1);
+      block-size: var(--ocx-border-width);
+      background: var(--ocx-color-border);
+      box-shadow: 0 0 0 100vmax var(--ocx-color-border);
+      clip-path: inset(0 -100vmax);
+      pointer-events: none;
+    }
+  }
+</style>

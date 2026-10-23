@@ -145,4 +145,19 @@ describe("C-503 byte stability", () => {
     expect(json).not.toContain("sourceRepository");
     expect(json).not.toContain("revision");
   });
+
+  it("`upstream` and a tag's `ephemeral` flag never reach the serialized catalog.json", () => {
+    const d = digest("n");
+    const root = emptyRoot({
+      upstream: { org: "UpstreamVendorOrg", repositoryUrl: "https://example.test/vendor/repo", disclaimer: "UpstreamDisclaimerText" },
+      tags: {
+        "1.0.0": { content: d, observed: "2026-01-01T00:00:00Z", yanked: null },
+        "1.1.0-snap": { content: d, observed: "2026-01-02T00:00:00Z", yanked: null, ephemeral: true },
+      },
+    });
+    const json = serializeCatalog(catalogIndex([sourceOf(root, { [`${d}.json`]: indexWithAnnotations(undefined) })]));
+    for (const leaked of ["upstream", "UpstreamVendorOrg", "UpstreamDisclaimerText", "example.test/vendor", "ephemeral", "1.1.0-snap"]) {
+      expect(json).not.toContain(leaked);
+    }
+  });
 });

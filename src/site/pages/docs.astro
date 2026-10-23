@@ -1,0 +1,188 @@
+---
+// The consumer docs mount, injected at `/docs/[...slug]` (C-020). One page per
+// `**/*.md` entry of the `docs` content collection (written by the build only
+// when `docs` is set); the Sätteri processor renders the body (Shiki-highlighted
+// fences, permalinked headings, `docs_markdown.ts`), which sits in the theme's
+// `.ocx-prose`. VitePress-only syntax (`::: details`, `{#id}`) is not
+// interpreted: it shows as text.
+//
+// The frame is 250px sidebar | 720px prose | 180px outline, in that DOM order
+// (tab order follows the visual one). The Shell's skip link would land on
+// `<main>`, which wraps the whole frame, so `skipTarget` points it at the
+// article: a keyboard user skips the sidebar's links. Below 40rem the sidebar and outline fold into
+// a drawer behind a floating "Contents" button; the outline shows from 75rem.
+import ProseCodeCopy from "@ocx-sh/theme/components/ProseCodeCopy.astro";
+import Toc from "@ocx-sh/theme/components/Toc.astro";
+import Drawer from "@ocx-sh/theme/components/ui/Drawer.astro";
+import Icon from "@ocx-sh/theme/components/ui/Icon.astro";
+import { getEntry, render } from "astro:content";
+import site from "virtual:ocx-catalog/site";
+import DocsSidebar from "../components/DocsSidebar.astro";
+import Page from "../layouts/Page.astro";
+
+// An `index.md` is served at its directory: the docs root has slug `""`, which a
+// rest param spells `undefined`. `id` is the collection id (the file's path).
+export function getStaticPaths() {
+  return site.docs.pages.map(({ slug, id, title, description }) => ({
+    params: { slug: slug === "" ? undefined : slug },
+    props: { slug, id, title, description },
+  }));
+}
+
+const { slug, id, title, description } = Astro.props;
+const entry = await getEntry("docs", id);
+if (entry === undefined) throw new Error(`docs: no content entry for "${id}"`);
+// Astro logs a markdown render error (a dead link, `docs_markdown.ts`) and carries on with an unrendered entry.
+if (entry.rendered === undefined) throw new Error(`docs: "${id}" did not render (the error above says why)`);
+const { Content, headings } = await render(entry);
+// The outline lists h2 and h3: h1 is the page title, deeper levels are detail.
+const outline = headings
+  .filter(({ depth }) => depth === 2 || depth === 3)
+  .map(({ slug: anchor, text, depth }) => ({ id: anchor, label: text, depth }));
+---
+
+<Page title={title} description={description} width="wide" skipTarget="docs-content">
+  <div class="docs">
+    <aside class="docs__sidebar"><DocsSidebar groups={site.docs.groups} current={slug} /></aside>
+    <article id="docs-content" class="ocx-prose docs__content" tabindex="-1"><Content /></article>
+    <ProseCodeCopy />
+    {outline.length > 0 && <aside class="docs__outline"><Toc items={outline} /></aside>}
+    <div class="docs__drawer">
+      <Drawer title="Docs navigation" side="start">
+        <Fragment slot="trigger"><Icon name="menu" /> Contents</Fragment>
+        <DocsSidebar groups={site.docs.groups} current={slug} />
+        {outline.length > 0 && <Toc items={outline} />}
+      </Drawer>
+    </div>
+  </div>
+</Page>
+
+<script>
+  import { closeOnLink } from "../client/docs_drawer.js";
+
+  const drawer = document.querySelector<HTMLElement>(".docs__drawer");
+  if (drawer) closeOnLink(drawer);
+</script>
+
+<style>
+  /* An anchor jump lands the heading below the sticky header; the theme's outline spy reads this offset too. */
+  :global(html) {
+    scroll-padding-top: calc(var(--ocx-header-height) + var(--ocx-space-4));
+  }
+  .docs {
+    --docs-sidebar: 250px;
+    --docs-outline: 180px;
+    --docs-prose: 720px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "content";
+  }
+  .docs__content {
+    grid-area: content;
+    outline: none;
+    min-width: 0;
+    box-sizing: border-box;
+    max-inline-size: calc(var(--docs-prose) + 2 * var(--ocx-space-8));
+    margin-inline: auto;
+    padding: var(--ocx-space-6) 0 var(--ocx-space-11);
+  }
+  .docs__sidebar,
+  .docs__outline {
+    display: none;
+  }
+  .docs__drawer {
+    display: block;
+  }
+  /* The floating "Contents" button, bottom right; the drawer's own parts are fixed already. */
+  .docs__drawer :global([data-part="trigger"]) {
+    position: fixed;
+    inset-inline-end: var(--ocx-space-4);
+    inset-block-end: var(--ocx-space-4);
+    z-index: var(--ocx-z-drawer-backdrop);
+    border-radius: var(--ocx-radius-full);
+  }
+
+  /* The frame is centred in the Shell's wide `<main>` and, where the viewport is narrower than the frame, as wide as the viewport allows. */
+  @media (min-width: 40rem) {
+    .docs {
+      --docs-frame: calc(var(--docs-sidebar) + var(--docs-prose) + 2 * var(--ocx-space-8));
+      --docs-width: min(var(--docs-frame), 100vw - 2 * var(--ocx-space-4));
+      inline-size: var(--docs-width);
+      margin-inline: calc((100% - var(--docs-width)) / 2);
+      grid-template-columns: var(--docs-sidebar) minmax(0, 1fr);
+      grid-template-areas: "sidebar content";
+    }
+    .docs__content {
+      padding-inline: var(--ocx-space-8);
+      padding-block-start: var(--ocx-space-7);
+      padding-block-end: var(--ocx-space-10);
+    }
+    .docs__sidebar {
+      grid-area: sidebar;
+      display: block;
+      border-inline-end: var(--ocx-border-width) solid var(--ocx-color-border);
+    }
+    .docs__sidebar > :global(nav) {
+      position: sticky;
+      inset-block-start: var(--ocx-header-height);
+      max-block-size: calc(100vh - var(--ocx-header-height));
+      overflow-y: auto;
+      padding: var(--ocx-space-6) var(--ocx-space-4) var(--ocx-space-7);
+    }
+    .docs__drawer {
+      display: none;
+    }
+  }
+  @media (min-width: 75rem) {
+    .docs {
+      --docs-frame: calc(
+        var(--docs-sidebar) + var(--docs-prose) + 2 * var(--ocx-space-8) + var(--docs-outline) + 2 * var(--ocx-space-6)
+      );
+      grid-template-columns: var(--docs-sidebar) minmax(0, 1fr) calc(var(--docs-outline) + 2 * var(--ocx-space-6));
+      grid-template-areas: "sidebar content outline";
+    }
+    .docs__outline {
+      grid-area: outline;
+      display: block;
+      align-self: start;
+      position: sticky;
+      inset-block-start: var(--ocx-header-height);
+      padding: var(--ocx-space-8) var(--ocx-space-6) 0;
+    }
+  }
+
+  /* Permalink anchors: a quiet "#" after the heading, shown on hover or keyboard focus. */
+  .docs__content :global(.header-anchor) {
+    margin-inline-start: var(--ocx-space-2);
+    color: var(--ocx-color-fg-subtle);
+    text-decoration: none;
+    opacity: 0;
+    transition: opacity var(--ocx-duration-base);
+  }
+  .docs__content :global(.header-anchor)::before {
+    content: "#";
+  }
+  .docs__content :global(:is(h1, h2, h3, h4, h5, h6):hover > .header-anchor),
+  .docs__content :global(.header-anchor:focus-visible) {
+    opacity: 1;
+  }
+  /* h5 and h6 read as h4: the theme styles h1 to h4 only, and the browser default makes h6 smaller than the body. */
+  .docs__content :global(:is(h5, h6)) {
+    margin: var(--ocx-prose-h4-margin);
+    font-family: var(--ocx-font-sans);
+    font-size: var(--ocx-prose-h4);
+    font-weight: var(--ocx-font-weight-semibold);
+    line-height: var(--ocx-lh-heading);
+    letter-spacing: var(--ocx-tracking-heading);
+    color: var(--ocx-color-fg);
+  }
+  /* Fences: padded, and a long line scrolls inside the box instead of spilling out of the article. */
+  .docs__content :global(pre) {
+    padding: var(--ocx-space-5);
+    overflow-x: auto;
+  }
+  .docs__content :global(pre code) {
+    padding: 0;
+    background: none;
+  }
+</style>

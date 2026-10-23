@@ -1,0 +1,37 @@
+---
+// The Mod+K command palette, server-rendered closed (S-009, C-019): the theme's `CommandPalette` (header
+// trigger + closed "Search" dialog) inside a wrapper that carries what the catalog's source needs:
+// `data-base`, and `data-docs` when a docs mount exists (so `docs-index.json` is requested at all).
+// No search index or catalog URL appears here (C-011): the source module loads on the first open.
+import CommandPalette from "@ocx-sh/theme/components/ui/CommandPalette.astro";
+import site from "virtual:ocx-catalog/site";
+
+const hasDocs = site.docs.pages.length > 0;
+---
+
+<div class="ocx-palette" data-base={site.base} data-docs={hasDocs ? "" : undefined}>
+  <CommandPalette
+    triggerLabel="Search packages"
+    placeholder="Search packages and docs…"
+    hint="Search packages by name or keyword, or documentation by title."
+    description="Search packages by name or keyword, and documentation pages by title. Use the arrow keys and Enter."
+  />
+</div>
+
+<script>
+  import { mountCommandPalette } from "@ocx-sh/theme/command-palette";
+  import { mountPalette } from "../client/palette.js";
+
+  const root = document.querySelector<HTMLElement>(".ocx-palette");
+  if (root) mountPalette(root, mountCommandPalette);
+</script>
+
+<style>
+  @layer ocx {
+    /* One flex item in the header row: the closed dialog adds no sibling gap. */
+    .ocx-palette {
+      display: inline-flex;
+      align-items: center;
+    }
+  }
+</style>

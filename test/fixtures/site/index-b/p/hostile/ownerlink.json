@@ -1,0 +1,48 @@
+{
+  "name": "index-b/hostile/ownerlink",
+  "repository": "oci://ghcr.io/ocx-contrib/hostile/ownerlink",
+  "owners": [
+    {
+      "login": "not/a-host",
+      "github": "not/a-host",
+      "id": 3,
+      "github_id": 3
+    }
+  ],
+  "status": "active",
+  "deprecated_message": null,
+  "created": "2026-01-03",
+  "upstream": {
+    "org": "hostile",
+    "repository_url": "https://github.com/hostile/ownerlink",
+    "disclaimer": "Unaffiliated mirror of the upstream hostile/ownerlink project."
+  },
+  "desc": {
+    "digest": "sha256:153e024b14c0b8820ba17c4b8de9bb995825959161ccdf5eb11310fb29d7d8ca",
+    "title": "ownerlink",
+    "description": "Owner login that cannot form a valid profile URL.",
+    "keywords": [
+      "hostile",
+      "owner"
+    ],
+    "readme": "sha256:ee58294c4555f5b53d6449455badb66d56e2ef2d748fad09d10caae84bf75512"
+  },
+  "tags": {
+    "1": {
+      "content": "sha256:bf70cfbe701b0ce6f137c702f8afb8514807c4b85178dbf8ec62d313d0a0d191",
+      "observed": "2026-01-03T09:00:00Z"
+    },
+    "1.0.0": {
+      "content": "sha256:bf70cfbe701b0ce6f137c702f8afb8514807c4b85178dbf8ec62d313d0a0d191",
+      "observed": "2026-01-03T09:00:00Z"
+    },
+    "1.0": {
+      "content": "sha256:bf70cfbe701b0ce6f137c702f8afb8514807c4b85178dbf8ec62d313d0a0d191",
+      "observed": "2026-01-03T09:00:00Z"
+    },
+    "latest": {
+      "content": "sha256:bf70cfbe701b0ce6f137c702f8afb8514807c4b85178dbf8ec62d313d0a0d191",
+      "observed": "2026-01-03T09:00:00Z"
+    }
+  }
+}

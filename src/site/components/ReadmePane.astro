@@ -1,0 +1,90 @@
+---
+// The README card. The sanitised HTML was rendered by the CLI parent (`src/build/readmes.ts`; jsdom
+// cannot run in this child) and is read here from its file; `file` is `null` when the package has no
+// README or it could not be rendered (C-037), which shows the "unavailable" pane. This is the one
+// HTML sink in the site (C-014): what reaches it is a `SanitizedHtml` or nothing.
+import "@ocx-sh/theme/prose-code.css";
+import CopyMenu from "@ocx-sh/theme/components/CopyMenu.astro";
+import ProseCodeCopy from "@ocx-sh/theme/components/ProseCodeCopy.astro";
+import { fetchCommand, type ReadmeProvenance } from "../lib/readmeProvenance.js";
+import { readSanitizedHtml, type SanitizedHtml } from "../lib/sanitizedHtml.js";
+
+interface Props {
+  file: string | null;
+  /** The README's digest and wire path, for the provenance menu (D-085); `null` when it has none. */
+  provenance: ReadmeProvenance | null;
+}
+const { file, provenance } = Astro.props;
+const html: SanitizedHtml | null = file === null ? null : await readSanitizedHtml(file);
+---
+
+<section class="readme" aria-labelledby="readme-heading" data-readme>
+  <h2 id="readme-heading" class="rail-heading">README</h2>
+  <div class="rail-card readme-card">
+    {
+      provenance !== null && (
+        <div class="readme-provenance" data-readme-provenance data-path={provenance.href}>
+          <CopyMenu
+            label="README provenance"
+            triggerIcon="more"
+            placement="bottom-end"
+            items={[
+              { value: "digest", label: "Copy digest", meaning: "README digest", text: provenance.digest, icon: "copy" },
+              { value: "url", label: "Copy URL", meaning: "README URL", text: provenance.href, icon: "external" },
+              { value: "curl", label: "Copy fetch command", meaning: "fetch command", text: fetchCommand(provenance.href), icon: "play" },
+            ]}
+          />
+        </div>
+      )
+    }
+    {
+      html === null ? (
+        <p class="readme-empty" data-readme-unavailable>README unavailable.</p>
+      ) : (
+        <>
+          <div class="ocx-prose readme-content" set:html={html} />
+          <ProseCodeCopy />
+        </>
+      )
+    }
+  </div>
+</section>
+
+<style>
+  /* The menu is a bare icon in the card's top-right corner. */
+  .readme-card {
+    position: relative;
+  }
+  .readme-provenance {
+    position: absolute;
+    inset-block-start: var(--ocx-space-2);
+    inset-inline-end: var(--ocx-space-2);
+  }
+  .readme-empty {
+    margin: 0;
+    font-family: var(--ocx-font-mono);
+    font-size: var(--ocx-text-sm);
+    color: var(--ocx-color-fg-subtle);
+  }
+  .readme-content {
+    overflow-wrap: anywhere;
+  }
+  .readme-content :global(pre) {
+    overflow-x: auto;
+    padding: var(--ocx-space-4) var(--ocx-space-5);
+  }
+  /* Images keep their natural size and only shrink to fit the card. */
+  .readme-content :global(img) {
+    max-inline-size: 100%;
+    block-size: auto;
+  }
+  /* The first block sits flush against the card's top padding. A README that opens with a heading
+     would otherwise get the prose margin, and an h2 its rule and padding, stacked on the card's own. */
+  .readme-content > :global(:first-child) {
+    margin-block-start: 0;
+  }
+  .readme-content > :global(:is(h1, h2, h3, h4):first-child) {
+    padding-block-start: 0;
+    border-block-start: 0;
+  }
+</style>

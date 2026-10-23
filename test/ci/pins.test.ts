@@ -60,7 +60,7 @@ describe("C-007 scrapePins", () => {
   it("DEFAULT_PINS carries a pin for every action the templates reference", () => {
     expect(DEFAULT_PINS["actions/checkout"]).toMatch(/^[0-9a-f]{40} {2}# v\d+\.\d+\.\d+$/);
     expect(DEFAULT_PINS["actions/setup-node"]).toMatch(/^[0-9a-f]{40} {2}# v\d+\.\d+\.\d+$/);
-    // packageManager: "bun" swaps this in for actions/setup-node (render.ts
+    // packageManager: "bun" adds this after actions/setup-node (render.ts
     // githubSetupSteps) — same shape requirement.
     expect(DEFAULT_PINS["oven-sh/setup-bun"]).toMatch(/^[0-9a-f]{40} {2}# v\d+\.\d+\.\d+$/);
   });

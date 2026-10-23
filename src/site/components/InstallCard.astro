@@ -1,0 +1,139 @@
+---
+// The rail's install card (D-058, D-059, D-171, D-073). Each command is one button: a click copies it and the
+// theme's `CopyMenu` opens on it (right-click, menu key) with the identifier, link and every install
+// command for the shown tag; `client/detail.ts` copies and writes the menu's texts. The commands name the page's initial tag: the bare name
+// for a live `latest`, `name:tag` for the primary tag otherwise (a deprecated package's stray `latest` is
+// not live). With more than one variant or version the card shows native selectors; `client/detail.ts`
+// retargets the commands when one changes, restores the stored pick (`ocx-install-pin`) once the page is
+// up and swaps the Platforms card to the picked tag. Every command is built from the model
+// (`DetailView.install`, from `DEFAULT_INSTALL_FLAVORS`); the island fills the same `{name}` template.
+import CopyMenu from "@ocx-sh/theme/components/CopyMenu.astro";
+import CommandBar from "@ocx-sh/theme/components/ui/CommandBar.astro";
+import Icon from "@ocx-sh/theme/components/ui/Icon.astro";
+import Select from "@ocx-sh/theme/components/ui/Select.astro";
+import { cardCopyItems } from "../lib/cardCopy.js";
+import { DEFAULT_INSTALL_FLAVORS } from "../lib/installFlavors.js";
+import { INSTALL_ICON_NAMES, PIN_ICON_NAMES } from "../lib/installIcons.js";
+import { installTarget } from "../lib/installPin.js";
+import type { DetailView } from "../model/detail.js";
+
+interface Props {
+  view: DetailView;
+}
+const { view } = Astro.props;
+const { installVariants } = view;
+const opened = installVariants[0];
+const showSelectors = installVariants.length > 1 || (opened?.options.length ?? 0) > 1;
+// The option's text names the granularity; the tag follows unless it is the bare `latest`.
+const optionText = (label: string, tag: string) => (tag === "latest" ? label : `${label} :${tag}`);
+---
+
+<section class="rail-block" aria-labelledby="install-heading" data-install data-name={view.name} data-initial-tag={view.initialTag ?? undefined}>
+  <h2 id="install-heading" class="rail-heading">Install</h2>
+  <div class="rail-card">
+    {
+      view.install.length === 0 ? (
+        <p class="rail-empty">No installable version.</p>
+      ) : (
+        <>
+          {showSelectors && (
+            <div class="install-selects" data-install-selects>
+              {installVariants.length > 1 && (
+                <div class="install-select-row">
+                  <Select
+                    label="Variant"
+                    hideLabel
+                    class="install-select"
+                    data-install-variant
+                    value={opened?.variant ?? ""}
+                    options={installVariants.map((variant) => ({ value: variant.variant ?? "", label: variant.label }))}
+                  >
+                    <Icon slot="start" name="layers" class="install-select-icon" />
+                  </Select>
+                </div>
+              )}
+              <div class="install-select-row">
+                <CommandBar
+                  choices={(opened?.options ?? []).map((option) => ({
+                    value: option.tag,
+                    label: option.label,
+                    command: installTarget(view.name, option.tag) ?? "",
+                    icon: PIN_ICON_NAMES[option.label],
+                  }))}
+                  pickerLabel="Pin"
+                  noun="identifier"
+                  data-install-pin
+                />
+              </div>
+              {installVariants.map((variant) => (
+                <template data-install-options data-variant={variant.variant ?? ""}>
+                  {variant.options.map((option) => (
+                    <option value={option.tag} data-rank={option.rank} data-level={option.label}>
+                      {optionText(option.label, option.tag)}
+                    </option>
+                  ))}
+                </template>
+              ))}
+            </div>
+          )}
+          <CopyMenu context label="Install actions" items={cardCopyItems(DEFAULT_INSTALL_FLAVORS)}>
+            <ul class="install-rows" data-install-rows data-deprecated={view.status === "deprecated" ? "" : undefined}>
+              {view.install.map((row) => (
+                <li class="install-row">
+                  <CommandBar
+                    choices={[{ value: row.label, label: row.label, command: row.command }]}
+                    icon={INSTALL_ICON_NAMES[row.icon]}
+                    prompt="$"
+                    noun="command"
+                    data-install-row
+                    data-install-copy
+                    data-template={row.template}
+                    data-label={row.label}
+                    title={`${row.label} — click to copy · right-click for more`}
+                  />
+                </li>
+              ))}
+            </ul>
+          </CopyMenu>
+        </>
+      )
+    }
+  </div>
+</section>
+
+<style>
+  /* One select per row, each the width and height of a command below, its icon in the commands' icon lane;
+     a rule separates the pickers from the commands. */
+  .install-selects {
+    display: grid;
+    gap: var(--ocx-space-3);
+    margin-block-end: var(--ocx-space-4);
+    padding-block-end: var(--ocx-space-4);
+    border-block-end: var(--ocx-border-width) solid var(--ocx-color-border);
+  }
+  /* The icon sits inside the box, in the lane and at the gap the command icons take inside theirs. */
+  .install-selects :global(.ocx-ui-select),
+  .install-selects :global(.ocx-ui-input-group) {
+    inline-size: 100%;
+  }
+  .install-selects :global(.install-select-icon) {
+    flex: none;
+    color: var(--ocx-color-fg-muted);
+  }
+  .install-rows {
+    display: grid;
+    gap: var(--ocx-space-3);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .install-rows[data-deprecated] :global(.ocx-cmdbar__text) {
+    color: var(--ocx-color-fg-subtle);
+  }
+  .rail-empty {
+    margin: 0;
+    font-family: var(--ocx-font-mono);
+    font-size: var(--ocx-text-sm);
+    color: var(--ocx-color-fg-subtle);
+  }
+</style>

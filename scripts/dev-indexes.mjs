@@ -21,6 +21,7 @@
  * |---|---|
  * | `<index repo>/p` | volume — 124 roots across 100 namespaces, `bazelbuild/bazel` at 135 tags, the longest real package names |
  * | `<index repo>/demo/p` | a deprecated package, a yanked TAG, roots with no readme/logo |
+ * | `test/fixtures/ephemeral-index` | `acme/nightly` (ephemeral snapshot tags, the strict-`true` decoys) and `acme/builds` (tracks: rc, canary, merge-request builds) |
  * | `test/fixtures/quality-index` | the only whole-package `status: yanked` anywhere, plus a `desc`-rich root and the only platform-agnostic (`any/any`) package |
  *
  * Point `INDEX_REPO` elsewhere if the sibling checkout lives somewhere else.
@@ -62,7 +63,7 @@
  * fixture. The same `lib/inflate.mjs` builds the site
  * `scripts/quality-site.mjs` measures.
  */
-import { cp, mkdir, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
+import { cp, mkdir, readFile, readdir, rename, rm, stat, writeFile } from "node:fs/promises";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
@@ -71,13 +72,18 @@ import { inflate } from "./lib/inflate.mjs";
 
 const REPO = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const INDEX_REPO = resolve(process.env.INDEX_REPO ?? join(REPO, "..", "index"));
-const OUT = join(REPO, ".dev-indexes");
+const FINAL = join(REPO, ".dev-indexes");
+// Seeded into a sibling and swapped in at the end: a running `ocx-catalog dev` watches the config
+// files there, and a tree wiped in place makes its reload fail with "config file not found".
+// The configs hold only relative paths, so the staged tree is valid once renamed.
+const OUT = `${FINAL}.staging-${process.pid}`;
 const TREES = join(OUT, "trees");
 
 const CORPORA = {
   real: join(INDEX_REPO, "p"),
   demo: join(INDEX_REPO, "demo", "p"),
   quality: join(REPO, "test", "fixtures", "quality-index", "p"),
+  ephemeral: join(REPO, "test", "fixtures", "ephemeral-index", "p"),
 };
 
 /** `{ format_version: 1 }` — every carved tree needs one at its root. */
@@ -179,12 +185,12 @@ async function main() {
     process.exit(1);
   }
 
-  await rm(OUT, { recursive: true, force: true });
   await mkdir(OUT, { recursive: true });
 
   const real = await collectRoots(CORPORA.real);
   const demo = await collectRoots(CORPORA.demo);
   const quality = await collectRoots(CORPORA.quality);
+  const ephemeral = await collectRoots(CORPORA.ephemeral);
 
   // Brands are dotted on purpose: a namespace can never contain a `.`, so no
   // ACCIDENTAL collision with a root namespace can occur — the collision case
@@ -199,6 +205,8 @@ async function main() {
   // quality-index carries the deprecated + whole-package-yanked pair, and its
   // `acme` namespace is what the collision case below is named after.
   for (const root of quality) await writeRoot(ROOT, root);
+  // ephemeral-index carries the only package with ephemeral (snapshot) tags.
+  for (const root of ephemeral) await writeRoot(ROOT, root);
   // (2) half of the duplicate pair. Seeded explicitly rather than hoped for
   // out of the bulk slice above — a "same package in two indexes" case that
   // only sometimes contains the same package proves nothing.
@@ -303,7 +311,13 @@ async function main() {
   }
 
   const cases = (await readdir(OUT)).filter(name => name.endsWith(".config.json")).sort();
-  console.log(`dev-indexes: seeded ${(await readdir(TREES)).length} index trees in ${relative(REPO, OUT)}`);
+  const trees = (await readdir(TREES)).length;
+  // ponytail: two renames, not one atomic swap; the gap is microseconds against a debounced watcher.
+  const old = `${FINAL}.old-${process.pid}`;
+  if (await exists(FINAL)) await rename(FINAL, old);
+  await rename(OUT, FINAL);
+  await rm(old, { recursive: true, force: true });
+  console.log(`dev-indexes: seeded ${trees} index trees in ${relative(REPO, FINAL)}`);
   console.log(`  cases: ${cases.map(name => name.replace(".config.json", "")).join(", ")}`);
 }
 

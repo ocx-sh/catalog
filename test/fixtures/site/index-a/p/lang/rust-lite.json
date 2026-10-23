@@ -1,0 +1,57 @@
+{
+  "name": "index-a/lang/rust-lite",
+  "repository": "oci://ghcr.io/ocx-contrib/lang/rust-lite",
+  "owners": [
+    {
+      "login": "ocx-bot",
+      "github": "ocx-bot",
+      "id": 309019509,
+      "github_id": 309019509
+    }
+  ],
+  "status": "active",
+  "deprecated_message": null,
+  "created": "2026-01-13",
+  "upstream": {
+    "org": "lang",
+    "repository_url": "https://github.com/lang/rust-lite",
+    "disclaimer": "Unaffiliated mirror of the upstream lang/rust-lite project."
+  },
+  "desc": {
+    "digest": "sha256:e8d12aabeacd9c1a5e975bedef26aa9b99475d43d969f7df1fc318b2fb40717d",
+    "title": "rust-lite",
+    "description": "A minimal Rust toolchain distribution.",
+    "keywords": [
+      "rust",
+      "compiler"
+    ],
+    "readme": "sha256:2cb263bf000e22127ab79872fffe7f67ccc81e70e9a18b4eb7df8283c8eb3bed",
+    "logo": "sha256:19dc1d21a80b31c72d735c41f6f21ecc0fabda69897c805acd57883d90f5e399"
+  },
+  "tags": {
+    "1": {
+      "content": "sha256:d709c0f176b6e85b7ae4a150ec96d425d1fdde4f27e4e1b25cd9dda15967e208",
+      "observed": "2026-01-13T09:00:00Z"
+    },
+    "1.0.0": {
+      "content": "sha256:66f56ed721a4c0e20bfd01b490527ae8e6d55790cc937c095a1f8d50862506e9",
+      "observed": "2026-01-13T09:00:00Z"
+    },
+    "1.1.0": {
+      "content": "sha256:1dc5094c9c7783e822c4e789eefa6834a35c192fff785a71f9e4d136e432bcf4",
+      "observed": "2026-01-13T09:00:00Z"
+    },
+    "1.2.0": {
+      "content": "sha256:d709c0f176b6e85b7ae4a150ec96d425d1fdde4f27e4e1b25cd9dda15967e208",
+      "observed": "2026-01-13T09:00:00Z"
+    },
+    "1.2": {
+      "content": "sha256:d709c0f176b6e85b7ae4a150ec96d425d1fdde4f27e4e1b25cd9dda15967e208",
+      "observed": "2026-01-13T09:00:00Z"
+    },
+    "latest": {
+      "content": "sha256:d709c0f176b6e85b7ae4a150ec96d425d1fdde4f27e4e1b25cd9dda15967e208",
+      "observed": "2026-01-13T09:00:00Z"
+    }
+  }
+}

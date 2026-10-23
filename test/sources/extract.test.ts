@@ -54,6 +54,7 @@ describe("extractPackages — field mapping", () => {
       content: `sha256:${"d".repeat(64)}`,
       observed: "2026-01-01T00:00:00Z",
       yanked: null,
+      ephemeral: false,
     });
   });
 
@@ -407,6 +408,77 @@ describe("extractPackages — malformed root shape (schema-invalid, not just unp
     const message = throwsWith(utf8('{"name":"ocx.sh/acme/hello","desc":null,"tags":{"1.0.0":[]}}'));
     expect(message).toContain('tags["1.0.0"]');
   });
+
+  const withExtra = (extra: string): Uint8Array => utf8(`{"name":"ocx.sh/acme/hello","desc":null,"tags":{},${extra}}`);
+
+  it("owners that is a string, not an array", () => {
+    const message = throwsWith(withExtra('"owners":"x"'));
+    expect(message).toContain("malformed root at p/acme/hello.json");
+    expect(message).toContain('"owners"');
+  });
+
+  it.each([["null", "null"], ["a string", '"x"'], ["an array", "[]"]])("an owner entry that is %s", (_, json) => {
+    const message = throwsWith(withExtra(`"owners":[${json}]`));
+    expect(message).toContain("owners[0] must be an object");
+  });
+
+  it.each(["login", "github"])("an owner whose %s is not a string", (field) => {
+    const message = throwsWith(withExtra(`"owners":[{"login":"ok"},{"${field}":7}]`));
+    expect(message).toContain(`owners[1].${field}`);
+  });
+
+  it.each(["source", "superseded_by"])("%s that is not a string", (field) => {
+    const message = throwsWith(withExtra(`"${field}":42`));
+    expect(message).toContain(`"${field}" must be a string`);
+  });
+
+  it("accepts absent, null and well-typed owners, source and superseded_by", () => {
+    const files = new Map([
+      [
+        "p/acme/hello.json",
+        withExtra('"owners":[{"login":"a"},{"github":"b"},{}],"source":null,"superseded_by":"acme/next"'),
+      ],
+    ]);
+    const [pkg] = extractPackages(files);
+    expect(pkg?.root.owners).toEqual(["a", "b"]);
+    expect(pkg?.root.supersededBy).toBe("acme/next");
+  });
+
+  it.each([
+    ["a string", '"x"'],
+    ["an array", "[]"],
+    ["an object with no org", '{"disclaimer":"d"}'],
+    ["an object whose org is a number", '{"org":7}'],
+  ])("D-050: upstream that is %s", (_, json) => {
+    const message = throwsWith(withExtra(`"upstream":${json}`));
+    expect(message).toContain("malformed root at p/acme/hello.json");
+    expect(message).toContain('"upstream" must be an object with a string "org"');
+  });
+
+  it.each(["repository_url", "disclaimer"])("D-050: upstream.%s that is not a string", (field) => {
+    const message = throwsWith(withExtra(`"upstream":{"org":"acme","${field}":3}`));
+    expect(message).toContain(`"upstream.${field}" must be a string`);
+  });
+
+  it("D-050: maps upstream's org, repository_url and disclaimer; absent and null parts are null", () => {
+    const upstream = (json: string) => extractPackages(new Map([["p/acme/hello.json", withExtra(json)]]))[0]?.root.upstream;
+
+    expect(upstream('"upstream":{"org":"sharkdp","repository_url":"https://github.com/sharkdp/bat","disclaimer":"Unaffiliated."}')).toEqual({
+      org: "sharkdp",
+      repositoryUrl: "https://github.com/sharkdp/bat",
+      disclaimer: "Unaffiliated.",
+    });
+    expect(upstream('"upstream":{"org":"sharkdp","repository_url":null}')).toEqual({ org: "sharkdp", repositoryUrl: null, disclaimer: null });
+    expect(upstream('"upstream":null')).toBeNull();
+    expect(upstream('"x":1')).toBeNull();
+  });
+
+  it("maps absent and null owners to an empty list", () => {
+    for (const extra of ['"x":1', '"owners":null']) {
+      const [pkg] = extractPackages(new Map([["p/acme/hello.json", withExtra(extra)]]));
+      expect(pkg?.root.owners).toEqual([]);
+    }
+  });
 });
 
 /** Security panel (2026-08-22, S2): tag names are remote data, and
@@ -444,9 +516,27 @@ describe("extractPackages — hostile tag names never hit Object.prototype", () 
       content: `sha256:${"d".repeat(64)}`,
       observed: "2026-01-01T00:00:00Z",
       yanked: { reason: "compromised", at: "2026-02-01T00:00:00Z" },
+      ephemeral: false,
     });
     // The map itself is prototype-less, so no remote tag name can ever reach
     // an inherited setter/getter in the first place.
     expect(Object.getPrototypeOf(tags)).toBeNull();
+  });
+});
+
+describe("extractPackages — tags[*].ephemeral", () => {
+  it.each([
+    ["absent", undefined, false],
+    ["true", true, true],
+    ["false", false, false],
+    ["null", null, false],
+    ['"true"', "true", false],
+    ["1", 1, false],
+  ])("%s -> ephemeral %s (only a JSON true marks the tag)", (_label, wire, expected) => {
+    const entry = { content: `sha256:${"d".repeat(64)}`, observed: "2026-01-01T00:00:00Z", ephemeral: wire };
+    const files = new Map([
+      ["p/acme/nightly.json", rootJsonBytes({ name: "ocx.sh/acme/nightly", status: "active", created: "2026-01-01", desc: null, tags: { "1.0.0": entry } })],
+    ]);
+    expect(extractPackages(files)[0]!.root.tags["1.0.0"]!.ephemeral).toBe(expected);
   });
 });

@@ -1,0 +1,53 @@
+{
+  "name": "index-a/legacy/oldtool",
+  "repository": "oci://ghcr.io/ocx-contrib/legacy/oldtool",
+  "owners": [
+    {
+      "login": "ocx-bot",
+      "github": "ocx-bot",
+      "id": 309019509,
+      "github_id": 309019509
+    }
+  ],
+  "status": "deprecated",
+  "deprecated_message": "Superseded by tools/modern, which covers every oldtool workflow.",
+  "superseded_by": "tools/modern",
+  "created": "2026-01-24",
+  "upstream": {
+    "org": "legacy",
+    "repository_url": "https://github.com/legacy/oldtool",
+    "disclaimer": "Unaffiliated mirror of the upstream legacy/oldtool project."
+  },
+  "desc": {
+    "digest": "sha256:67d86345e94f414cf1fe39b84ca94371d2256f84d159aa372d67ee7444e55771",
+    "title": "oldtool",
+    "description": "First-generation tool, superseded by tools/modern.",
+    "keywords": [
+      "cli",
+      "deprecated"
+    ],
+    "readme": "sha256:41cbc201bfbd22f29c3391d4f755167dbef7c1389ef888a0757bb4517fddfa3d"
+  },
+  "tags": {
+    "1": {
+      "content": "sha256:49ee3afe71de5719f90c5cea393a7563e9281e408d6f2a43930ebf60cc17e6ed",
+      "observed": "2026-01-24T09:00:00Z"
+    },
+    "1.0.0": {
+      "content": "sha256:0acbc98f2c49acf6984aaea9a87a05ede70a9062108825681d1f9149f5683978",
+      "observed": "2026-01-24T09:00:00Z"
+    },
+    "1.4.0": {
+      "content": "sha256:49ee3afe71de5719f90c5cea393a7563e9281e408d6f2a43930ebf60cc17e6ed",
+      "observed": "2026-01-24T09:00:00Z"
+    },
+    "1.4": {
+      "content": "sha256:49ee3afe71de5719f90c5cea393a7563e9281e408d6f2a43930ebf60cc17e6ed",
+      "observed": "2026-01-24T09:00:00Z"
+    },
+    "latest": {
+      "content": "sha256:49ee3afe71de5719f90c5cea393a7563e9281e408d6f2a43930ebf60cc17e6ed",
+      "observed": "2026-01-24T09:00:00Z"
+    }
+  }
+}

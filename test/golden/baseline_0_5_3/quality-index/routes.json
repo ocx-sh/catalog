@@ -1,0 +1,65 @@
+[
+  {
+    "segments": [
+      "acme",
+      "gadget"
+    ],
+    "namespace": "acme",
+    "package": "gadget",
+    "wireBase": ""
+  },
+  {
+    "segments": [
+      "acme",
+      "husk"
+    ],
+    "namespace": "acme",
+    "package": "husk",
+    "wireBase": ""
+  },
+  {
+    "segments": [
+      "acme",
+      "legacy-tool"
+    ],
+    "namespace": "acme",
+    "package": "legacy-tool",
+    "wireBase": ""
+  },
+  {
+    "segments": [
+      "acme",
+      "portable"
+    ],
+    "namespace": "acme",
+    "package": "portable",
+    "wireBase": ""
+  },
+  {
+    "segments": [
+      "contrib",
+      "mono"
+    ],
+    "namespace": "contrib",
+    "package": "mono",
+    "wireBase": ""
+  },
+  {
+    "segments": [
+      "oxidize",
+      "ripgrep"
+    ],
+    "namespace": "oxidize",
+    "package": "ripgrep",
+    "wireBase": ""
+  },
+  {
+    "segments": [
+      "sharkdp",
+      "bat"
+    ],
+    "namespace": "sharkdp",
+    "package": "bat",
+    "wireBase": ""
+  }
+]

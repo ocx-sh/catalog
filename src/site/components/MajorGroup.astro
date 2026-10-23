@@ -1,0 +1,31 @@
+---
+// One major line of a variant's breakdown: its header chip, then each minor line with the patch tags under
+// it behind a `<details>` (D-053, D-054, D-076). `VersionList` renders the lines the page prerenders
+// (`shown`); the same component renders, once with placeholder data and `shown = null`, the `<template>`
+// the browser clones to draw the rest after the package root is fetched (`client/versions.ts`), so a late
+// line has the markup and the scoped styles of a prerendered one. The `data-*` hooks below are that
+// script's contract. Tag names are untrusted text: attributes and text only.
+import type { MajorGroup } from "../lib/versionTable.js";
+import MinorLine from "./MinorLine.astro";
+import TagChip from "./TagChip.astro";
+
+interface Props {
+  major: MajorGroup;
+  /** The groups and patches the page prerenders; `null` renders all (the placeholder template). */
+  shown: ReadonlySet<object> | null;
+  releaseOf: ReadonlyMap<string, number>;
+}
+const { major, shown, releaseOf } = Astro.props;
+const visible = (item: object) => shown === null || shown.has(item);
+---
+
+<div class="major-group" data-major>
+  <div class="chips" data-head>
+    <TagChip tag={major.tag} label={major.label} yanked={major.yanked} ephemeral={major.ephemeral} release={releaseOf.get(major.tag)} variant="rolling" />
+  </div>
+  {
+    major.minorGroups.filter(visible).map((minor) => (
+      <MinorLine minor={minor} shown={shown} releaseOf={releaseOf} />
+    ))
+  }
+</div>

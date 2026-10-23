@@ -68,6 +68,16 @@ describe("C-605 nav[].link validation", () => {
     });
   });
 
+  // Parses as on-site, but the renderer's `joinBase` throws on a dot segment: it
+  // used to load and then crash the Astro child with exit 1.
+  it.each(["/docs/../x", "/%2e%2e/admin", "/a/./b", "/..#x", "/..?q", "/a/..?q"])("rejects a dot-segment path (%s) the renderer cannot join", async (link) => {
+    await withTempDir(async (dir) => {
+      const error = await loadConfigError(await writeConfig(dir, configWithNavLink(link)));
+      expect(error.code).toBe("INVALID_TYPE");
+      expect(error.message).toContain("nav[0].link");
+    });
+  });
+
   it("rejects a plain non-URL string (fails new URL() parsing)", async () => {
     await withTempDir(async (dir) => {
       const configPath = await writeConfig(dir, configWithNavLink("not a url at all"));

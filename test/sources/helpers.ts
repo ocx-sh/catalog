@@ -28,6 +28,7 @@ export interface RootTag {
   content: string;
   observed: string;
   yanked?: { reason: string; at: string };
+  ephemeral?: unknown;
 }
 
 export interface RootDesc {
@@ -95,6 +96,7 @@ export function rootJsonText(fields: RootFields): string {
         content: entry.content,
         observed: entry.observed,
         ...(entry.yanked !== undefined ? { yanked: entry.yanked } : {}),
+        ...(entry.ephemeral !== undefined ? { ephemeral: entry.ephemeral } : {}),
       },
     ]),
   );

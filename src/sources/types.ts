@@ -7,6 +7,7 @@
  * the per-source `/data/catalog/catalog.json` + `_headers`.
  */
 
+import { ownerLogin, type Owner } from "../site/lib/wireTypes.js";
 import type { CatalogPackageRoot, CatalogSourcePackage, TagEntry } from "../viewmodel/types.js";
 
 /**
@@ -140,7 +141,11 @@ export type SourceErrorCode =
    * `INDEX_NAMESPACE_COLLISION` — same collision, the other claimant.
    * Compared case-insensitively, since macOS and Windows resolve `Docs` and
    * `docs` to one directory. */
-  | "INDEX_LABEL_RESERVED";
+  | "INDEX_LABEL_RESERVED"
+  /** `mirror.ts`: a path the mirror writes is already in the output (a
+   * consumer `publicDir` file such as `_headers`, or a path two sources both
+   * claim) — the mirror never overwrites (C-027). */
+  | "OUTPUT_COLLISION";
 
 /**
  * Raised by the source-reading layer for any failure listed in
@@ -205,7 +210,9 @@ export class SourceError extends Error {
  * Wire field mapping (root JSON is snake_case per `schema/root.schema.json`;
  * `CatalogPackageRoot` is camelCase): `deprecated_message` -> always present
  * -> `deprecatedMessage` verbatim; `superseded_by` -> ABSENT when unset ->
- * `supersededBy: null`; `repository` -> ABSENT when unset -> `repository:
+ * `supersededBy: null`; `owners` -> each owner's `ownerLogin` (an owner with neither spelling is
+ * dropped); `source` -> ABSENT when unset -> `null` (both detail-page data only,
+ * like `repository`); `repository` -> ABSENT when unset -> `repository:
  * null` (C-501 — detail-page data only, `catalogEntry` never reads it, so it
  * never reaches `/data/catalog/catalog.json`, C-503); `desc` -> JSON `null`
  * -> `desc: null` (its own `readme`/`logo` are each ABSENT when unset ->
@@ -264,6 +271,8 @@ interface RawTagEntry {
   content: string;
   observed: string;
   yanked?: { reason: string; at: string };
+  /** Only a JSON `true` marks the tag ephemeral (ocx `wire.rs`); every other value is durable. */
+  ephemeral?: unknown;
 }
 
 interface RawDesc {
@@ -286,6 +295,11 @@ interface RawRoot {
    * fixture, a non-conformant source) degrades to `null` rather than
    * crashing (C-501: report, never invent). */
   repository?: string;
+  owners?: readonly Owner[];
+  source?: string | null;
+  /** The vendor a mirrored namespace attributes (`schema/root.schema.json`'s
+   * `upstream`): `org` is required, the URL and the governance disclaimer are not. */
+  upstream?: { org: string; repository_url?: string | null; disclaimer?: string | null } | null;
   created: string;
   desc: RawDesc | null;
   tags: Record<string, RawTagEntry>;
@@ -308,8 +322,11 @@ interface RawRoot {
  * check of their own: `desc.title`/`.description`/`.keywords` need `desc`
  * present and an object; `Object.entries(tags)` and each `entry.content`/
  * `.observed`/`.yanked` need `tags` an object of objects; `name.indexOf`
- * needs `name` a string. Every other field mapRoot reads (`status`,
- * `deprecated_message`, `superseded_by`, `created`) is copied through with
+ * needs `name` a string. `owners`, `source` and `superseded_by` are checked
+ * for type when present (an owner is walked, `ownerLogin` reads it; the other
+ * two reach the site typed as strings); so is `upstream` (its `org`, URL and
+ * disclaimer reach the detail page). Every other field mapRoot reads
+ * (`status`, `deprecated_message`, `created`) is copied through with
  * `??`/direct assignment and never crashes on a wrong type, so it is
  * deliberately NOT checked here — this is the crash class, not a schema
  * validator (see this file's own doc comment above).
@@ -357,6 +374,41 @@ function validateRootShape(path: WirePath, parsed: unknown): asserts parsed is R
       throw new Error(`malformed root at ${path}: tags["${tag}"] is required and must be an object`);
     }
   }
+
+  // `owners`, `source` and `superseded_by` are optional on the wire, but a present one of the
+  // wrong type would otherwise crash `mapRoot` or flow into the site typed as the right one.
+  for (const field of ["source", "superseded_by"] as const) {
+    if (obj[field] != null && typeof obj[field] !== "string") {
+      throw new Error(`malformed root at ${path}: "${field}" must be a string when present`);
+    }
+  }
+  if (obj.upstream != null) {
+    const upstream = obj.upstream as Record<string, unknown>;
+    if (typeof upstream !== "object" || Array.isArray(upstream) || typeof upstream.org !== "string") {
+      throw new Error(`malformed root at ${path}: "upstream" must be an object with a string "org" when present`);
+    }
+    for (const field of ["repository_url", "disclaimer"] as const) {
+      if (upstream[field] != null && typeof upstream[field] !== "string") {
+        throw new Error(`malformed root at ${path}: "upstream.${field}" must be a string when present`);
+      }
+    }
+  }
+  if (obj.owners != null) {
+    if (!Array.isArray(obj.owners)) {
+      throw new Error(`malformed root at ${path}: "owners" must be an array when present`);
+    }
+    obj.owners.forEach((owner: unknown, i) => {
+      if (typeof owner !== "object" || owner === null || Array.isArray(owner)) {
+        throw new Error(`malformed root at ${path}: owners[${i}] must be an object`);
+      }
+      for (const field of ["login", "github"] as const) {
+        const value = (owner as Record<string, unknown>)[field];
+        if (value !== undefined && typeof value !== "string") {
+          throw new Error(`malformed root at ${path}: owners[${i}].${field} must be a string when present`);
+        }
+      }
+    });
+  }
 }
 
 function mapRoot(parsed: RawRoot): CatalogPackageRoot {
@@ -387,6 +439,7 @@ function mapRoot(parsed: RawRoot): CatalogPackageRoot {
       content: entry.content,
       observed: entry.observed,
       yanked: entry.yanked ?? null,
+      ephemeral: entry.ephemeral === true,
     };
   }
 
@@ -396,6 +449,16 @@ function mapRoot(parsed: RawRoot): CatalogPackageRoot {
     deprecatedMessage: parsed.deprecated_message ?? null,
     supersededBy: parsed.superseded_by ?? null,
     repository: parsed.repository ?? null,
+    owners: (parsed.owners ?? []).flatMap((owner) => ownerLogin(owner) ?? []),
+    source: parsed.source ?? null,
+    upstream:
+      parsed.upstream == null
+        ? null
+        : {
+            org: parsed.upstream.org,
+            repositoryUrl: parsed.upstream.repository_url ?? null,
+            disclaimer: parsed.upstream.disclaimer ?? null,
+          },
     created: parsed.created,
     desc,
     tags,

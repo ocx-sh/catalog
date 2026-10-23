@@ -1,0 +1,56 @@
+{
+  "name": "index-a/lang/nodejs-lite",
+  "repository": "oci://ghcr.io/ocx-contrib/lang/nodejs-lite",
+  "owners": [
+    {
+      "login": "ocx-bot",
+      "github": "ocx-bot",
+      "id": 309019509,
+      "github_id": 309019509
+    }
+  ],
+  "status": "active",
+  "deprecated_message": null,
+  "created": "2026-01-10",
+  "upstream": {
+    "org": "lang",
+    "repository_url": "https://github.com/lang/nodejs-lite",
+    "disclaimer": "Unaffiliated mirror of the upstream lang/nodejs-lite project."
+  },
+  "desc": {
+    "digest": "sha256:67e859200fcb5417efdcb4e8006ce92e59d861e4f2410b10c94af3258568dc8a",
+    "title": "nodejs-lite",
+    "description": "A minimal JavaScript runtime distribution.",
+    "keywords": [
+      "javascript",
+      "runtime"
+    ],
+    "readme": "sha256:0b69a0e2f5d213de8e8c8757bdfab251f569da9f84d947b06083ea10851338fb"
+  },
+  "tags": {
+    "1": {
+      "content": "sha256:6ad8edbfc08bd44cb5514c0b286a164aefde19c7f07a1bb0307b1d03140b0763",
+      "observed": "2026-01-10T09:00:00Z"
+    },
+    "1.0.0": {
+      "content": "sha256:397243d2438c3cd4fc3cb13f13376179d9c0a5a862a7738e2fb0cb9ac9dc819e",
+      "observed": "2026-01-10T09:00:00Z"
+    },
+    "1.1.0": {
+      "content": "sha256:5e9068c7a31068a35ea56ab15ce8ebe46b6fadc232f2788401c5c41268f8161b",
+      "observed": "2026-01-10T09:00:00Z"
+    },
+    "1.2.0": {
+      "content": "sha256:6ad8edbfc08bd44cb5514c0b286a164aefde19c7f07a1bb0307b1d03140b0763",
+      "observed": "2026-01-10T09:00:00Z"
+    },
+    "1.2": {
+      "content": "sha256:6ad8edbfc08bd44cb5514c0b286a164aefde19c7f07a1bb0307b1d03140b0763",
+      "observed": "2026-01-10T09:00:00Z"
+    },
+    "latest": {
+      "content": "sha256:6ad8edbfc08bd44cb5514c0b286a164aefde19c7f07a1bb0307b1d03140b0763",
+      "observed": "2026-01-10T09:00:00Z"
+    }
+  }
+}
