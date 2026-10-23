@@ -1,0 +1,7 @@
+{
+  "$schema": "../../../src/config/schema/catalog.config.schema.json",
+  "sources": [{ "path": ".", "root": true }],
+  "brand": { "title": "Ephemeral Fixture Catalog" },
+  "siteUrl": "https://ephemeral.ocx.test",
+  "description": "A committed OCX index fixture with ephemeral snapshot tags."
+}

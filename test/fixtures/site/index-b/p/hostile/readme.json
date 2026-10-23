@@ -1,0 +1,49 @@
+{
+  "name": "index-b/hostile/readme",
+  "repository": "oci://ghcr.io/ocx-contrib/hostile/readme",
+  "owners": [
+    {
+      "login": "ocx-bot",
+      "github": "ocx-bot",
+      "id": 309019509,
+      "github_id": 309019509
+    }
+  ],
+  "status": "active",
+  "deprecated_message": null,
+  "created": "2026-01-01",
+  "upstream": {
+    "org": "hostile",
+    "repository_url": "https://github.com/hostile/readme",
+    "disclaimer": "Unaffiliated mirror of the upstream hostile/readme project."
+  },
+  "desc": {
+    "digest": "sha256:b02d29e58973482b14c0159c0fa1853bab9e6e7bac8fb32c14230db0ca736a09",
+    "title": "readme",
+    "description": "Carries a hostile README; every other field is ordinary.",
+    "keywords": [
+      "hostile",
+      "readme"
+    ],
+    "readme": "sha256:73bf7621173355e68eb275a065cd44c95fcb7307e479bbba03fa43b2a2963443",
+    "logo": "sha256:b30aa38b14a5242481bd0fab2ec6005ddebcc0946cd4f9f1356b2b7c86bcbadf"
+  },
+  "tags": {
+    "1": {
+      "content": "sha256:6ff08d20c88ad1ae3589b29ae499eb7b4138511232d06dc51496f111e53ebe86",
+      "observed": "2026-01-01T09:00:00Z"
+    },
+    "1.0.0": {
+      "content": "sha256:6ff08d20c88ad1ae3589b29ae499eb7b4138511232d06dc51496f111e53ebe86",
+      "observed": "2026-01-01T09:00:00Z"
+    },
+    "1.0": {
+      "content": "sha256:6ff08d20c88ad1ae3589b29ae499eb7b4138511232d06dc51496f111e53ebe86",
+      "observed": "2026-01-01T09:00:00Z"
+    },
+    "latest": {
+      "content": "sha256:6ff08d20c88ad1ae3589b29ae499eb7b4138511232d06dc51496f111e53ebe86",
+      "observed": "2026-01-01T09:00:00Z"
+    }
+  }
+}

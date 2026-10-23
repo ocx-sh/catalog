@@ -1,0 +1,233 @@
+---
+// One package card, a link to its detail page (C-009, C-010). Rendered for the
+// server-side first window and, with `template`, once into the
+// `<template data-grid-card>` the grid island clones (`client/grid.ts` documents
+// the `data-field` contract). In template mode every optional part is present
+// and the island sets `hidden`; a server card renders only what it has.
+import Icon from "@ocx-sh/theme/components/ui/Icon.astro";
+import LogoTile from "@ocx-sh/theme/components/ui/LogoTile.astro";
+import Tag from "@ocx-sh/theme/components/ui/Tag.astro";
+import { plural } from "../lib/plural.js";
+import { joinBase } from "../../viewmodel/url.js";
+import { cardCopyData } from "../lib/cardCopy.js";
+import { installCommand, DEFAULT_INSTALL_FLAVORS } from "../lib/installFlavors.js";
+import { CARD_NAME_BUDGET, elideMiddle } from "../lib/elideMiddle.js";
+import { displayOses } from "../lib/platformAgnostic.js";
+import type { LandingCard } from "../model/landing.js";
+import OsGlyph from "./OsGlyph.astro";
+
+interface Props {
+  card: LandingCard;
+  base: string;
+  template?: boolean;
+}
+const { card, base, template = false } = Astro.props;
+const leaf = card.name.split("/").slice(2).join("/");
+// The hue key is the bare `<ns>/<pkg>`, whatever index the card came from.
+const bare = card.name.split("/").slice(1).join("/");
+const oses = displayOses(card.platforms);
+const copy = cardCopyData(card.name, card.latestVersion, DEFAULT_INSTALL_FLAVORS);
+---
+
+<a class="ocx-card pkg-card" data-slot="package-card" data-card data-key={card.name} data-copy={JSON.stringify(copy)} href={card.href}>
+  <LogoTile name={leaf} seed={bare} src={card.logoUrl === null ? undefined : joinBase(base, card.logoUrl)} size="lg" />
+  <div class="pkg-id">
+    <span class="pkg-title" data-field="title" title={card.title}>{card.title}</span>
+    {(template || card.latestVersion !== null) && <span class="pkg-version" data-field="version">{card.latestVersion}</span>}
+    {(template || card.status === "deprecated") && <Tag variant="stamp" tone="warning" data-field="deprecated" hidden={template}>deprecated</Tag>}
+    {(template || card.status === "yanked") && <Tag variant="stamp" tone="danger" data-field="yanked" hidden={template}>yanked</Tag>}
+    <div class="pkg-name" data-field="name" title={card.name}>{elideMiddle(card.name, CARD_NAME_BUDGET)}</div>
+  </div>
+  <p class="pkg-desc" data-field="description">{card.description}</p>
+  <div class="pkg-meta">
+    <span class="pkg-keywords" data-field="keywords">
+      {card.keywords.map((keyword) => <Tag as="button" tone="keyword" aria-pressed="false" data-slot="keyword" data-grid-chip data-keyword={keyword}>{keyword}</Tag>)}
+    </span>
+    <span class="pkg-glyphs" data-field="platforms">{oses.map((os) => <OsGlyph os={os} />)}</span>
+    <span class="pkg-tags" data-field="tags">{plural(card.tagCount, "tag")}</span>
+  </div>
+  {/* A copy shorthand inside the link: its click copies and never opens the detail page (grid.ts, D-001). */}
+  <button type="button" class="pkg-install" data-grid-install title="Click to copy install command · right-click for more">
+    <span class="install-cmd" data-field="install">{installCommand(DEFAULT_INSTALL_FLAVORS[0]!.command, card.name)}</span>
+    <Icon name="copy" size="sm" class="install-copy" />
+  </button>
+</a>
+
+<style>
+  @layer ocx {
+    .pkg-card {
+      /* The card is the grid item (its <li> is display: contents). Off-screen cards stay out of layout
+         and paint; `auto` remembers the real height once rendered. The first guess is the content box of a
+         card as it renders (head, two-line description, meta, install: 142px, 3.4 control heights); a larger
+         guess shrinks every card, and everything below it, when its first real layout lands. */
+      content-visibility: auto;
+      contain-intrinsic-size: auto calc(var(--ocx-control-3xl) * 3.4);
+      gap: var(--ocx-space-3);
+      min-inline-size: 0;
+    }
+    /* The head is the card's own grid: tile beside the identity, everything else a full row. Wrapper-free, a card is
+       three nodes lighter than head/row/group boxes would make it. */
+    .pkg-card {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      align-items: center;
+    }
+    .pkg-desc,
+    .pkg-meta,
+    .pkg-install {
+      grid-column: 1 / -1;
+    }
+    /* Title, then version or status stamp on one baseline (the title gives way first); the name is the second row. */
+    .pkg-id {
+      display: grid;
+      grid-template-columns: minmax(0, max-content) repeat(2, max-content) minmax(0, 1fr);
+      column-gap: var(--ocx-space-3);
+      row-gap: var(--ocx-space-1);
+      align-items: baseline;
+      justify-content: start;
+      min-inline-size: 0;
+    }
+    /* A status stamp sits at the row's end, so the title and version lead. */
+    .pkg-id :global(.ocx-ui-tag[data-variant="stamp"]) {
+      grid-column: -2;
+      justify-self: end;
+    }
+    /* The name takes the whole second row without sizing the columns above it: a long name widening the version's column
+       would push the version away from the title. It has no width of its own, and fills the row's. */
+    .pkg-name {
+      grid-column: 1 / -1;
+      inline-size: 0;
+      min-inline-size: 100%;
+    }
+    .pkg-title {
+      overflow: hidden;
+      font-size: var(--ocx-text-md);
+      font-weight: var(--ocx-font-weight-semibold);
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .pkg-version,
+    .pkg-name,
+    .pkg-tags {
+      font-family: var(--ocx-font-mono);
+      font-size: var(--ocx-text-xs);
+      color: var(--ocx-color-fg-muted);
+    }
+    .pkg-name {
+      overflow: hidden;
+      /* Backstop only: `elideMiddle` has already dropped the middle segments, so a still-too-long name is a two-segment one. */
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .pkg-desc {
+      /* Two lines, floored, so cards side by side stay one height. */
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+      line-clamp: 2;
+      overflow: hidden;
+      min-block-size: calc(2 * 1lh);
+      margin: 0;
+      font-size: var(--ocx-text-base);
+      color: var(--ocx-color-fg-muted);
+    }
+    .pkg-meta {
+      display: flex;
+      align-items: center;
+      gap: var(--ocx-space-3);
+      min-inline-size: 0;
+    }
+    .pkg-keywords {
+      /* One clipped line: a longer keyword list never makes this card taller than its neighbour. */
+      display: flex;
+      flex: 1;
+      flex-wrap: wrap;
+      gap: var(--ocx-space-2);
+      min-inline-size: 0;
+      /* Exactly one chip tall: a chip that does not fit whole wraps to a clipped second line, so none is ever cut
+         in half. The lazy session makes the clipped ones inert (no tab stop on an invisible chip). The chip is
+         24px tall, the WCAG 2.2 minimum target (Lighthouse target-size); the strip must stay in step with it. */
+      max-block-size: var(--ocx-space-6);
+      overflow: hidden;
+    }
+    .pkg-keywords :global([data-slot="keyword"]) {
+      min-block-size: var(--ocx-space-6);
+      cursor: pointer;
+      transition: background-color var(--ocx-duration-base), color var(--ocx-duration-base);
+    }
+    .pkg-keywords :global([data-slot="keyword"]:hover) {
+      color: var(--ocx-color-fg);
+    }
+    .pkg-keywords :global([data-slot="keyword"]:focus-visible) {
+      outline: var(--ocx-focus-ring);
+    }
+    .pkg-keywords :global([data-slot="keyword"][aria-pressed="true"]) {
+      color: var(--ocx-color-accent-fg);
+      background: var(--ocx-color-accent-tint);
+      box-shadow: inset 0 0 0 var(--ocx-border-width-emphasis) var(--ocx-color-accent);
+    }
+    .pkg-glyphs {
+      display: inline-flex;
+      gap: var(--ocx-space-3);
+      color: var(--ocx-color-fg-muted);
+    }
+    /* The one-line install command is a button: click copies it, the box answers hover and focus with the accent. */
+    .pkg-install {
+      display: flex;
+      align-items: center;
+      gap: var(--ocx-space-3);
+      inline-size: 100%;
+      padding: var(--ocx-space-2) var(--ocx-space-3);
+      font: inherit;
+      font-family: var(--ocx-font-mono);
+      font-size: var(--ocx-text-xs);
+      color: var(--ocx-color-fg);
+      text-align: start;
+      cursor: pointer;
+      background: var(--ocx-color-surface-subtle);
+      border: var(--ocx-border-width) solid var(--ocx-color-border);
+      border-radius: var(--ocx-radius-md);
+      transition: border-color var(--ocx-duration-base);
+    }
+    .pkg-install:hover,
+    .pkg-install:focus-visible {
+      border-color: var(--ocx-color-accent);
+    }
+    /* Pointing at the button is not pointing at the card: the card's hover border is not lifted (D-001). */
+    .pkg-card:has(.pkg-install:hover) {
+      border-color: var(--ocx-color-border);
+    }
+    /* The `$` prompt and the copied tick are characters, not elements: a card is four nodes lighter. */
+    .pkg-install::before {
+      content: "$";
+      flex-shrink: 0;
+      font-weight: var(--ocx-font-weight-semibold);
+      color: var(--ocx-color-accent);
+    }
+    .install-cmd {
+      flex: 1;
+      min-inline-size: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .pkg-install :global(.install-copy) {
+      flex-shrink: 0;
+      color: var(--ocx-color-fg-subtle);
+    }
+    .pkg-install[data-copied] {
+      border-color: var(--ocx-color-success);
+    }
+    .pkg-install[data-copied] .install-cmd {
+      color: var(--ocx-color-success);
+    }
+    .pkg-install[data-copied] :global(.install-copy) {
+      display: none;
+    }
+    .pkg-install[data-copied]::after {
+      content: "\2713";
+      flex-shrink: 0;
+      color: var(--ocx-color-success);
+    }
+  }
+</style>

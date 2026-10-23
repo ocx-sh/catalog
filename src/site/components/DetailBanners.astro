@@ -1,0 +1,147 @@
+---
+// The detail page's governance notices: the deprecated or yanked banner above the identity block
+// (D-063, D-066..D-069) and the upstream disclaimer below it (D-050, ND-9: shown whenever the wire root
+// carries one, never conditionally hidden). Every string is untrusted text: attributes and text only.
+// The two links go through `wireHref` / `joinBase` (C-042); an unsafe value is plain text.
+import Icon from "@ocx-sh/theme/components/ui/Icon.astro";
+import Link from "@ocx-sh/theme/components/ui/Link.astro";
+import { joinBase, wireHref } from "../../viewmodel/url.js";
+import type { DetailView } from "../model/detail.js";
+
+interface Props {
+  view: DetailView;
+  /** `banner`: the deprecated / yanked notice. `disclaimer`: the upstream note. */
+  part: "banner" | "disclaimer";
+}
+const { view, part } = Astro.props;
+const { upstream } = view;
+// Neutral containers, not landmarks: an unnamed `<aside>` is a complementary region inside `main`.
+---
+
+{
+  part === "banner" && view.status === "deprecated" && (
+    <div class="banner banner-deprecated" data-banner="deprecated">
+      <Icon name="warning" class="banner-icon" />
+      <span class="banner-text">
+        <strong>Deprecated</strong>
+        {view.supersededBy !== null && (
+          <span data-superseded-by>
+            {" "}
+            — superseded by{" "}
+            {view.supersededByHref === null ? (
+              <span>{view.supersededBy}</span>
+            ) : (
+              <a href={joinBase("/", view.supersededByHref)}>{view.supersededBy}</a>
+            )}
+            {"."}
+          </span>
+        )}{" "}
+        <span data-banner-message>
+          {view.deprecatedMessage ?? "Existing versions remain installable; no new releases will be mirrored."}
+        </span>
+      </span>
+    </div>
+  )
+}
+{
+  part === "banner" && view.status === "yanked" && (
+    <div class="banner banner-yanked" data-banner="yanked">
+      <Icon name="warning" class="banner-icon" />
+      <span class="banner-text">
+        <strong>Yanked</strong> — this package has been withdrawn by its maintainers. Existing installs may keep working, but
+        it should not be newly installed.
+      </span>
+    </div>
+  )
+}
+{
+  part === "disclaimer" && upstream !== null && upstream.disclaimer !== null && (
+    <div class="disclaimer" data-disclaimer>
+      <Icon name="info" class="disclaimer-icon" />
+      <span class="disclaimer-text">
+        {upstream.disclaimer}
+        {upstream.repository !== null && (
+          <>
+            {" "}
+            Upstream:{" "}
+            {upstream.href === null ? (
+              <span data-upstream-text>{upstream.repository}</span>
+            ) : (
+              <Link class="disclaimer-link" href={wireHref(upstream.href) ?? ""} newTab external>
+                {upstream.repository}
+              </Link>
+            )}
+          </>
+        )}
+      </span>
+    </div>
+  )
+}
+
+<style>
+  .banner {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--ocx-space-4);
+    padding: var(--ocx-space-4) var(--ocx-space-5);
+    background: var(--ocx-color-accent-tint);
+    border: var(--ocx-border-width) solid var(--ocx-color-accent-tint-border);
+    border-radius: var(--ocx-radius-lg);
+  }
+  /* The banner wears its status stamp's tone (deprecated warning, yanked danger), as on the cards. */
+  .banner-deprecated {
+    background: var(--ocx-color-warning-tint);
+    border-color: var(--ocx-color-warning);
+  }
+  .banner-yanked {
+    background: var(--ocx-color-danger-tint);
+    border-color: var(--ocx-color-danger);
+  }
+  .banner :global(.banner-icon) {
+    margin-block-start: var(--ocx-space-1);
+    color: var(--ocx-color-accent-hover);
+  }
+  .banner-deprecated :global(.banner-icon) {
+    color: var(--ocx-color-warning);
+  }
+  .banner-yanked :global(.banner-icon) {
+    color: var(--ocx-color-danger);
+  }
+  .banner-text {
+    font-size: var(--ocx-text-sm);
+    color: var(--ocx-color-fg);
+  }
+  /* In-sentence links sit next to body text of nearly the same colour: the underline is the non-colour cue. */
+  .banner-text a {
+    color: var(--ocx-color-accent-fg);
+    text-decoration: underline;
+  }
+  .banner-text a:hover {
+    color: var(--ocx-color-accent-hover);
+  }
+  .disclaimer {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--ocx-space-3);
+    padding-block: var(--ocx-space-1);
+    padding-inline-start: var(--ocx-space-4);
+    border-inline-start: var(--ocx-border-width-strong) solid var(--ocx-color-warning);
+  }
+  .disclaimer :global(.disclaimer-icon) {
+    margin-block-start: var(--ocx-space-1);
+    color: var(--ocx-color-warning);
+  }
+  .disclaimer-text {
+    font-size: var(--ocx-text-xs);
+    color: var(--ocx-color-fg-muted);
+  }
+  .disclaimer-text :global(a) {
+    color: var(--ocx-color-accent-fg);
+  }
+  .disclaimer-text :global(a:hover) {
+    color: var(--ocx-color-accent-hover);
+  }
+  .disclaimer-text :global(.disclaimer-link) {
+    overflow-wrap: anywhere;
+  }
+</style>

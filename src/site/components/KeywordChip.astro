@@ -1,0 +1,20 @@
+---
+// One keyword filter chip: the rail's server-rendered chips and the
+// `<template data-grid-chip>` the grid island clones are this one markup
+// (`client/grid.ts` documents the `data-field` contract). The island sets
+// `data-keyword`, `aria-pressed` and the keyword field on every chip it keeps or
+// makes; a server chip carries the same, so the first render adopts it as is. The popover's
+// chips also get `data-count`, which Toolbar.astro draws with `::before`: no node per count.
+// An active chip ends in a close glyph ("click to remove", D-015): Toolbar.astro draws it with `::after`.
+import Tag from "@ocx-sh/theme/components/ui/Tag.astro";
+
+interface Props {
+  /** Empty for the island's template. */
+  keyword?: string;
+}
+const { keyword = "" } = Astro.props;
+---
+
+<Tag as="button" variant="filter" aria-pressed="false" data-grid-chip data-keyword={keyword}>
+  <span data-field="keyword">{keyword}</span>
+</Tag>

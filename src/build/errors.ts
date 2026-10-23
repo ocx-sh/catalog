@@ -28,9 +28,23 @@ export type BuildErrorCode =
 export class BuildError extends Error {
   readonly code: BuildErrorCode;
 
-  constructor(code: BuildErrorCode, message: string) {
-    super(message);
+  constructor(code: BuildErrorCode, message: string, options?: ErrorOptions) {
+    super(message, options);
     this.name = "BuildError";
     this.code = code;
+  }
+}
+
+/**
+ * The Astro child failed after the sources resolved: it exited non-zero, was
+ * killed by a signal, or could not be spawned (`astro_runner.ts`). Unlike
+ * `BuildError` it carries no data/availability meaning, so the CLI does not
+ * map it to 65/69: `cli/build.ts` and `cli/dev.ts` catch it and exit `FAIL`
+ * (1) (C-046). The child's own diagnostics were already relayed to stderr.
+ */
+export class RenderError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "RenderError";
   }
 }

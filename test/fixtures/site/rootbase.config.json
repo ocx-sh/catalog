@@ -1,0 +1,18 @@
+{
+  "$schema": "../../../src/config/schema/catalog.config.schema.json",
+  "sources": [{ "path": "./index-a", "root": true }],
+  "brand": { "title": "Site Fixture Catalog", "wordmark": "fixture.ocx.test" },
+  "nav": [{ "text": "Source", "link": "https://github.com/ocx-sh/catalog" }],
+  "footer": { "links": [{ "text": "Index", "link": "https://index.ocx.sh" }] },
+  "docs": "./docs-fixture",
+  "docsNav": [
+    { "text": "Guide", "link": "/docs/guide/getting-started/" },
+    { "text": "CLI", "link": "/docs/reference/cli/" }
+  ],
+  "publicDir": "./public-fixture",
+  "favicon": "/favicon.svg",
+  "description": "A committed fixture site for the ocx-catalog build tests.",
+  "siteUrl": "https://fixture.ocx.test/catalog/",
+  "base": "/catalog/",
+  "chrome": "neutral"
+}

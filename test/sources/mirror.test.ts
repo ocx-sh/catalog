@@ -17,7 +17,7 @@
  * DELIBERATELY non-alphabetical `files` Map insertion order to prove the
  * output order comes from the sort, not from map/object iteration order.
  */
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -79,7 +79,7 @@ function betaSource(): ResolvedSourceFiles {
 describe("mirrorSources — byte-verbatim copy under dist/index/<label>/", () => {
   it("copies every source's files byte-verbatim, unconditionally, even for a root source", async () => {
     const distDir = await tempDistDir();
-    await mirrorSources([alphaSource(), betaSource()], distDir);
+    await mirrorSources([alphaSource(), betaSource()], distDir, "/");
 
     expect(bytesEqual(await readAt(distDir, "index/alpha/config.json"), ALPHA_CONFIG)).toBe(true);
     expect(bytesEqual(await readAt(distDir, "index/beta/config.json"), BETA_CONFIG)).toBe(true);
@@ -93,7 +93,7 @@ describe("mirrorSources — byte-verbatim copy under dist/index/<label>/", () =>
 
   it("root: true additionally copies the SAME files to dist root, on top of (not instead of) dist/index/<label>/", async () => {
     const distDir = await tempDistDir();
-    await mirrorSources([alphaSource(), betaSource()], distDir);
+    await mirrorSources([alphaSource(), betaSource()], distDir, "/");
 
     // Additional root copy.
     expect(bytesEqual(await readAt(distDir, "config.json"), BETA_CONFIG)).toBe(true);
@@ -114,7 +114,7 @@ describe("mirrorSources — byte-verbatim copy under dist/index/<label>/", () =>
     // (`/hawkeye.js` vs `/p/hawkeye/hawkeye.json`, observed 2026-08-27).
     // The alias is what the theme fetches; the canonical copy stays put.
     const distDir = await tempDistDir();
-    await mirrorSources([alphaSource(), betaSource()], distDir);
+    await mirrorSources([alphaSource(), betaSource()], distDir, "/");
 
     expect(
       bytesEqual(await readAt(distDir, "index/alpha/p/zzz/pkg/_root.json"), rootJsonBytes({ name: "ocx.sh/zzz/pkg" })),
@@ -144,6 +144,7 @@ describe("mirrorSources — byte-verbatim copy under dist/index/<label>/", () =>
         ]),
       ],
       distDir,
+      "/",
     );
 
     expect(bytesEqual(await readAt(distDir, "p/ns/pkg/_root.json"), rootJsonBytes({ name: "ocx.sh/ns/pkg" }))).toBe(true);
@@ -154,7 +155,7 @@ describe("mirrorSources — byte-verbatim copy under dist/index/<label>/", () =>
 
   it("no source is skipped — there is no serve flag; a non-root source still gets its full mirror copy", async () => {
     const distDir = await tempDistDir();
-    await mirrorSources([alphaSource()], distDir);
+    await mirrorSources([alphaSource()], distDir, "/");
 
     expect(bytesEqual(await readAt(distDir, "index/alpha/p/aaa/pkg.json"), rootJsonBytes({ name: "ocx.sh/aaa/pkg" }))).toBe(
       true,
@@ -165,7 +166,7 @@ describe("mirrorSources — byte-verbatim copy under dist/index/<label>/", () =>
 describe("mirrorSources — per-source catalog.json, sorted by qualified package id", () => {
   it("places a non-root source's catalog at /index/<label>/data/catalog/catalog.json, packages sorted lexicographically", async () => {
     const distDir = await tempDistDir();
-    await mirrorSources([alphaSource()], distDir);
+    await mirrorSources([alphaSource()], distDir, "/");
 
     const raw = await readAt(distDir, "index/alpha/data/catalog/catalog.json");
     const catalog = JSON.parse(new TextDecoder().decode(raw)) as { packages: { namespace: string; package: string }[] };
@@ -176,7 +177,7 @@ describe("mirrorSources — per-source catalog.json, sorted by qualified package
 
   it("places a root source's catalog at /data/catalog/catalog.json", async () => {
     const distDir = await tempDistDir();
-    await mirrorSources([betaSource()], distDir);
+    await mirrorSources([betaSource()], distDir, "/");
 
     const raw = await readAt(distDir, "data/catalog/catalog.json");
     const catalog = JSON.parse(new TextDecoder().decode(raw)) as { packages: unknown[] };
@@ -207,6 +208,7 @@ describe("mirrorSources — per-source catalog.json, sorted by qualified package
         ]),
       ],
       distDir,
+      "/",
     );
 
     const raw = await readAt(distDir, "index/alpha/data/catalog/catalog.json");
@@ -219,7 +221,7 @@ describe("mirrorSources — per-source catalog.json, sorted by qualified package
 
   it("never writes catalog.json into the source's own mirrored tree (it is a derived artifact, not part of files)", async () => {
     const distDir = await tempDistDir();
-    await mirrorSources([alphaSource()], distDir);
+    await mirrorSources([alphaSource()], distDir, "/");
 
     await expect(readAt(distDir, "index/alpha/catalog.json")).rejects.toMatchObject({ code: "ENOENT" });
   });
@@ -228,7 +230,7 @@ describe("mirrorSources — per-source catalog.json, sorted by qualified package
 describe("mirrorSources — return value", () => {
   it("MirrorResult.written lists the paths this run wrote", async () => {
     const distDir = await tempDistDir();
-    const result = await mirrorSources([alphaSource()], distDir);
+    const result = await mirrorSources([alphaSource()], distDir, "/");
 
     expect(result.written).toContain("index/alpha/config.json");
     expect(result.written).toContain("index/alpha/p/aaa/pkg.json");
@@ -238,7 +240,7 @@ describe("mirrorSources — return value", () => {
 
 describe("renderHeaders", () => {
   it("emits the leading /p/* sandbox block only when a root: true source is present, before every /index/<label>/p/* block", () => {
-    const headers = renderHeaders([alphaSource(), betaSource()]);
+    const headers = renderHeaders([alphaSource(), betaSource()], "/");
     const rootBlock = "/p/*\n  Content-Security-Policy: sandbox\n  X-Content-Type-Options: nosniff";
     const alphaBlock =
       "/index/alpha/p/*\n  Content-Security-Policy: sandbox\n  X-Content-Type-Options: nosniff";
@@ -252,7 +254,7 @@ describe("renderHeaders", () => {
   });
 
   it("omits the /p/* block entirely when no source sets root: true", () => {
-    const headers = renderHeaders([alphaSource()]);
+    const headers = renderHeaders([alphaSource()], "/");
     const lines = headers.split("\n");
 
     expect(lines).not.toContain("/p/*");
@@ -260,7 +262,7 @@ describe("renderHeaders", () => {
   });
 
   it("emits exactly one block per distinct label — none for a label with no source", () => {
-    const headers = renderHeaders([alphaSource()]);
+    const headers = renderHeaders([alphaSource()], "/");
     const sandboxLineCount = headers.split("\n").filter((line) => line.trim() === "Content-Security-Policy: sandbox")
       .length;
 
@@ -281,7 +283,7 @@ describe("mirrorSources — writeDistFile containment backstop (BLOCK A belt-and
     const escapePath = "../".repeat(20) + "tmp/canary";
     const malicious = source("evil", false, [["config.json", utf8("{}")], [escapePath, utf8("pwned")]]);
 
-    await expect(mirrorSources([malicious], distDir)).rejects.toThrow(/outside dist dir/);
+    await expect(mirrorSources([malicious], distDir, "/")).rejects.toThrow(/outside dist dir/);
 
     // The canary must never land anywhere on disk — in particular not at the
     // exact traversal target the PoC used (20 "../" from a deep tmp dir
@@ -310,7 +312,7 @@ describe("mirrorSources — oversized CAS asset is skipped and warned (C-405)", 
     const distDir = await tempDistDir();
     const warn = vi.fn();
 
-    const result = await mirrorSources([sourceWithOversizedLogo()], distDir, warn);
+    const result = await mirrorSources([sourceWithOversizedLogo()], distDir, "/", warn);
 
     await expect(readAt(distDir, `index/alpha/p/ns/pkg/o/sha256/${HEX}.svg`)).rejects.toMatchObject({ code: "ENOENT" });
     expect(result.written).not.toContain(`index/alpha/p/ns/pkg/o/sha256/${HEX}.svg`);
@@ -328,7 +330,7 @@ describe("mirrorSources — oversized CAS asset is skipped and warned (C-405)", 
     const stderr = vi.spyOn(process.stderr, "write").mockReturnValue(true);
     let emitted: string;
     try {
-      await mirrorSources([sourceWithOversizedLogo()], distDir);
+      await mirrorSources([sourceWithOversizedLogo()], distDir, "/");
       // Capture BEFORE mockRestore — it clears mock.calls.
       emitted = stderr.mock.calls.map((call) => String(call[0])).join("");
     } finally {
@@ -369,3 +371,66 @@ describe("compareQualifiedIds", () => {
 // covered at its documented layer: labels.ts's checkLabelConflicts
 // (test/sources/labels.test.ts) — flagged as a design-record note, not
 // invented.
+
+// C-027: the mirror never writes a path twice and never overwrites what the
+// output already holds, except the root catalog.json the merged catalog
+// replaces straight afterwards.
+describe("mirrorSources write-once (C-027)", () => {
+  it("refuses a path two sources both claim", async () => {
+    const distDir = await tempDistDir();
+    // Label "a" mirrors config.json to index/a/config.json; the root source's
+    // own wire path "index/a/config.json" is the same destination.
+    const claimant = source("a", false, [["config.json", ALPHA_CONFIG]]);
+    const squatter = source("root", true, [["index/a/config.json" as WirePath, BETA_CONFIG]]);
+    await expect(mirrorSources([claimant, squatter], distDir, "/")).rejects.toThrow(
+      'refusing to write "index/a/config.json" twice',
+    );
+  });
+
+  it("refuses to overwrite a file the output already holds", async () => {
+    const distDir = await tempDistDir();
+    await writeFile(join(distDir, "_headers"), "/x\n  X-Mine: 1\n", "utf8");
+    await expect(mirrorSources([alphaSource()], distDir, "/")).rejects.toThrow(
+      'refusing to overwrite "_headers": the output already contains it',
+    );
+    expect(await readFile(join(distDir, "_headers"), "utf8")).toBe("/x\n  X-Mine: 1\n");
+  });
+
+  it("refuses to overwrite a directory the output already holds", async () => {
+    const distDir = await tempDistDir();
+    await mkdir(join(distDir, "index", "alpha", "config.json"), { recursive: true });
+    await expect(mirrorSources([source("alpha", false, [["config.json", ALPHA_CONFIG]])], distDir, "/")).rejects.toThrow(
+      'refusing to overwrite "index/alpha/config.json"',
+    );
+  });
+
+  it("may overwrite the root catalog.json, which the merged catalog replaces", async () => {
+    const distDir = await tempDistDir();
+    await mkdir(join(distDir, "data", "catalog"), { recursive: true });
+    await writeFile(join(distDir, "data", "catalog", "catalog.json"), "consumer file", "utf8");
+    await mirrorSources([source("root", true, [["config.json", ALPHA_CONFIG]])], distDir, "/");
+    expect(await readFile(join(distDir, "data", "catalog", "catalog.json"), "utf8")).not.toBe("consumer file");
+  });
+
+  it("surfaces a non-ENOENT stat failure instead of treating the path as free", async () => {
+    const distDir = await tempDistDir();
+    // A regular file where a directory is needed: lstat on a path beneath it fails with ENOTDIR.
+    await writeFile(join(distDir, "index"), "not a directory", "utf8");
+    await expect(mirrorSources([source("alpha", false, [["config.json", ALPHA_CONFIG]])], distDir, "/")).rejects.toThrow(
+      /ENOTDIR/,
+    );
+  });
+
+  it("writes the same tree for every base; only _headers differs", async () => {
+    const rootDir = await tempDistDir();
+    const baseDir = await tempDistDir();
+    const sources = [alphaSource(), betaSource()];
+    const atRoot = await mirrorSources(sources, rootDir, "/");
+    const atBase = await mirrorSources(sources, baseDir, "/catalog/");
+    expect([...atBase.written].sort()).toEqual([...atRoot.written].sort());
+    for (const relPath of atRoot.written.filter((path) => path !== "_headers")) {
+      expect(bytesEqual(await readAt(baseDir, relPath), await readAt(rootDir, relPath)), relPath).toBe(true);
+    }
+    expect(await readFile(join(baseDir, "_headers"), "utf8")).toContain("/catalog/p/*");
+  });
+});

@@ -1,0 +1,193 @@
+---
+// The detail page's identity block: logo tile, title, qualified name (copyable), the `latest <version>`
+// chip, the DEPRECATED / YANKED stamp, the description and the keyword chips (D-070, D-075, D-077,
+// D-079, D-080). The qualified name is a button: a click copies it (D-074) and the theme's `CopyMenu`
+// opens on it with the identifier, link and install commands (D-073); `client/detail.ts` copies and
+// writes the menu's texts. The tile is the theme's `LogoTile`, the same one the cards use: the monogram paints
+// with the markup and a logo that fails to load leaves it standing. The logo is an `<img>` with
+// intrinsic size, never inlined wire SVG (C-015).
+import CopyMenu from "@ocx-sh/theme/components/CopyMenu.astro";
+import Icon from "@ocx-sh/theme/components/ui/Icon.astro";
+import LogoTile from "@ocx-sh/theme/components/ui/LogoTile.astro";
+import Tag from "@ocx-sh/theme/components/ui/Tag.astro";
+import site from "virtual:ocx-catalog/site";
+import { joinBase } from "../../viewmodel/url.js";
+import { cardCopyItems } from "../lib/cardCopy.js";
+import { DEFAULT_INSTALL_FLAVORS } from "../lib/installFlavors.js";
+import type { DetailView } from "../model/detail.js";
+
+interface Props {
+  view: DetailView;
+}
+const { view } = Astro.props;
+const { base } = site;
+// Initials come from the leaf of the package path, like the title fallback: `a/b` is `B`, not `AB`.
+const leaf = view.package.slice(view.package.lastIndexOf("/") + 1);
+---
+
+<header class="identity" data-identity>
+  <LogoTile name={leaf} seed={`${view.namespace}/${view.package}`} src={view.logoUrl === null ? undefined : joinBase("/", view.logoUrl)} size="xl" />
+  <div class="identity-text">
+    <div class="identity-title-row">
+      <h1>{view.title}</h1>
+      <CopyMenu context label="Package actions" items={cardCopyItems(DEFAULT_INSTALL_FLAVORS)}>
+        <button
+          type="button"
+          class="identity-name"
+          data-name-copy
+          title="Click to copy package name · right-click for more"
+        >
+          <code>{view.name}</code>
+          <Icon name="copy" size="sm" class="copy-icon" />
+          <Icon name="check" size="sm" class="check-icon" />
+        </button>
+      </CopyMenu>
+      {view.latestVersion !== null && <span class="identity-latest" data-latest>latest {view.latestVersion}</span>}
+      {
+        view.status === "deprecated" && (
+          <Tag variant="stamp" tone="warning" data-status-stamp="deprecated">
+            Deprecated
+          </Tag>
+        )
+      }
+      {
+        view.status === "yanked" && (
+          <Tag variant="stamp" tone="danger" data-status-stamp="yanked">
+            Yanked
+          </Tag>
+        )
+      }
+    </div>
+    {view.description !== "" && <p class="identity-description">{view.description}</p>}
+    {
+      view.keywords.length > 0 && (
+        <div class="identity-keywords">
+          {view.keywords.map((keyword) => (
+            <a
+              class="identity-keyword"
+              data-keyword
+              href={joinBase(base, `/?q=${encodeURIComponent(keyword)}`)}
+              title={`search packages: ${keyword}`}
+            >
+              {keyword}
+            </a>
+          ))}
+        </div>
+      )
+    }
+  </div>
+</header>
+
+<style is:global>
+  @layer ocx {
+    /* A logo that failed keeps its box, invisible over the monogram: `display: none` would remove it from layout
+       and everything after it would move (D-037). */
+    [data-identity] .ocx-logo-tile[data-state="fallback"] .ocx-logo-tile__image[hidden] {
+      display: block;
+      visibility: hidden;
+    }
+  }
+</style>
+
+<style>
+  .identity {
+    display: flex;
+    gap: var(--ocx-space-5);
+    align-items: flex-start;
+  }
+  .identity-text {
+    display: grid;
+    gap: var(--ocx-space-2);
+    min-inline-size: 0;
+  }
+  .identity-title-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--ocx-space-4);
+  }
+  .identity-text h1 {
+    margin: 0;
+    font-size: var(--ocx-text-2xl);
+    line-height: var(--ocx-lh-heading);
+    color: var(--ocx-color-fg);
+  }
+  .identity-name {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--ocx-space-3);
+    padding: var(--ocx-space-1) var(--ocx-space-3);
+    font-family: var(--ocx-font-mono);
+    font-size: var(--ocx-text-sm);
+    color: var(--ocx-color-fg-muted);
+    background: transparent;
+    border: var(--ocx-border-width) solid transparent;
+    border-radius: var(--ocx-radius-sm);
+    cursor: pointer;
+  }
+  .identity-name:hover,
+  .identity-name:focus-visible {
+    color: var(--ocx-color-accent-fg);
+    border-color: var(--ocx-color-accent);
+  }
+  .identity-name :global(.check-icon) {
+    display: none;
+  }
+  /* Copied: the copy icon gives way to a check for the guard window (`client/detail.ts`). */
+  .identity-name[data-copied] {
+    color: var(--ocx-color-success);
+    border-color: var(--ocx-color-success);
+  }
+  .identity-name[data-copied] :global(.copy-icon) {
+    display: none;
+  }
+  .identity-name[data-copied] :global(.check-icon) {
+    display: inline-block;
+  }
+  .identity-latest {
+    font-family: var(--ocx-font-mono);
+    font-size: var(--ocx-text-sm);
+    color: var(--ocx-color-success);
+  }
+  .identity-description {
+    margin: 0;
+    max-inline-size: var(--ocx-prose-width);
+    font-size: var(--ocx-text-md);
+    color: var(--ocx-color-fg-muted);
+  }
+  .identity-keywords {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--ocx-space-3);
+  }
+  .identity-keyword {
+    /* A link target of at least 24px (WCAG 2.5.8, axe `target-size`). */
+    display: inline-flex;
+    align-items: center;
+    min-block-size: var(--ocx-space-6);
+    padding: 0 var(--ocx-space-3);
+    font-family: var(--ocx-font-mono);
+    font-size: var(--ocx-text-2xs);
+    color: var(--ocx-color-keyword);
+    background: var(--ocx-color-keyword-tint);
+    /* A transparent border keeps the hover border from shifting the layout. */
+    border: var(--ocx-border-width) solid transparent;
+    transition: border-color var(--ocx-duration-base);
+  }
+  .identity-keyword:hover,
+  .identity-keyword:focus-visible {
+    border-color: var(--ocx-color-keyword);
+  }
+  @media (max-width: 40em) {
+    .identity {
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+    .identity-title-row,
+    .identity-keywords {
+      justify-content: center;
+    }
+  }
+</style>

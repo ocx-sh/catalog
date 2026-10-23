@@ -62,6 +62,27 @@ describe("ownerUrl", () => {
     });
   });
 
+  it.each(["http:example.com/{login}", "https:example.com/{login}", " https://example.com/{login}"])(
+    "D-160 rejects %s: the URL parser takes it, but safeHref would render every owner as plain text",
+    async (ownerUrl) => {
+      await withTempDir(async (dir) => {
+        const error = await loadConfigError(await writeConfig(dir, { ...MINIMAL_VALID, ownerUrl }));
+        expect(error.code).toBe("INVALID_TYPE");
+        expect(error.message).toContain('"ownerUrl"');
+      });
+    },
+  );
+
+  it("D-160 rejects the same spelling on a source's ownerUrl, naming it", async () => {
+    await withTempDir(async (dir) => {
+      const error = await loadConfigError(
+        await writeConfig(dir, { sources: [{ path: "a", ownerUrl: "http:example.com/{login}" }], brand: { title: "x" } }),
+      );
+      expect(error.code).toBe("INVALID_TYPE");
+      expect(error.message).toContain('"sources[0].ownerUrl"');
+    });
+  });
+
   it.each([
     ["relative", "/people/{login}"],
     ["not a URL at all", "not a url {login}"],

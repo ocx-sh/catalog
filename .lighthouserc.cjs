@@ -1,54 +1,51 @@
 /**
- * Lighthouse CI config for `task quality:web` (WP2, C-201/C-203). Consumed
- * OUT-OF-PROCESS by the `@lhci/cli` binary — never imported into the vitest
- * process (hence its `vitest.config.ts` coverage exclusion). `task
- * quality:web` builds the committed fixture index at
- * `test/fixtures/quality-index/` into `.lhci-site/`, and lhci audits every
- * emitted page against the category thresholds below.
+ * Lighthouse CI config for `task quality:web` (C-017). Consumed OUT-OF-PROCESS
+ * by the `@lhci/cli` binary — never imported into the vitest process (hence its
+ * `vitest.config.ts` coverage exclusion). `task quality:web` builds the
+ * committed fixture index at `test/fixtures/quality-index/` into `.lhci-site/`,
+ * and lhci audits every emitted page (the landing page, the 404 and one detail
+ * page per fixture package) on the default mobile preset.
  *
- * ## Thresholds: measured, then ratcheted (C-203, unchecked-green discipline)
+ * ## Floors: the theme's bar, then a margin only where a timing needs one
  *
- * A gate whose red state was never observed is not a gate. These numbers are
- * the MEASURED category medians of the fixture site (3 runs/page, all 8 pages
- * — index, 404, and one detail page per fixture package), then dropped by a
- * >=0.03 margin so ordinary run-to-run variance never reds the build while a
- * real regression still does. Re-measure and re-ratchet when the theme or the
- * fixture changes; never raise a threshold above a level the site actually
- * clears.
+ * The target is 100 in all four categories on every content-class page, which
+ * is what `@ocx-sh/theme`'s own gate holds (`ocx-theme-quality`). Measured on
+ * the Astro output (Chrome 155, 3 runs/page, all 9 pages), the median of every
+ * page is:
  *
- *   category         min median across pages   threshold (floor - margin)
- *   accessibility    1.00  (every page)         0.97   error
- *   best-practices   0.96  (404, contrib/mono)  0.93   error
- *   seo              1.00  (every page)         0.97   error
- *   performance      0.88  (acme/husk)          0.85   warn
+ *   category         measured median       floor
+ *   accessibility    100 (every page)      1.00   error
+ *   best-practices   100 (every page)      1.00   error
+ *   seo              100 (every page)      1.00   error
+ *   performance      99-100                0.96   error
  *
- * The medians above are the ones the headless Chrome that `task quality:web`
- * selects actually produces (see that task and
- * `scripts/lhci-posix-tmpdir.cjs`); a different browser build shifts them, so
- * re-measure rather than carrying numbers across setups.
+ * The three deterministic categories hold the literal maximum: they are
+ * counts of failing audits, not timings, so a margin would only hide a
+ * regression. Performance is a timing aggregate, so it keeps a 0.03 margin
+ * below the measured floor for run-to-run variance. The theme's Dialog
+ * start-up fix has landed (ocx-website 73d3fa9; no palette dialog machine
+ * loads before input any more), and the latest run scores 1.00 on 26 of 27
+ * runs, one run on `/contrib/mono/` at 0.99 (see the measurement report): the
+ * floor stays at 0.96 until a CI runner has produced a few more runs.
  *
- * The a11y assertion's RED state was proven by a deliberate regression (a
- * no-alt `<img>`, an empty `<button>`, and an unlabeled `<input>` added to the
- * landing page dropped index.html a11y from 0.92 to 0.77 — median over 3 runs
- * — failing the 0.84 error gate with exit code 1), then reverted to confirm
- * green. See the WP2 completion report for the transcript.
+ * Re-measure when the theme or the fixture changes; never lower a floor to
+ * make a regression pass. The medians come from the headless Chrome that
+ * `task quality:web` selects (see that task and
+ * `scripts/lhci-posix-tmpdir.cjs`); a different browser build shifts them.
+ *
+ * Every floor was shown red once, by planting its regression into a copy of the
+ * built site: an image without `alt` and an unlabelled button (accessibility),
+ * an inline script the CSP refuses, which logs a console error
+ * (best-practices), a removed `<title>` and `meta description` (seo), and a
+ * blocking 400 KB script (performance). See the G.3 report for the transcripts.
  *
  * ## Why category assertions and NOT `preset: 'lighthouse:no-pwa'`
  *
- * C-201 named that preset, but it asserts individual audits at `error`
- * (`color-contrast`, `link-name`, `link-in-text-block`, `font-size`,
- * `unused-css-rules`, `unused-javascript`, ...). WP2's shipped theme failed
- * several of those (the header brand link had no accessible name; a handful
- * of design tokens missed WCAG contrast) — WP6 (2026-08-22) closed every
- * `color-contrast`/`link-name`/`link-in-text-block` failure the fixture site
- * produced (accessibility now medians 1.00 on all 8 pages; see
- * `src/theme/styles/tokens/palette.css`'s own docblock for the token-level
- * fix). `unused-css-rules`/`unused-javascript` remain real (VitePress ships
- * more JS/CSS than the landing page uses) and still out of scope. Category
- * assertions are kept rather than switching to the preset regardless: they
- * hold the line against any FUTURE regression in whichever audits make up a
- * category, without re-opening the "author names every audit by hand"
- * maintenance burden the preset carries.
+ * That preset asserts individual audits at `error` (`unused-css-rules`,
+ * `unused-javascript`, ...), which the theme's chrome fails on any page by
+ * construction. Category assertions hold the line against a future regression
+ * in whichever audits make up a category without re-opening the "author names
+ * every audit by hand" maintenance burden the preset carries.
  */
 module.exports = {
   ci: {
@@ -69,10 +66,10 @@ module.exports = {
     },
     assert: {
       assertions: {
-        'categories:accessibility': ['error', { minScore: 0.97 }],
-        'categories:best-practices': ['error', { minScore: 0.93 }],
-        'categories:seo': ['error', { minScore: 0.97 }],
-        'categories:performance': ['warn', { minScore: 0.85 }],
+        'categories:accessibility': ['error', { minScore: 1 }],
+        'categories:best-practices': ['error', { minScore: 1 }],
+        'categories:seo': ['error', { minScore: 1 }],
+        'categories:performance': ['error', { minScore: 0.96 }],
       },
     },
     upload: { target: 'filesystem', outputDir: '.lighthouseci' },

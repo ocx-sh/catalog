@@ -13,8 +13,9 @@
  *  2. CAS blob extension discovery for `desc.readme`/`desc.logo` is settled
  *     too, with NO new registry-side discovery mechanism: `readme` is
  *     always `.md` (schema-pinned); `logo` tries `.svg` then `.png`, in
- *     that order (mirroring `src/theme/utils/cas.ts`'s
- *     `LOGO_EXT_CANDIDATES`) — both absent degrades to "no asset" plus a
+ *     that order (the walker's `LOGO_EXT_CANDIDATES`; the view model reads
+ *     the extension that exists from `contentByDigest`) — both absent
+ *     degrades to "no asset" plus a
  *     warning, never a build failure. See the
  *     `readUrlSource — optional desc assets` describe block.
  */

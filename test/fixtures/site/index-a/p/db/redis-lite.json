@@ -1,0 +1,57 @@
+{
+  "name": "index-a/db/redis-lite",
+  "repository": "oci://ghcr.io/ocx-contrib/db/redis-lite",
+  "owners": [
+    {
+      "login": "ocx-bot",
+      "github": "ocx-bot",
+      "id": 309019509,
+      "github_id": 309019509
+    }
+  ],
+  "status": "active",
+  "deprecated_message": null,
+  "created": "2026-01-16",
+  "upstream": {
+    "org": "db",
+    "repository_url": "https://github.com/db/redis-lite",
+    "disclaimer": "Unaffiliated mirror of the upstream db/redis-lite project."
+  },
+  "desc": {
+    "digest": "sha256:41233da666a744733885fac197d080d9594fe231342d4c24acafccecb78cb112",
+    "title": "redis-lite",
+    "description": "An in-memory data store command-line client.",
+    "keywords": [
+      "redis",
+      "cache",
+      "cli"
+    ],
+    "readme": "sha256:bd2a1c655cb87adbc5f3c19f927ec33a45c343e1eb7c648cc7b2ec87edcd71ae"
+  },
+  "tags": {
+    "1": {
+      "content": "sha256:c935c9bbd52a946a224bb33fea8a80d1f6f950cc30c1c2a45bd78e1a837dc2ac",
+      "observed": "2026-01-16T09:00:00Z"
+    },
+    "1.0.0": {
+      "content": "sha256:40ec29c8fea31e8a2fd2fe0f12ebcb8144b4311b87181ce669953098e16ea003",
+      "observed": "2026-01-16T09:00:00Z"
+    },
+    "1.1.0": {
+      "content": "sha256:ac74672671d06009e134e0fbb71d8649f01b2e5ffe845ef1ac2825c6dcbcc644",
+      "observed": "2026-01-16T09:00:00Z"
+    },
+    "1.2.0": {
+      "content": "sha256:c935c9bbd52a946a224bb33fea8a80d1f6f950cc30c1c2a45bd78e1a837dc2ac",
+      "observed": "2026-01-16T09:00:00Z"
+    },
+    "1.2": {
+      "content": "sha256:c935c9bbd52a946a224bb33fea8a80d1f6f950cc30c1c2a45bd78e1a837dc2ac",
+      "observed": "2026-01-16T09:00:00Z"
+    },
+    "latest": {
+      "content": "sha256:c935c9bbd52a946a224bb33fea8a80d1f6f950cc30c1c2a45bd78e1a837dc2ac",
+      "observed": "2026-01-16T09:00:00Z"
+    }
+  }
+}

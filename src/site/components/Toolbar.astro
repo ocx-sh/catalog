@@ -1,0 +1,320 @@
+---
+// The catalog toolbar in its final server state (C-010): scope control, search,
+// platform / status chips, the keyword rail, count, sort, view. The island
+// (`client/grid.ts`) listens to the theme's documented events and to the
+// `data-grid-*` hooks below; it owns no widget logic of its own. The rail is
+// rendered here for the opening scope (the landing model picks its chips with
+// the island's own function, D-012); the island takes it over from
+// `template[data-grid-chip]` on the first render.
+import { plural } from "../lib/plural.js";
+import Icon from "@ocx-sh/theme/components/ui/Icon.astro";
+import Kbd from "@ocx-sh/theme/components/ui/Kbd.astro";
+import Popover from "@ocx-sh/theme/components/ui/Popover.astro";
+import SearchField from "@ocx-sh/theme/components/ui/SearchField.astro";
+import Select from "@ocx-sh/theme/components/ui/Select.astro";
+import Tag from "@ocx-sh/theme/components/ui/Tag.astro";
+import ToggleButton from "@ocx-sh/theme/components/ui/ToggleButton.astro";
+import ToggleGroup from "@ocx-sh/theme/components/ToggleGroup.astro";
+import type { KeywordChip as RailChip } from "../lib/keywordRail.js";
+import { OS_ORDER } from "../lib/platformAgnostic.js";
+import { ALL_SCOPE_VALUE, SCOPE_INLINE_MAX, SORT_LABELS, VIEW_LABELS } from "../lib/gridContract.js";
+import type { ScopeTab } from "../model/landing.js";
+import KeywordChip from "./KeywordChip.astro";
+
+interface Props {
+  scopes: readonly ScopeTab[];
+  total: number;
+  rail: readonly RailChip[];
+  moreCount: number;
+}
+const { scopes, total, rail, moreCount } = Astro.props;
+const scopeLabel = (tab: ScopeTab) => `${tab.index ?? "all"}${tab.default ? " · default" : ""}`;
+const scopeValue = (tab: ScopeTab) => tab.index ?? ALL_SCOPE_VALUE;
+// "all" and the first SCOPE_INLINE_MAX indexes are tabs; the rest sit behind "+N" (D-034).
+const inlineTabs = scopes.slice(0, SCOPE_INLINE_MAX + 1);
+const overflowTabs = scopes.slice(SCOPE_INLINE_MAX + 1);
+const activeInline = inlineTabs.find((tab) => tab.active);
+---
+
+<div class="toolbar" data-slot="toolbar">
+  {
+    scopes.length > 0 && (
+      <div class="scope" data-grid-scope>
+        <ToggleGroup
+          label="Index"
+          value={activeInline ? scopeValue(activeInline) : []}
+          items={inlineTabs.map((tab) => ({ value: scopeValue(tab), label: `${scopeLabel(tab)} (${tab.count})` }))}
+        />
+        {overflowTabs.length > 0 && (
+          <div class="scope-more" data-grid-scope-more>
+            <Popover>
+              <Fragment slot="trigger">+{overflowTabs.length}</Fragment>
+              <div class="chip-group more-list" role="group" aria-label="More indexes">
+                {overflowTabs.map((tab) => (
+                  <Tag as="button" variant="filter" aria-pressed={String(tab.active)} data-grid-scope-option={scopeValue(tab)}>
+                    {scopeLabel(tab)}
+                    <span class="dim">{tab.count}</span>
+                  </Tag>
+                ))}
+              </div>
+            </Popover>
+          </div>
+        )}
+      </div>
+    )
+  }
+  <div class="toolbar-search">
+    <SearchField label="Search packages" clearLabel="Clear search" placeholder="search packages — name, keyword, description…" data-grid-search />
+    {/* The "/" shortcut's hint sits in the slot the clear button takes once there is a query (D-019). */}
+    <span class="search-hint" aria-hidden="true"><Kbd>/</Kbd></span>
+  </div>
+  <div class="chips">
+    <div class="chip-group" role="group" aria-label="Filter by platform">
+      {
+        OS_ORDER.map((os) => (
+          <Tag as="button" variant="filter" aria-pressed="false" data-grid-platform={os}>
+            <Icon name={os === "darwin" ? "apple" : os === "windows" ? "windows" : "linux"} size="sm" />
+            {os}
+          </Tag>
+        ))
+      }
+    </div>
+    <span class="chip-divider" aria-hidden="true"></span>
+    <div class="chip-group chip-rail" role="group" aria-label="Filter by keyword" data-grid-keywords>
+      {rail.map((chip) => <KeywordChip keyword={chip.keyword} />)}
+    </div>
+    <div data-grid-more hidden={moreCount === 0}>
+      <Popover size="s">
+        <Fragment slot="trigger">+<span data-grid-more-count>{moreCount}</span> more</Fragment>
+        <SearchField label="Filter keywords" placeholder="filter keywords…" data-grid-more-filter />
+        <div class="chip-group more-list" role="group" aria-label="All keywords" data-grid-more-list></div>
+        <p class="more-empty" role="status" data-grid-more-empty hidden>no keyword matches</p>
+      </Popover>
+    </div>
+    <div class="chip-group" role="group" aria-label="Filter by status">
+      <Tag as="button" variant="filter" tone="warning" aria-pressed="false" data-grid-status="deprecated">
+        deprecated
+      </Tag>
+      <Tag as="button" variant="filter" tone="danger" aria-pressed="false" data-grid-status="yanked">
+        yanked
+      </Tag>
+    </div>
+  </div>
+  <div class="meta">
+    <p class="count" role="status" aria-atomic="true" data-grid-count>{plural(total, "package")}</p>
+    <button type="button" class="clear-link" data-grid-clear hidden>clear filters</button>
+    <div class="meta-controls">
+      <div data-grid-sort>
+        <Select
+          label="Sort by"
+          hideLabel
+          size="s"
+          value="name"
+          options={Object.entries(SORT_LABELS).map(([value, label]) => ({ value, label }))}
+        />
+      </div>
+      <ToggleButton iconOnly size="s" aria-label="Invert sort order" title="invert order" class="sort-dir" data-grid-invert>
+        <Icon name="sort-asc" />
+      </ToggleButton>
+      <div data-grid-view>
+        <ToggleGroup
+          label="Catalog view"
+          size="s"
+          value="cards"
+          items={Object.entries(VIEW_LABELS).map(([value, { label, icon }]) => ({ value, label, icon, iconOnly: true }))}
+        />
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  @layer ocx {
+    .toolbar {
+      display: flex;
+      flex-direction: column;
+      gap: var(--ocx-space-4);
+    }
+    /* Many indexes scroll inside the bar rather than widening the toolbar (D-006). The group is a
+       nowrap inline-flex; the scroller holds it and the "+N" button, and its height never moves. */
+    .scope {
+      display: flex;
+      align-items: center;
+      gap: var(--ocx-space-2);
+      max-inline-size: 100%;
+      overflow-x: auto;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+    .scope::-webkit-scrollbar {
+      display: none;
+    }
+    .scope :global(.ocx-toggle-group) {
+      flex-shrink: 0;
+    }
+    .scope-more {
+      flex-shrink: 0;
+    }
+    .toolbar-search {
+      position: relative;
+    }
+    /* Over the clear button's slot: it is invisible while the field is empty, and this is hidden once it is not. */
+    .search-hint {
+      position: absolute;
+      inset-block-start: 50%;
+      inset-inline-end: var(--ocx-space-4);
+      pointer-events: none;
+      transform: translateY(-50%);
+    }
+    .toolbar :global(.toolbar-search:has(.ocx-ui-input-group__input:not(:placeholder-shown)) .search-hint) {
+      display: none;
+    }
+    /* The padding hosts the focus rings (2px ring + 2px offset = space-2) that the chip row's own scroll
+       clipping would cut at every edge; the negative margin gives the room back (D-008). */
+    .chips {
+      display: flex;
+      flex-wrap: nowrap;
+      align-items: center;
+      gap: var(--ocx-space-3);
+      padding: var(--ocx-space-2);
+      margin: calc(-1 * var(--ocx-space-2));
+      /* Backstop for a width where the platform and status groups alone overflow (D-003). */
+      overflow-x: auto;
+      /* Reserve the chip row at the toolbar control height (every member shares it): the "+N more" button and the keyword rail fill in later and must not move the grid. */
+      min-block-size: var(--ocx-control-lg);
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+      container-type: inline-size;
+    }
+    /* Below this width the rail has no room for a whole chip: it would show an 8px sliver of one (a target
+       Lighthouse's target-size rejects, and a tab stop on nothing). Hidden, not removed: the island's fit
+       measurement still sees the same layout, and "+N more" still lists what the rail cannot. */
+    @container (inline-size < 40rem) {
+      .chip-rail {
+        visibility: hidden;
+      }
+    }
+    .chips::-webkit-scrollbar,
+    .chip-rail::-webkit-scrollbar {
+      display: none;
+    }
+    .chip-group {
+      display: flex;
+      flex-shrink: 0;
+      gap: var(--ocx-space-2);
+    }
+    /* The theme's compact size (s) for every toolbar control lines the chips, "+N more", the sort and the view up. */
+    .chips [data-grid-more] :global(.ocx-ui-button) {
+      font-size: var(--ocx-text-xs);
+      font-weight: var(--ocx-font-weight-semibold);
+    }
+    .chip-divider {
+      flex-shrink: 0;
+      inline-size: var(--ocx-border-width);
+      block-size: var(--ocx-icon-lg);
+      background: var(--ocx-color-border);
+    }
+    .chip-group.chip-rail {
+      /* One line that only shrinks: a chip that does not fit whole wraps onto a second line the box clips, so the
+         rail never shows half a chip (every keyword is still in the "+N more" popover). */
+      flex: 1 1 0;
+      flex-wrap: wrap;
+      min-inline-size: 0;
+      block-size: calc(var(--ocx-control-lg) + 2 * var(--ocx-space-2));
+      padding: var(--ocx-space-2);
+      margin: calc(-1 * var(--ocx-space-2));
+      overflow: hidden;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+    /* The popover lists the vocabulary as one column: name left, count dim and right (D-014). */
+    .more-list {
+      flex-direction: column;
+      max-block-size: var(--ocx-panel-body);
+      margin-block-start: var(--ocx-space-3);
+      overflow-y: auto;
+    }
+    .more-list :global(.ocx-ui-tag) {
+      justify-content: space-between;
+    }
+    .more-list .dim {
+      margin-inline-start: auto;
+      color: var(--ocx-color-fg-subtle);
+    }
+    /* The count is an attribute drawn after the name, before an active chip's close glyph: no element per count. */
+    .more-list :global([data-grid-chip])::before {
+      content: attr(data-count);
+      order: 1;
+      margin-inline-start: auto;
+      color: var(--ocx-color-fg-subtle);
+    }
+    .more-list :global([data-grid-chip][aria-pressed="true"])::after {
+      order: 2;
+    }
+    .more-empty {
+      margin: var(--ocx-space-3) 0 0;
+      font-family: var(--ocx-font-mono);
+      font-size: var(--ocx-text-xs);
+      color: var(--ocx-color-fg-subtle);
+    }
+    /* An active filter chip ends in a close glyph, not the theme's check (D-015). */
+    .toolbar :global(.ocx-ui-tag[data-variant="filter"] > .ocx-ui-tag__check) {
+      display: none;
+    }
+    /* The glyph is a character, not an icon element: a pressed chip is one node smaller per chip. */
+    .toolbar :global(.ocx-ui-tag[data-variant="filter"][aria-pressed="true"])::after {
+      content: "\00d7";
+      margin-inline-start: var(--ocx-space-1);
+      font-size: var(--ocx-text-md);
+      line-height: var(--ocx-lh-none);
+    }
+    /* The count and sort row belongs to the results below it: more air above it, the usual gap under it. */
+    .meta {
+      margin-block-start: var(--ocx-space-4);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--ocx-space-3);
+      /* Optical inset: flush-left text beside a column of rounded boxes reads as misaligned. */
+      padding-inline-start: var(--ocx-space-2);
+    }
+    .count {
+      margin: 0;
+      font-family: var(--ocx-font-mono);
+      font-size: var(--ocx-text-sm);
+      font-weight: var(--ocx-font-weight-semibold);
+      color: var(--ocx-color-fg);
+    }
+    .clear-link {
+      padding: 0;
+      font-family: var(--ocx-font-mono);
+      font-size: var(--ocx-text-xs);
+      font-weight: var(--ocx-font-weight-medium);
+      color: var(--ocx-color-accent-fg);
+      cursor: pointer;
+      background: none;
+      border: 0;
+    }
+    .clear-link:hover,
+    .clear-link:focus-visible {
+      text-decoration: underline;
+    }
+    .meta-controls {
+      display: flex;
+      align-items: center;
+      gap: var(--ocx-space-3);
+      margin-inline-start: auto;
+    }
+    /* A direction, not an on/off choice: neither order reads as selected, the glyph alone flips. */
+    .meta-controls :global(.sort-dir[aria-pressed="true"]) {
+      color: var(--ocx-color-fg-subtle);
+      background: var(--ocx-color-surface);
+      border-color: var(--ocx-color-border);
+      box-shadow: none;
+    }
+    /* One glyph for both directions: an inverted order shows it flipped (D-022). */
+    .meta-controls :global(.sort-dir[aria-pressed="true"] svg) {
+      transform: scaleY(-1);
+    }
+  }
+</style>

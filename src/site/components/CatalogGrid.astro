@@ -1,0 +1,342 @@
+---
+// The catalog landing body (C-010): visually hidden <h1>, toolbar, the first
+// window of cards (a real <ul>, every card a link), and everything the grid
+// island (`client/grid.ts`) needs to take over on first interaction: item
+// templates, hidden state panels, a skeleton and a sentinel. `data-base` is
+// the island's only input; the script below registers it on the theme's lazy
+// `mount` (L.4): the filter code and `catalog.json` wait for the first
+// interaction (or the first scroll), or load at once when the URL carries
+// state. A catalog with no package shows the no-data panel alone; the same
+// panel waits hidden for a `catalog.json` that turns out empty at run time.
+import CopyMenu from "@ocx-sh/theme/components/CopyMenu.astro";
+import Button from "@ocx-sh/theme/components/ui/Button.astro";
+import Logo from "@ocx-sh/theme/components/ui/Logo.astro";
+import Skeleton from "@ocx-sh/theme/components/ui/Skeleton.astro";
+import Tag from "@ocx-sh/theme/components/ui/Tag.astro";
+import site from "virtual:ocx-catalog/site";
+import { wireHref } from "../../viewmodel/url.js";
+import { cardCopyItems } from "../lib/cardCopy.js";
+import { ALL_SCOPE_VALUE } from "../lib/gridContract.js";
+import { DEFAULT_INSTALL_FLAVORS } from "../lib/installFlavors.js";
+import { AGNOSTIC_OS, OS_ORDER } from "../lib/platformAgnostic.js";
+import type { LandingCard, LandingView } from "../model/landing.js";
+import KeywordChip from "./KeywordChip.astro";
+import OsGlyph from "./OsGlyph.astro";
+import PackageCard from "./PackageCard.astro";
+import PackageRow from "./PackageRow.astro";
+import Toolbar from "./Toolbar.astro";
+
+interface Props {
+  view: LandingView;
+  base: string;
+  siteName: string;
+}
+const { view, base, siteName } = Astro.props;
+const placeholder: LandingCard = {
+  key: "",
+  href: "#",
+  name: "",
+  title: "",
+  description: "",
+  status: "active",
+  latestVersion: null,
+  platforms: [],
+  keywords: [],
+  tagCount: 0,
+  logoUrl: null,
+};
+// The mirror's own `nav[]` links, offered beside every empty panel (already `base`-joined).
+const navLinks = site.chrome.nav.map((link) => ({ ...link, external: /^https?:\/\//i.test(link.href) }));
+---
+
+<h1 class="visually-hidden">{siteName}</h1>
+<div class="grid" data-grid data-base={base} data-scope={view.scope ?? ALL_SCOPE_VALUE}>
+  <div data-grid-toolbar hidden={view.empty}>
+    <Toolbar scopes={view.scopes} total={view.total} rail={view.rail} moreCount={view.moreCount} />
+  </div>
+  {/* Ahead of the cards, beside the toolbar's own platform icons: the same paths a few KiB apart gzip to back-references. */}
+  {[...OS_ORDER, AGNOSTIC_OS].map((os) => <template data-grid-os={os}><OsGlyph os={os} /></template>)}
+  <div class="panel" data-grid-empty="no-data" hidden={!view.empty}>
+    {view.empty && <Logo size="l" label="" />}
+    <p class="panel-title">No packages published yet</p>
+    <p class="panel-copy">The index is live but the first seeds haven't landed.</p>
+    {
+      navLinks.length > 0 && (
+        <div class="panel-actions">
+          {navLinks.map((link) => (
+            <Button
+              variant="secondary"
+              size="s"
+              href={wireHref(link.href) ?? link.href}
+              target={link.external ? "_blank" : undefined}
+              rel={link.external ? "noopener noreferrer" : undefined}
+            >
+              {link.label}
+            </Button>
+          ))}
+        </div>
+      )
+    }
+  </div>
+  <div class="panel" data-grid-empty="no-match" hidden={view.cards.length > 0 || view.empty}>
+    <p class="panel-title" data-field="title">No packages in this view</p>
+    <p class="panel-copy" data-field="message">{view.allTotal} packages total.</p>
+    <div class="panel-actions">
+      <Button variant="secondary" size="s" data-grid-clear-search hidden>clear search</Button>
+      <Button variant="secondary" size="s" data-grid-clear hidden>clear filters</Button>
+      {
+        navLinks.map((link) => (
+          <Button
+            variant="ghost"
+            size="s"
+            href={wireHref(link.href) ?? link.href}
+            target={link.external ? "_blank" : undefined}
+            rel={link.external ? "noopener noreferrer" : undefined}
+          >
+            {link.label}
+          </Button>
+        ))
+      }
+    </div>
+  </div>
+  <div class="panel" data-grid-empty="error" role="alert" hidden>
+    <p class="panel-title">Failed to load the catalog</p>
+    <p class="panel-copy" data-field="message"></p>
+    <Button variant="secondary" size="s" data-grid-retry>try again</Button>
+  </div>
+  {/* Card-shaped placeholders in a real list that shares the card grid's own rule, so the two cannot drift (D-024).
+       The list is empty until the island needs it: it stamps nine copies of the one item below. */}
+  <ul class="skeleton" role="list" aria-hidden="true" data-grid-skeleton hidden></ul>
+  <template data-grid-skeleton-item>
+    <li class="item">
+      <div class="ocx-card skeleton-card">
+        <div class="skeleton-head">
+          <Skeleton variant="rect" ratio="1 / 1" class="skeleton-tile" />
+          <Skeleton lines={2} class="skeleton-lines" />
+        </div>
+        <Skeleton lines={2} />
+        <div class="skeleton-install"></div>
+      </div>
+    </li>
+  </template>
+  {/* Runs before the lists are parsed: a remembered table view hides the cards before first paint (lib/viewScript.ts). */}
+  <script is:inline>(()=>{const d=document.documentElement,p=new URLSearchParams(location.search);let s;try{s=localStorage.getItem('ocx-catalog-sort')}catch{}if(p.get('q')||p.has('index')||p.get('keyword')||p.get('platform')||p.getAll('status').some(v=>v==='deprecated'||v==='yanked')||p.get('invert')==='1'||/^(updated|created)$/.test(p.get('sort')||s||''))d.dataset.catalogWait='';try{if((p.get('view')||localStorage.getItem('ocx-catalog-view'))==='table')d.dataset.catalogView='table'}catch{}})()</script>
+  {/* One right-click menu for every card and row: each carries its own texts as `data-copy` (D-002). */}
+  <CopyMenu context label="Package actions" items={cardCopyItems(DEFAULT_INSTALL_FLAVORS)}>
+    <ul class="cards" role="list" data-grid-cards>
+      {view.cards.map((card) => <li class="item"><PackageCard card={card} base={base} /></li>)}
+    </ul>
+    <ul class="table" role="list" data-grid-table hidden></ul>
+  </CopyMenu>
+  <div class="sentinel" data-grid-sentinel aria-hidden="true" hidden></div>
+  <template data-grid-card><li class="item"><PackageCard card={placeholder} base={base} template /></li></template>
+  <template data-grid-row><li class="item"><PackageRow card={placeholder} base={base} /></li></template>
+  <template data-grid-card-keyword><Tag as="button" tone="keyword" aria-pressed="false" data-slot="keyword" data-grid-chip data-keyword=""></Tag></template>
+  <template data-grid-chip><KeywordChip /></template>
+</div>
+
+<script>
+  import { mount as lazyMount } from "@ocx-sh/theme/lazy";
+  import { mount } from "../client/grid_entry.js";
+
+  const root = document.querySelector<HTMLElement>("[data-grid]");
+  if (root) mount(root, { lazy: { mount: lazyMount } });
+</script>
+
+<style is:global>
+  @layer ocx {
+    /* `hidden` must win over any display rule on chips, buttons and panels inside the grid, theme or scoped:
+       the doubled attribute outranks both at equal layer. */
+    [data-grid] [hidden][hidden] {
+      display: none;
+    }
+    /* A cold URL that narrows the set: the rail lists the unfiltered catalog's keywords, so it is not drawn until the results settle it (a drawn chip that then moves is a layout shift). */
+:root[data-catalog-wait] [data-grid-keywords],
+:root[data-catalog-wait] [data-grid-count] {
+      visibility: hidden;
+    }
+    /* The skeleton shows only if the results take longer than a blink: on a fast load the page goes from empty straight to the
+       filtered results, never through a screen of placeholders. Unhiding it restarts the delay. */
+    [data-grid-skeleton] {
+      animation: ocx-catalog-skeleton-in 0s 400ms both;
+    }
+    @keyframes ocx-catalog-skeleton-in {
+      from {
+        visibility: hidden;
+      }
+      to {
+        visibility: visible;
+      }
+    }
+    /* A logo that failed keeps its box, invisible over the monogram: `display: none` would remove it from layout. */
+    [data-grid] .ocx-logo-tile[data-state="fallback"] .ocx-logo-tile__image[hidden] {
+      display: block;
+      visibility: hidden;
+    }
+    /* The theme's glyph entrance replays on every card or row a view switch shows, and each glyph is its own compositor
+       layer: a window of 48 cards costs ~25ms of Layerize and a restyle per frame at 4x throttle (the view-switch probe).
+       `[data-os]` outranks the theme's scoped `.ocx-platform[data-astro-cid-…]`; at equal specificity bundle order decides. */
+    [data-grid] .ocx-platform[data-os] {
+      animation: none;
+    }
+    .visually-hidden {
+      position: absolute;
+      inline-size: 1px;
+      block-size: 1px;
+      padding: 0;
+      margin: calc(-1 * var(--ocx-border-width));
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+    }
+  }
+</style>
+
+<style>
+  @layer ocx {
+    .grid {
+      display: flex;
+      flex-direction: column;
+      gap: var(--ocx-space-4);
+    }
+    /* `--reserve` is set by the island while the catalog loads: the list region holds the server cards' height while the
+       skeleton, then the results or the no-match panel, replace them. The island releases it on the render after the first. */
+    .cards,
+    .table,
+    .skeleton,
+    .panel[data-grid-empty="no-match"] {
+      box-sizing: border-box;
+      min-block-size: var(--reserve, 0px);
+    }
+    /* The skeleton stands in for a list of unknown length: it never grows past the height it replaces, or the footer
+       beneath it moves when the results arrive. */
+    .skeleton {
+      max-block-size: var(--reserve, none);
+      overflow: hidden;
+    }
+    /* The card grid and the skeleton are one rule, so a placeholder is the card's track by construction (D-024).
+       300px is the card's calibrated minimum (its content box fits the 38-character name budget); no track token
+       is that wide. 640px and 1200px are the theme's drawer and outline breakpoints, as literals: a media query cannot read a token. */
+    .cards,
+    .skeleton {
+      display: grid;
+      /* Rows keep their own height: a reserved `--reserve` box must not stretch a lone result to fill it. */
+      align-content: start;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: var(--ocx-space-3);
+      padding: 0;
+      margin: 0;
+      list-style: none;
+    }
+    /* Pinned to two columns between the bands, so a tablet never stretches a card (D-023). */
+    @media (min-width: 640px) and (max-width: 1199px) {
+      .cards,
+      .skeleton {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+    @media (max-width: 639px) {
+      .cards,
+      .skeleton {
+        grid-template-columns: 1fr;
+      }
+    }
+    .table {
+      display: grid;
+      align-content: start;
+      /* tile | title | identifier | description | version | platforms | tag count */
+      grid-template-columns: auto minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 2fr) auto auto auto;
+      padding: 0;
+      margin: 0;
+      overflow: hidden;
+      list-style: none;
+      background: var(--ocx-color-surface);
+      border: var(--ocx-border-width) solid var(--ocx-color-border);
+      border-radius: var(--ocx-radius-lg);
+    }
+    /* Narrow screens fold columns, the identifier last: it names the index a package came from (D-004).
+       The description goes first (PackageRow hides it at the same width), then platforms and tag count. */
+    @media (max-width: 899px) {
+      .table {
+        grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr) auto auto auto;
+      }
+    }
+    @media (max-width: 639px) {
+      .table {
+        grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr) auto;
+      }
+    }
+    /* A table view asked for, or a URL that narrows the set (`data-catalog-wait`): the server's cards are the wrong ones, so they never show.
+       They keep their box (invisible, not removed): the page below them holds still until the skeleton takes over. */
+    :global(:root[data-catalog-view="table"]) .cards,
+    :global(:root[data-catalog-wait]) .cards {
+      visibility: hidden;
+    }
+    /* An empty list (no match) is not a box at all: the no-match panel stands in for it, reserve included. */
+    .cards:not(:has(> *)),
+    .table:not(:has(> *)) {
+      display: none;
+    }
+    /* The menu's root is a wrapper only: the lists stay the grid's flex children, so an empty list leaves no gap. */
+    .grid > :global(.ocx-copy-menu) {
+      display: contents;
+    }
+    .item {
+      /* The <li> carries the list semantics only; its child is the grid item. */
+      display: contents;
+    }
+    /* Separators sit between rows only; the container's own border closes the last (D-042). */
+    .table .item + .item :global(.pkg-row) {
+      border-block-start: var(--ocx-border-width) solid var(--ocx-color-border);
+    }
+    .skeleton-card {
+      display: flex;
+      flex-direction: column;
+      gap: var(--ocx-space-3);
+      font-size: var(--ocx-text-base);
+    }
+    .skeleton-head {
+      display: flex;
+      align-items: center;
+      gap: var(--ocx-space-3);
+    }
+    /* The logo tile's size in the card (LogoTile `lg`). */
+    .skeleton-head :global(.skeleton-tile) {
+      flex: none;
+      inline-size: var(--ocx-control-2xl);
+    }
+    .skeleton-head :global(.skeleton-lines) {
+      flex: 1;
+    }
+    .skeleton-install {
+      block-size: var(--ocx-control-lg);
+      background: var(--ocx-color-surface-subtle);
+      border-radius: var(--ocx-radius-md);
+    }
+    .panel {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--ocx-space-3);
+      padding: var(--ocx-space-9) var(--ocx-space-5);
+      text-align: center;
+      border: var(--ocx-border-width) dashed var(--ocx-color-border-strong);
+      border-radius: var(--ocx-radius-lg);
+    }
+    .panel-title {
+      margin: 0;
+      font-size: var(--ocx-text-lg);
+      font-weight: var(--ocx-font-weight-semibold);
+    }
+    .panel-copy {
+      margin: 0;
+      color: var(--ocx-color-fg-muted);
+    }
+    .panel-actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: var(--ocx-space-3);
+    }
+  }
+</style>

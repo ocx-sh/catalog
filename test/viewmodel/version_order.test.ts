@@ -127,6 +127,22 @@ describe("variantNames", () => {
 });
 
 describe("findLatestVersion", () => {
+  it("skips ephemeral tags, pre-releases and yanked tags: the newest durable stable wins", () => {
+    const tags = {
+      latest: tag("sha256:aaaa"),
+      "2.2.0": tag("sha256:aaaa"),
+      "2.2.1": { ...tag("sha256:aaaa"), ephemeral: true },
+      "3.0.0-rc.1": tag("sha256:aaaa"),
+      "2.9.0": tag("sha256:aaaa", { reason: "cve", at: "2026-07-17T00:00:00Z" }),
+    };
+    expect(findLatestVersion(tags)).toBe("2.2.0");
+  });
+
+  it("is null when every stable version is ephemeral or yanked", () => {
+    const tags = { "2.2.1": { ...tag("sha256:aaaa"), ephemeral: true }, "1.0.0": tag("sha256:bbbb", { reason: "x", at: "2026-07-17T00:00:00Z" }) };
+    expect(findLatestVersion(tags)).toBeNull();
+  });
+
   // Mirrors test_find_latest_version_picks_highest_semver
   it("picks the highest semver", () => {
     const tags = {

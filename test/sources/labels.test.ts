@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { checkIndexNamespaceCollisions,
-  checkReservedIndexLabels, checkLabelConflicts, resolveLabel } from "../../src/sources/labels.js";
+  checkReservedIndexLabels, checkLabelConflicts, resolveLabel, staticReservedNames } from "../../src/sources/labels.js";
 import { extractPackages, SourceError } from "../../src/sources/types.js";
 import type { ResolvedSource } from "../../src/config/types.js";
 import { rootJsonBytes } from "./helpers.js";
@@ -263,7 +263,7 @@ describe("checkReservedIndexLabels", () => {
   const labels = (...entries: [string, boolean][]) => entries.map(([label, root]) => ({ label, root }));
 
   it("passes an ordinary non-root label", () => {
-    expect(() => checkReservedIndexLabels(labels(["ocx.sh", true], ["acme", false]))).not.toThrow();
+    expect(() => checkReservedIndexLabels(labels(["ocx.sh", true], ["acme", false]), staticReservedNames)).not.toThrow();
   });
 
   it.each(["p", "index", "data", "docs", "assets", "404", "public"])(
@@ -271,7 +271,7 @@ describe("checkReservedIndexLabels", () => {
     (reserved) => {
       let error: SourceError | undefined;
       try {
-        checkReservedIndexLabels(labels(["ocx.sh", true], [reserved, false]));
+        checkReservedIndexLabels(labels(["ocx.sh", true], [reserved, false]), staticReservedNames);
       } catch (err) {
         error = err as SourceError;
       }
@@ -284,14 +284,14 @@ describe("checkReservedIndexLabels", () => {
   // macOS and Windows resolve `Docs` and `docs` to one directory, so a
   // case-sensitive check would pass CI and collide on a contributor's laptop.
   it("compares case-insensitively", () => {
-    expect(() => checkReservedIndexLabels(labels(["Docs", false]))).toThrow(SourceError);
-    expect(() => checkReservedIndexLabels(labels(["DATA", false]))).toThrow(SourceError);
+    expect(() => checkReservedIndexLabels(labels(["Docs", false]), staticReservedNames)).toThrow(SourceError);
+    expect(() => checkReservedIndexLabels(labels(["DATA", false]), staticReservedNames)).toThrow(SourceError);
   });
 
   // A root source's packages keep bare routes, so its label never becomes a
   // top-level segment — it only ever mirrors to the nested `index/<label>/`.
   it("ignores a root source, whose label is not a route prefix", () => {
-    expect(() => checkReservedIndexLabels(labels(["docs", true]))).not.toThrow();
+    expect(() => checkReservedIndexLabels(labels(["docs", true]), staticReservedNames)).not.toThrow();
   });
 
   // No root source means no bare routes exist, so nothing can be shadowed.

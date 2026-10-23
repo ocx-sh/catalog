@@ -1,0 +1,26 @@
+---
+// One platform glyph, the unit both the server-rendered cards and the grid
+// island's cloned cards/rows are built from: the theme's `PlatformIcons` for a
+// real OS, a labelled globe for the platform-agnostic `any` (which subsumes
+// every OS beside it). `CatalogGrid` renders one `<template data-grid-os>` per
+// value so the island clones a glyph instead of drawing one.
+import Icon from "@ocx-sh/theme/components/ui/Icon.astro";
+import PlatformIcons from "@ocx-sh/theme/components/PlatformIcons.astro";
+
+interface Props {
+  os: string;
+}
+const { os } = Astro.props;
+---
+
+{
+  os === "any" ? (
+    <span class="ocx-platforms">
+      <span class="ocx-platform" data-os="any" role="img" aria-label="Any platform" title="Any platform">
+        <Icon name="globe" class="ocx-platform__icon" />
+      </span>
+    </span>
+  ) : (
+    <PlatformIcons platforms={[os]} />
+  )
+}

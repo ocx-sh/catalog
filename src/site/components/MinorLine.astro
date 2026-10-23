@@ -1,0 +1,61 @@
+---
+// One minor line: its chip, then its patch tags behind a `<details>` whose panel floats under the toggle
+// (D-053, D-054, D-076). `MajorGroup` renders one per minor; `VersionList` renders one per track of
+// pre-releases and builds, with the track key as `kicker` and `prerelease` set. The `data-*` hooks are
+// `client/versions.ts`'s contract. Tag names are untrusted text: attributes and text only.
+import Icon from "@ocx-sh/theme/components/ui/Icon.astro";
+import { minorGroupHasYanked, minorIsCut, type MinorGroup } from "../lib/versionTable.js";
+import TagChip from "./TagChip.astro";
+
+interface Props {
+  minor: MinorGroup;
+  /** The groups and patches the page prerenders; `null` renders all (the placeholder template). */
+  shown: ReadonlySet<object> | null;
+  releaseOf: ReadonlyMap<string, number>;
+  /** A track's chips are marked pre-release. */
+  prerelease?: boolean;
+  /** The track key, drawn before the chip. */
+  kicker?: string;
+}
+const { minor, shown, releaseOf, prerelease = false, kicker } = Astro.props;
+const visible = (item: object) => shown === null || shown.has(item);
+---
+
+<div class="minor-group" data-minor>
+  {kicker !== undefined && <span class="kicker" data-kicker>{kicker}</span>}
+  <div class="chips" data-head>
+    <TagChip tag={minor.tag} label={minor.label} yanked={minor.yanked} ephemeral={minor.ephemeral} prerelease={prerelease} release={releaseOf.get(minor.tag)} variant="minor" />
+  </div>
+  {minor.patches.length > 0 && (
+    <details class="patches" data-patches data-lazy={shown !== null && minorIsCut(minor, shown) ? "" : undefined}>
+      <summary
+        class:list={["expand-toggle", "minor-toggle", { warn: minorGroupHasYanked(minor) }]}
+        title={minorGroupHasYanked(minor) ? "Contains a yanked version" : undefined}
+      >
+        {minorGroupHasYanked(minor) && <Icon name="warning" size="sm" class="warn-icon" />}
+        <span class="expand-count" data-count>+{minor.patches.length}</span>
+        <Icon name="chevron-down" size="sm" class="chevron" />
+      </summary>
+      <div class="patch-panel">
+        <div class="chips" data-patch-list>
+          {minor.patches.filter(visible).map((patch) => (
+            <TagChip tag={patch.tag} yanked={patch.yanked} ephemeral={patch.ephemeral} prerelease={prerelease} release={releaseOf.get(patch.tag)} variant="child" />
+          ))}
+        </div>
+        {minor.patches.filter(visible).some((patch) => patch.yanked !== null) && (
+          <ul class="yanked-reasons" data-reasons>
+            {minor.patches.filter(visible).map(
+              (patch) =>
+                patch.yanked !== null && (
+                  <li data-yanked-reason>
+                    <Icon name="warning" size="sm" />
+                    {patch.tag} yanked — {patch.yanked.reason} · {patch.yanked.at.slice(0, 10)}
+                  </li>
+                ),
+            )}
+          </ul>
+        )}
+      </div>
+    </details>
+  )}
+</div>

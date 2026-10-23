@@ -1,0 +1,434 @@
+---
+// The versions card (D-053, D-054, D-057, D-076): one row per variant (default first), each with the alias
+// chain of tags sharing a digest (`latest` highlighted) and a collapsible major/minor/patch breakdown; a
+// withdrawn tag stays in its place, struck through, and a collapsed group that hides one is flagged. A tag
+// is a button: a click copies its identifier, the theme's `CopyMenu` (context mode, one for the list) opens
+// on right-click, the menu key or Shift+F10 with the texts `client/detail.ts` writes onto each tag, and the
+// hint above the list says so (D-055, D-056, D-082).
+//
+// The page prerenders a bounded tree (`lib/versionTable.ts`'s `prerender`): every alias, the newest lines
+// and their newest patches. What it leaves out is fetched on first interaction (D-149, D-091, D-093): a
+// breakdown or track list opened loads the package root (`_root.json`, preloaded by `pages/package.astro`)
+// and `client/versions.ts` draws the whole tree from the `<template>`s at the end of this component, which
+// are this same markup with placeholder data. `data-lazy` marks every `<details>` that has something to
+// fetch. The hover preview is `client/detail.ts`'s. Tag names are untrusted text: attributes and text only.
+import CopyMenu from "@ocx-sh/theme/components/CopyMenu.astro";
+import Icon from "@ocx-sh/theme/components/ui/Icon.astro";
+import site from "virtual:ocx-catalog/site";
+import { cardCopyItems } from "../lib/cardCopy.js";
+import { DEFAULT_INSTALL_FLAVORS } from "../lib/installFlavors.js";
+import {
+  breakdownCount,
+  prerender,
+  rowHasHiddenYanked,
+  rowIsCut,
+  SSR_OTHER,
+  SSR_TRACKS,
+  type MajorGroup as Major,
+  type MinorGroup as Minor,
+} from "../lib/versionTable.js";
+import type { DetailView } from "../model/detail.js";
+import MajorGroup from "./MajorGroup.astro";
+import MinorLine from "./MinorLine.astro";
+import TagChip from "./TagChip.astro";
+
+interface Props {
+  view: DetailView;
+}
+const { view } = Astro.props;
+const { rows, tracks, unknownTags } = view.versions;
+const releaseOf = new Map(view.tagReleases);
+// One label column for variants and track keys, sized by the longest: the chips after it start on one line.
+const labelCh = Math.max(0, ...rows.map((row) => (row.isDefault ? "(default)" : row.label).length), ...tracks.map((track) => track.key.length));
+const { shown, cut } = prerender(view.versions);
+// The template the browser clones for every late line: one minor with one withdrawn patch, so each part exists.
+const PLACEHOLDER_MINOR: Minor = { label: "", tag: "", yanked: null, ephemeral: false, synthetic: false, patches: [{ tag: "", yanked: { reason: "", at: "" }, ephemeral: false }] };
+const PLACEHOLDER: Major = {
+  major: 0,
+  label: "",
+  tag: "",
+  yanked: null,
+  ephemeral: false,
+  synthetic: false,
+  minorGroups: [PLACEHOLDER_MINOR],
+};
+---
+
+<section
+  class="versions"
+  aria-labelledby="versions-heading"
+  data-versions
+  data-base={site.base}
+  data-ns={view.namespace}
+  data-pkg={view.package}
+  data-wire-base={view.wireBase}
+  data-status={view.status}
+>
+  <div class="versions-header">
+    <h2 id="versions-heading" class="rail-heading">Versions · {view.tagCount}</h2>
+    {view.tagCount > 0 && <span class="versions-hint" data-versions-hint>click = copy identifier · right-click = more</span>}
+  </div>
+  <div class="rail-card">
+    {view.tagCount === 0 && <p class="versions-empty">No versions available.</p>}
+    <CopyMenu context label="Version actions" items={cardCopyItems(DEFAULT_INSTALL_FLAVORS)}>
+      <div class="version-table" data-versions-list style={`--label-ch: ${labelCh}`}>
+        {
+          rows.map((row) => (
+            <div class="variant-row" data-variant={row.variant ?? ""}>
+              <div class="variant-row-header">
+                <span class:list={["variant-label", { default: row.isDefault }]}>
+                  {row.isDefault ? "(default)" : row.label}
+                </span>
+                <div class="row-chips">
+                {row.aliasChain.length > 0 && (
+                  <div class="chips alias-chain">
+                    {row.aliasChain.map((member) => (
+                      <TagChip
+                        tag={member.tag}
+                        yanked={member.yanked} ephemeral={member.ephemeral}
+                        release={releaseOf.get(member.tag)}
+                        variant="alias"
+                        latest={row.showLatestHighlight && member.tag === "latest"}
+                      />
+                    ))}
+                  </div>
+                )}
+                {row.yankedRolling.length > 0 && (
+                  <div class="chips yanked-rolling">
+                    {row.yankedRolling.map((member) => (
+                      <TagChip tag={member.tag} yanked={member.yanked} ephemeral={member.ephemeral} release={releaseOf.get(member.tag)} variant="rolling" />
+                    ))}
+                  </div>
+                )}
+                {row.aliasChain.length <= 1 && row.isDefault && view.status === "deprecated" && (
+                  <span class="alias-hint">no "latest" tag — deprecated</span>
+                )}
+                </div>
+              </div>
+              {row.majorGroups.length > 0 && (
+                <details class="breakdown" data-breakdown data-lazy={rowIsCut(row, shown) ? "" : undefined}>
+                  <summary
+                    class:list={["expand-toggle", { warn: rowHasHiddenYanked(row) }]}
+                    title={rowHasHiddenYanked(row) ? "Contains a yanked version" : undefined}
+                  >
+                    {rowHasHiddenYanked(row) && <Icon name="warning" size="sm" class="warn-icon" />}
+                    <span class="expand-count">{breakdownCount(row)} more</span>
+                    <Icon name="chevron-down" size="sm" class="chevron" />
+                  </summary>
+                  <div class="major-groups" data-major-groups>
+                    {row.majorGroups
+                      .filter((major) => shown.has(major))
+                      .map((major) => (
+                        <MajorGroup major={major} shown={shown} releaseOf={releaseOf} />
+                      ))}
+                  </div>
+                </details>
+              )}
+            </div>
+          ))
+        }
+        {
+          tracks.length > 0 && (
+            <details class="variant-row track-row" data-tracks>
+              <summary class="expand-toggle track-toggle">
+                <span class="variant-label prerelease">pre-releases &amp; builds</span>
+                <span class="alias-hint">not stable · newest build of each line first</span>
+                <span class="expand-count">{tracks.length} {tracks.length === 1 ? "line" : "lines"}</span>
+                <Icon name="chevron-down" size="sm" class="chevron" />
+              </summary>
+              <div class="track-list" data-track-list>
+                {tracks
+                  .filter((track) => shown.has(track))
+                  .map((track) => (
+                    <MinorLine minor={track} shown={shown} releaseOf={releaseOf} prerelease kicker={track.key} />
+                  ))}
+              </div>
+              {tracks.length > SSR_TRACKS && (
+                <details class="breakdown" data-lazy>
+                  <summary class="expand-toggle">
+                    <span class="expand-count">+{tracks.length - SSR_TRACKS} more lines</span>
+                    <Icon name="chevron-down" size="sm" class="chevron" />
+                  </summary>
+                  <div class="track-list" data-track-more />
+                </details>
+              )}
+            </details>
+          )
+        }
+        {
+          unknownTags.length > 0 && (
+            <div class="variant-row unknown-row" data-variant-other>
+              <div class="variant-row-header">
+                <span class="variant-label other">other</span>
+                <div class="chips">
+                  {unknownTags.slice(0, SSR_OTHER).map((member) => (
+                    <TagChip tag={member.tag} yanked={member.yanked} ephemeral={member.ephemeral} release={releaseOf.get(member.tag)} />
+                  ))}
+                </div>
+              </div>
+              {unknownTags.length > SSR_OTHER && (
+                <details class="breakdown" data-lazy>
+                  <summary class="expand-toggle">
+                    <span class="expand-count">+{unknownTags.length - SSR_OTHER}</span>
+                    <Icon name="chevron-down" size="sm" class="chevron" />
+                  </summary>
+                  <div class="chips" data-other-list />
+                </details>
+              )}
+            </div>
+          )
+        }
+      </div>
+    </CopyMenu>
+    <p class="versions-status" data-versions-status aria-live="polite"></p>
+    {
+      cut && (
+        <>
+          <template data-tpl="chip">
+            <TagChip tag="" variant="child" />
+          </template>
+          <template data-tpl="track">
+            <MinorLine minor={PLACEHOLDER_MINOR} shown={null} releaseOf={new Map()} prerelease kicker="" />
+          </template>
+          <template data-tpl="major">
+            <MajorGroup major={PLACEHOLDER} shown={null} releaseOf={new Map()} />
+          </template>
+        </>
+      )
+    }
+  </div>
+</section>
+
+<style>
+  .version-table {
+    --label-w: calc(var(--label-ch) * 1ch);
+    display: grid;
+  }
+  .variant-row {
+    position: relative;
+    padding-block: var(--ocx-space-3);
+    border-block-end: var(--ocx-border-width) solid var(--ocx-color-border);
+  }
+  .variant-row:last-child {
+    border-block-end: 0;
+  }
+  /* The card's own padding is the top gap; a row's padding only spaces it from the separator above. */
+  .variant-row:first-child {
+    padding-block-start: 0;
+  }
+  .variant-row:first-child > .breakdown > :global(summary) {
+    inset-block-start: 0;
+  }
+  /* Label column, then the chips wrapping in their own column. */
+  .variant-row-header {
+    display: grid;
+    grid-template-columns: var(--label-w) minmax(0, 1fr);
+    align-items: baseline;
+    gap: var(--ocx-space-3);
+  }
+  .row-chips {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--ocx-space-3);
+  }
+  /* "N more" sits at the end of the chips' first line, not on a line of its own; the header keeps room for it. */
+  .variant-row:has(> .breakdown) > .variant-row-header {
+    padding-inline-end: 7rem;
+  }
+  .variant-row > .breakdown > :global(summary) {
+    position: absolute;
+    inset-block-start: var(--ocx-space-3);
+    inset-inline-end: 0;
+    /* A chip's box (text-xs line, space-1 padding, a border), so the count centres on the chips' first line. */
+    padding-block: var(--ocx-space-1);
+    font-size: var(--ocx-text-xs);
+    border-block: var(--ocx-border-width) solid transparent;
+  }
+  .variant-row > .breakdown > :global(summary .expand-count) {
+    font-size: var(--ocx-text-2xs);
+  }
+  /* A zero-width strut in the chips' font sets the line's baseline, so the smaller count sits on the chips' text line. */
+  .variant-row > .breakdown > :global(summary) {
+    align-items: baseline;
+  }
+  .variant-row > .breakdown > :global(summary)::before {
+    content: "\200b";
+  }
+  .variant-row > .breakdown > :global(summary svg) {
+    align-self: center;
+  }
+  /* The label column: every label starts on the card's left edge, every row's first chip on one vertical line. */
+  .variant-row-header > .variant-label,
+  .version-table :global(.kicker) {
+    flex: none;
+    box-sizing: content-box;
+    inline-size: var(--label-w);
+    text-align: start;
+  }
+  .variant-row > .breakdown {
+    margin-block-start: 0;
+    margin-inline-start: calc(var(--label-w) + var(--ocx-space-3));
+  }
+  .variant-label {
+    font-family: var(--ocx-font-mono);
+    font-size: var(--ocx-text-xs);
+    color: var(--ocx-color-fg-muted);
+  }
+  .variant-label.default {
+    color: var(--ocx-color-fg-subtle);
+  }
+  .version-table :global(.chips) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--ocx-space-3);
+    margin: 0;
+    padding: 0;
+  }
+  .variant-label.prerelease {
+    color: var(--ocx-color-keyword);
+  }
+  /* One line per track, the key before its newest build and a "+N" for the older ones. */
+  .version-table :global(.track-list) {
+    display: grid;
+    gap: var(--ocx-space-3);
+    margin-block-start: var(--ocx-space-3);
+  }
+  .version-table :global(.kicker) {
+    margin-inline-end: var(--ocx-space-3);
+    font-family: var(--ocx-font-mono);
+    font-size: var(--ocx-text-xs);
+    color: var(--ocx-color-fg-subtle);
+  }
+  .alias-hint {
+    font-family: var(--ocx-font-mono);
+    font-size: var(--ocx-text-2xs);
+    color: var(--ocx-color-fg-subtle);
+  }
+  .version-table :global(.breakdown),
+  .version-table :global(.patches) {
+    margin-block-start: var(--ocx-space-3);
+  }
+  .version-table :global(.expand-toggle) {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ocx-space-2);
+    padding: var(--ocx-space-1) var(--ocx-space-3);
+    font-family: var(--ocx-font-mono);
+    font-size: var(--ocx-text-2xs);
+    color: var(--ocx-color-fg-muted);
+    cursor: pointer;
+    list-style: none;
+  }
+  .version-table :global(.expand-toggle::-webkit-details-marker) {
+    display: none;
+  }
+  .version-table :global(.expand-toggle.warn .warn-icon) {
+    color: var(--ocx-color-warning);
+  }
+  /* Pre-releases and builds are folded by default: one summary line names them, a click lists them. */
+  /* The whole line toggles; the count and chevron sit at its end, where the variants' "N more" sits. */
+  .version-table :global(.track-toggle) {
+    display: flex;
+    padding-inline-start: 0;
+  }
+  .version-table :global(.track-toggle .expand-count) {
+    margin-inline-start: auto;
+  }
+  .version-table :global(.track-toggle .alias-hint) {
+    margin-inline-start: var(--ocx-space-3);
+  }
+  .version-table :global(details[open] > .expand-toggle .chevron) {
+    transform: rotate(180deg);
+  }
+  .version-table :global(.major-groups) {
+    display: grid;
+    gap: var(--ocx-space-3);
+    margin-block-start: var(--ocx-space-3);
+    margin-inline-start: var(--ocx-space-3);
+  }
+  /* One row per major: its chip, then every minor line inline, each with its patch toggle right beside it. */
+  .version-table :global(.major-group) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--ocx-space-2) var(--ocx-space-3);
+  }
+  .version-table :global(.minor-group) {
+    display: inline-flex;
+    align-items: center;
+    gap: 0;
+  }
+  /* The patch toggle hugs its minor chip: "+7⌄" reads as part of it, not a separate control. */
+  .version-table :global(.minor-toggle) {
+    margin-inline-start: var(--ocx-space-1);
+    padding-inline: var(--ocx-space-1);
+    gap: var(--ocx-space-1);
+  }
+  /* A warning glyph leads the count: a little more air between it and the chip before it. */
+  .version-table :global(.minor-toggle.warn) {
+    margin-inline-start: var(--ocx-space-3);
+  }
+  /* The patch toggle sits beside its minor chip and the patches open in a panel under it, so a long line never
+     pushes the rows below it down (the Vue tree's popover, D-053). */
+  .version-table :global(.patches) {
+    position: relative;
+    margin-block-start: 0;
+  }
+  .version-table :global(.patch-panel) {
+    position: absolute;
+    inset-block-start: 100%;
+    inset-inline-start: 0;
+    z-index: 2;
+    box-sizing: border-box;
+    inline-size: max-content;
+    max-inline-size: min(22rem, 70vw);
+    margin-block-start: var(--ocx-space-2);
+    padding: var(--ocx-space-3);
+    background: var(--ocx-color-surface);
+    border: var(--ocx-border-width) solid var(--ocx-color-border);
+    border-radius: var(--ocx-radius-md);
+    box-shadow: var(--ocx-shadow-overlay);
+  }
+  .version-table :global(.yanked-reasons) {
+    display: grid;
+    gap: var(--ocx-space-2);
+    margin: var(--ocx-space-3) 0 0;
+    padding: 0;
+    list-style: none;
+    font-family: var(--ocx-font-mono);
+    font-size: var(--ocx-text-2xs);
+    color: var(--ocx-color-fg-muted);
+  }
+  .versions-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--ocx-space-2) var(--ocx-space-4);
+    margin: 0 0 var(--ocx-space-3);
+  }
+  .versions-header .rail-heading {
+    margin: 0;
+  }
+  .versions-hint {
+    font-family: var(--ocx-font-mono);
+    font-size: var(--ocx-text-2xs);
+    color: var(--ocx-color-fg-subtle);
+  }
+  .versions-status {
+    margin: var(--ocx-space-3) 0 0;
+    font-family: var(--ocx-font-mono);
+    font-size: var(--ocx-text-xs);
+    color: var(--ocx-color-fg-subtle);
+  }
+  .versions-status:empty {
+    display: none;
+  }
+  .versions-empty {
+    margin: var(--ocx-space-3) 0 0;
+    font-family: var(--ocx-font-mono);
+    font-size: var(--ocx-text-xs);
+    color: var(--ocx-color-fg-subtle);
+  }
+</style>
