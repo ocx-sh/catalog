@@ -49,7 +49,9 @@ web-app surface (no server, no auth, no SQL).
 | `path`/`git` source containment | Symlink escape out of the source root | `src/sources/path.ts`'s `resolveContainedRealPath` — realpath-verified per file, not once at the root |
 | `git` source args | Shell/option injection via `entry.git`/`entry.ref`/`entry.dir` | `src/sources/git.ts` — `execFile` array args, `--` separator, leading-`-` rejection |
 | Derived source labels | Control-character injection into the shared `_headers` file | `labels.ts`'s `assertLabelPathSafe` — must stay an allowlist regex, not a blocklist |
-| README rendering | XSS via a hostile package's `desc.readme` markdown | `markdown-it` + `dompurify` in the theme — verify sanitization runs on every render path, not just the common one |
+| README rendering | XSS via a hostile package's `desc.readme` markdown | `markdown-it` (`html: false`) + `dompurify` run in the CLI parent (`src/build/readmes.ts`), the one `set:html` sink is `ReadmePane.astro` — verify sanitization runs on every render path, not just the common one (`subsystem-site.md`) |
+| Wire-derived URLs and inline data | `javascript:`/protocol-relative `href`/`src`, `</script>` in inlined JSON | `viewmodel/url.ts`'s `wireHref`/`joinBase`, `site/lib/jsonForScript.ts` — grep-pinned by `test/viewmodel/url_sink.test.ts` |
+| Page CSP and mirrored `/p/*` content | Inline script injection; same-origin untrusted wire files | `src/site/astro_config.ts` (`security.csp`, hashes from `@ocx-sh/theme/csp`); `_headers` / the Bunny `catalog-sandbox` edge rule (`product-context.md`) |
 | Generated CI workflows | This package's own output becomes privileged YAML in a consumer repo | `src/ci/**`, `templates/ci/*.yml` — default-deny `permissions:`, no untrusted-value `run:` interpolation in what gets generated |
 | npm publish | Credential/scope escalation via a compromised transitive dependency | `.github/workflows/release.yml` — OIDC trusted publishing, `id-token: write` isolated to `publish`, `npm ci --ignore-scripts` there specifically |
 

@@ -2,7 +2,7 @@
 
 Canonical design principles for **all languages**. Shareable, project-independent
 root rule. Language-specific applications: `quality-typescript.md` (TS strictness,
-module system), `quality-vite.md` (Vite/VitePress build tooling).
+module system), `quality-vite.md` (Vite/Vitest/Astro build tooling).
 
 ---
 
