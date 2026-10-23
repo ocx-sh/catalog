@@ -1,0 +1,58 @@
+{
+  "name": "index-a/cloud/terraform-lite",
+  "repository": "oci://ghcr.io/ocx-contrib/cloud/terraform-lite",
+  "owners": [
+    {
+      "login": "ocx-bot",
+      "github": "ocx-bot",
+      "id": 309019509,
+      "github_id": 309019509
+    }
+  ],
+  "status": "active",
+  "deprecated_message": null,
+  "created": "2026-01-09",
+  "upstream": {
+    "org": "cloud",
+    "repository_url": "https://github.com/cloud/terraform-lite",
+    "disclaimer": "Unaffiliated mirror of the upstream cloud/terraform-lite project."
+  },
+  "desc": {
+    "digest": "sha256:b541564f588cb429cb925a296c2bce6eb6ca9ab20b7d847293339c3c5cfc1521",
+    "title": "terraform-lite",
+    "description": "A trimmed infrastructure-as-code planner.",
+    "keywords": [
+      "infrastructure",
+      "iac",
+      "cli"
+    ],
+    "readme": "sha256:50fff731889e6f094a11ddaa8d30348861bd05dcf57487e29cd1ee86236c8818",
+    "logo": "sha256:1e86c75125690ca9d9abf1d6790faec9730c032c1ecbba30b0866e5bb037bbb0"
+  },
+  "tags": {
+    "1": {
+      "content": "sha256:d1b065dd3aff4bdad3a88e051276e31d1da87ab072f8b193f7c391dd182bc405",
+      "observed": "2026-01-09T09:00:00Z"
+    },
+    "1.0.0": {
+      "content": "sha256:565313ff8a4d4fead3b7219968c17a0d746da320f54ae3c9c322a70474dd6f50",
+      "observed": "2026-01-09T09:00:00Z"
+    },
+    "1.1.0": {
+      "content": "sha256:b8a698cebb8092e0645192686514d40c460d0094ecb7f1b22433c6227855c49a",
+      "observed": "2026-01-09T09:00:00Z"
+    },
+    "1.4.0": {
+      "content": "sha256:d1b065dd3aff4bdad3a88e051276e31d1da87ab072f8b193f7c391dd182bc405",
+      "observed": "2026-01-09T09:00:00Z"
+    },
+    "1.4": {
+      "content": "sha256:d1b065dd3aff4bdad3a88e051276e31d1da87ab072f8b193f7c391dd182bc405",
+      "observed": "2026-01-09T09:00:00Z"
+    },
+    "latest": {
+      "content": "sha256:d1b065dd3aff4bdad3a88e051276e31d1da87ab072f8b193f7c391dd182bc405",
+      "observed": "2026-01-09T09:00:00Z"
+    }
+  }
+}

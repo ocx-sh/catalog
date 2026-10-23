@@ -1,0 +1,48 @@
+{
+  "name": "index-a/tools/flaky",
+  "repository": "oci://ghcr.io/ocx-contrib/tools/flaky",
+  "owners": [
+    {
+      "login": "ocx-bot",
+      "github": "ocx-bot",
+      "id": 309019509,
+      "github_id": 309019509
+    }
+  ],
+  "status": "active",
+  "deprecated_message": null,
+  "created": "2026-01-26",
+  "upstream": {
+    "org": "tools",
+    "repository_url": "https://github.com/tools/flaky",
+    "disclaimer": "Unaffiliated mirror of the upstream tools/flaky project."
+  },
+  "desc": {
+    "digest": "sha256:a53597c0d5046d7a85392923b6b432971678ee21829305cc78d1255e692916cb",
+    "title": "flaky",
+    "description": "Active package with one withdrawn release.",
+    "keywords": [
+      "cli",
+      "yanked-tag"
+    ],
+    "readme": "sha256:6cf687b19928fe23d50bff2fb6c7397ed0e7033791737f6f71f975c4117bbf3c"
+  },
+  "tags": {
+    "0.9.1": {
+      "content": "sha256:a61e3f3ddcae58992c0b623fb7e2491099b65400dd10a83d4e25410d2f9622df",
+      "observed": "2026-01-26T09:00:00Z",
+      "yanked": {
+        "reason": "Crashes on startup.",
+        "at": "2026-02-25"
+      }
+    },
+    "1.0.0": {
+      "content": "sha256:79f293d3399102e91a3330c1e38a8fe5dfe1d4f53cf4bca3d1f679abb1c22b2b",
+      "observed": "2026-01-26T09:00:00Z"
+    },
+    "latest": {
+      "content": "sha256:79f293d3399102e91a3330c1e38a8fe5dfe1d4f53cf4bca3d1f679abb1c22b2b",
+      "observed": "2026-01-26T09:00:00Z"
+    }
+  }
+}

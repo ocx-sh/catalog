@@ -53,3 +53,14 @@ describe("release.yml — install-script exposure in the credentialed job (W6)",
     expect(gate).not.toContain("--ignore-scripts");
   });
 });
+
+describe("release.yml — Node 24 / npm 11 toolchain (C-026)", () => {
+  it("both jobs run Node 24", () => {
+    expect(jobBlock("gate")).toContain('node-version: "24"');
+    expect(jobBlock("publish")).toContain('node-version: "24"');
+  });
+
+  it("the publish job pins npm 11.x for the OIDC exchange", () => {
+    expect(jobBlock("publish")).toMatch(/npm install -g npm@11\.\d+\.\d+$/m);
+  });
+});

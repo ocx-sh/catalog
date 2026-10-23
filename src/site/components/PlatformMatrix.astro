@@ -1,0 +1,295 @@
+---
+// The rail's Platforms card (D-060, D-061, D-071, D-072). One block per DISTINCT platform set across the
+// package's tags, all in the HTML; `client/detail.ts` shows the block of the install card's picked tag
+// (`data-platform-set`) and falls back to the empty note when a tag has none. Rows are OS glyph + name
+// with one cell per architecture column shared by every row, so an OS missing an arch keeps its
+// neighbours aligned; a platform-agnostic set is the single "any platform" line.
+// The support-matrix dialog renders its shell (chips, table header, a skeleton) and loads its rows from
+// `data/catalog/support/<key>.json` on first open (`client/support_matrix.ts`, D-149): a package with
+// hundreds of tags would otherwise push the page past C-017's gz budget.
+import CopyMenu from "@ocx-sh/theme/components/CopyMenu.astro";
+import Button from "@ocx-sh/theme/components/ui/Button.astro";
+import Dialog from "@ocx-sh/theme/components/ui/Dialog.astro";
+import Icon from "@ocx-sh/theme/components/ui/Icon.astro";
+import Skeleton from "@ocx-sh/theme/components/ui/Skeleton.astro";
+import Tag from "@ocx-sh/theme/components/ui/Tag.astro";
+import { cardCopyItems } from "../lib/cardCopy.js";
+import { DEFAULT_INSTALL_FLAVORS } from "../lib/installFlavors.js";
+import { platformMatrix } from "../lib/platformMatrix.js";
+import { supportPath } from "../lib/supportWire.js";
+import { joinBase } from "../../viewmodel/url.js";
+import type { DetailView } from "../model/detail.js";
+
+interface Props {
+  view: DetailView;
+  base: string;
+}
+const { view, base } = Astro.props;
+const OS_ICONS = { linux: "linux", darwin: "apple", windows: "windows" } as const;
+const opened = view.initialRelease === null ? -1 : (view.releases[view.initialRelease]?.platformSet ?? -1);
+const sets = view.platformSets.map((platforms) => platformMatrix(platforms));
+const platformCols = [...new Set(view.platformSets.flat())].sort();
+const supportUrl = joinBase(base, `/${supportPath(view.key)}`);
+---
+
+<section class="rail-block" aria-labelledby="platforms-heading" data-platforms>
+  <div class="platforms-head">
+    <h2 id="platforms-heading" class="rail-heading">Platforms</h2>
+      {
+        platformCols.length > 0 && (
+          <div class="support-dialog">
+          <Dialog title="Support matrix" description="Which platforms each version ships for. Click a version to copy its identifier.">
+            <span slot="trigger">support matrix</span>
+            <div data-support-matrix data-support-url={supportUrl}>
+              <div class="matrix-chips" role="group" aria-label="Show only versions supporting">
+                {platformCols.map((label) => (
+                  <Tag as="button" variant="filter" aria-pressed="false" data-matrix-require={label}>
+                    {label}
+                  </Tag>
+                ))}
+              </div>
+              <CopyMenu context label="Version actions" items={cardCopyItems(DEFAULT_INSTALL_FLAVORS)}>
+                <div class="matrix-scroll" role="region" aria-label="Support matrix" tabindex="0">
+                  <table class="matrix-table" aria-busy="true" data-matrix-table>
+                    <caption>Support matrix</caption>
+                    <thead>
+                      <tr>
+                        <th scope="col">Version</th>
+                        {platformCols.map((label) => (
+                          <th scope="col" data-matrix-col={label}>
+                            {label}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody data-matrix-rows />
+                  </table>
+                  <template data-matrix-flags>
+                    <span class="matrix-flag" role="img" data-flag="deprecated"><Icon name="warning" size="sm" /></span>
+                  </template>
+                </div>
+              </CopyMenu>
+              <div class="matrix-skeleton" data-matrix-skeleton>
+                <Skeleton variant="list" rows={6} />
+              </div>
+              <p class="matrix-note" data-matrix-empty hidden>No version supports all the chosen platforms.</p>
+              <p class="matrix-note" role="alert" data-matrix-error hidden>
+                The versions could not be loaded.
+                <Button variant="ghost" size="s" data-matrix-retry>Retry</Button>
+              </p>
+            </div>
+          </Dialog>
+          </div>
+        )
+      }
+  </div>
+  <div class="rail-card">
+    {
+      sets.map((matrix, i) => (
+        <div class="platform-set" data-platform-set={i} data-platform-key={view.platformSets[i]?.join(",")} hidden={i !== opened}>
+          {matrix.agnostic ? (
+            <p class="platform-any" data-platform-any>
+              any platform
+            </p>
+          ) : matrix.rows.length === 0 ? (
+            <p class="rail-empty">No platforms listed.</p>
+          ) : (
+            <div class="platform-matrix" style={`--arch-cols: ${matrix.columns.length}`} data-platform-matrix>
+              {matrix.rows.map((row) => (
+                <div class="platform-row" data-os={row.os}>
+                  <span class="platform-glyph">
+                    {row.os in OS_ICONS && <Icon name={OS_ICONS[row.os as keyof typeof OS_ICONS]} />}
+                  </span>
+                  <span class="platform-label">{row.label}</span>
+                  {matrix.columns.map((arch) => (
+                    <span class="platform-arch-cell">{row.arches.includes(arch) && <span class="platform-arch">{arch}</span>}</span>
+                  ))}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ))
+    }
+    <p class="rail-empty" data-platform-empty hidden={opened !== -1}>No platforms listed.</p>
+  </div>
+</section>
+
+<style>
+  .platform-set[hidden],
+  .rail-empty[hidden] {
+    display: none;
+  }
+  /* One grid for the whole card, rows joining it through `display: contents`: a grid per row would size
+     its arch columns from its own cells, and a row with an empty cell would drift out of line. */
+  .platform-matrix {
+    display: grid;
+    grid-template-columns: var(--ocx-space-5) 1fr repeat(var(--arch-cols), minmax(3.5rem, auto));
+    align-items: center;
+    gap: var(--ocx-space-4);
+  }
+  .platform-row {
+    display: contents;
+  }
+  .platform-glyph {
+    display: inline-flex;
+    justify-content: center;
+    color: var(--ocx-color-fg-muted);
+  }
+  .platform-label {
+    font-size: var(--ocx-text-sm);
+    color: var(--ocx-color-fg);
+  }
+  .platform-arch-cell {
+    display: flex;
+  }
+  .platform-arch {
+    flex: 1;
+    padding: var(--ocx-space-1) var(--ocx-space-3);
+    font-family: var(--ocx-font-mono);
+    font-size: var(--ocx-text-2xs);
+    text-align: center;
+    color: var(--ocx-color-fg-muted);
+    background: var(--ocx-color-surface-subtle);
+    border: var(--ocx-border-width) solid var(--ocx-color-border);
+    border-radius: var(--ocx-radius-sm);
+  }
+  .platform-any {
+    margin: 0;
+    font-size: var(--ocx-text-sm);
+    font-style: italic;
+    color: var(--ocx-color-fg-muted);
+  }
+  .rail-empty {
+    margin: 0;
+    font-family: var(--ocx-font-mono);
+    font-size: var(--ocx-text-sm);
+    color: var(--ocx-color-fg-subtle);
+  }
+  /* The trigger reads as a small accent link at the card's lower right, not a button (like "clear filters"). */
+  /* The matrix link sits on the heading's row, at its end, on the heading's baseline. */
+  .platforms-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--ocx-space-3);
+  }
+  .support-dialog {
+    --ocx-dialog-width: 56rem;
+  }
+  .support-dialog :global(.ocx-ui-button[data-part="trigger"]) {
+    block-size: auto;
+    padding: 0;
+    font-family: var(--ocx-font-mono);
+    font-size: var(--ocx-text-2xs);
+    font-weight: var(--ocx-font-weight-medium);
+    color: var(--ocx-color-accent-fg);
+    background: none;
+    border: 0;
+  }
+  .support-dialog :global(.ocx-ui-button[data-part="trigger"]:is(:hover, :focus-visible)) {
+    text-decoration: underline;
+  }
+  /* The table is the theme DataTable's look, drawn by `client/support_matrix.ts` (the theme table cannot take
+     rows at runtime): its rows do not exist at build time, so they are styled from the dialog. */
+  .matrix-scroll {
+    max-block-size: 60vh;
+    overflow: auto;
+    background: var(--ocx-color-surface);
+    border: var(--ocx-border-width) solid var(--ocx-color-border);
+    border-radius: var(--ocx-radius-lg);
+  }
+  .matrix-scroll:focus-visible {
+    outline: var(--ocx-focus-ring);
+    outline-offset: var(--ocx-focus-offset-inset);
+  }
+  .matrix-table {
+    inline-size: 100%;
+    margin: 0;
+    border-collapse: collapse;
+    font-size: var(--ocx-text-base);
+    color: var(--ocx-color-fg-muted);
+  }
+  .matrix-table caption {
+    position: absolute;
+    inline-size: 1px; /* visually hidden, still the table's name */
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .matrix-table th {
+    position: sticky;
+    inset-block-start: 0;
+    padding: var(--ocx-space-3) var(--ocx-space-5);
+    font-family: var(--ocx-font-mono);
+    font-size: var(--ocx-text-2xs);
+    font-weight: var(--ocx-font-weight-semibold);
+    letter-spacing: var(--ocx-tracking-caps);
+    text-transform: uppercase;
+    text-align: center;
+    white-space: nowrap;
+    color: var(--ocx-color-fg-subtle);
+    background: var(--ocx-color-surface-subtle);
+    border-bottom: var(--ocx-border-width) solid var(--ocx-color-border);
+  }
+  .matrix-table th:first-child {
+    inline-size: 100%;
+    text-align: start;
+  }
+  .support-dialog :global(.matrix-table td) {
+    padding: var(--ocx-space-4) var(--ocx-space-5);
+    text-align: center;
+    white-space: nowrap;
+    border-bottom: var(--ocx-border-width) solid var(--ocx-color-border);
+  }
+  .support-dialog :global(.matrix-table td:first-child) {
+    font-family: var(--ocx-font-mono);
+    font-size: var(--ocx-text-sm);
+    color: var(--ocx-color-fg);
+    text-align: start;
+    overflow-wrap: anywhere;
+  }
+  /* The version tree's marks (TagChip): a yanked tag struck through, an ephemeral one a keyword bar on its leading
+     edge; a deprecated package's warning glyph follows the tag. Each meaning is the mark's `title`. */
+  .support-dialog :global([data-matrix-tag][data-yanked]) {
+    text-decoration: line-through;
+    text-decoration-color: var(--ocx-color-danger);
+  }
+  .support-dialog :global([data-matrix-tag][data-ephemeral]) {
+    padding-inline-start: var(--ocx-space-3);
+    border-inline-start: 3px solid var(--ocx-color-keyword);
+  }
+  .support-dialog :global(.matrix-flag) {
+    display: inline-flex;
+    margin-inline-start: var(--ocx-space-2);
+    vertical-align: middle;
+    color: var(--ocx-color-warning);
+  }
+  .support-dialog :global(.matrix-table tr[hidden]) {
+    display: none;
+  }
+  /* A whole row copies its version: one pointer over it, no text caret on the cells. */
+  .support-dialog :global([data-support-matrix] tbody tr[data-ocx-row]) {
+    cursor: pointer;
+    user-select: none;
+  }
+  .support-dialog :global([data-support-matrix] tbody tr[data-ocx-row]:hover) {
+    background: var(--ocx-color-surface-subtle);
+  }
+  .matrix-skeleton[hidden],
+  .matrix-note[hidden] {
+    display: none;
+  }
+  .matrix-note {
+    margin: var(--ocx-space-4) 0 0;
+    font-size: var(--ocx-text-xs);
+    color: var(--ocx-color-fg-muted);
+  }
+  .matrix-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--ocx-space-3);
+    margin-block-end: var(--ocx-space-4);
+  }
+</style>

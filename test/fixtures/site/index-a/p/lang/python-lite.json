@@ -1,0 +1,57 @@
+{
+  "name": "index-a/lang/python-lite",
+  "repository": "oci://ghcr.io/ocx-contrib/lang/python-lite",
+  "owners": [
+    {
+      "login": "ocx-bot",
+      "github": "ocx-bot",
+      "id": 309019509,
+      "github_id": 309019509
+    }
+  ],
+  "status": "active",
+  "deprecated_message": null,
+  "created": "2026-01-11",
+  "upstream": {
+    "org": "lang",
+    "repository_url": "https://github.com/lang/python-lite",
+    "disclaimer": "Unaffiliated mirror of the upstream lang/python-lite project."
+  },
+  "desc": {
+    "digest": "sha256:e7871dc31a9f09aad4fe31b6fafcff68da7cbf91b56b9f0f26043627e7632264",
+    "title": "python-lite",
+    "description": "A minimal Python interpreter distribution.",
+    "keywords": [
+      "python",
+      "runtime"
+    ],
+    "readme": "sha256:5f6c699770326ce5e14acc5b957c3a168636242fe81b8b60d0a70305cebbe5f1",
+    "logo": "sha256:0ae105ea152ab0374c527e80c19ea1ffd3f8b5cd51282f78da25556c9211bc9e"
+  },
+  "tags": {
+    "1": {
+      "content": "sha256:f19d185daf6fb3f36ef5ad577b005b3a57f2e6cfbc48710e67670f65de4230e7",
+      "observed": "2026-01-11T09:00:00Z"
+    },
+    "1.0.0": {
+      "content": "sha256:8fa9e8c89364df6969d90b850071578a069277a01843d152b5d5ed56ff7a6641",
+      "observed": "2026-01-11T09:00:00Z"
+    },
+    "1.1.0": {
+      "content": "sha256:92b715baee1c96fdecb20f2e270581f4407d2b537a1cd688b513fcfdf13d4be4",
+      "observed": "2026-01-11T09:00:00Z"
+    },
+    "1.3.0": {
+      "content": "sha256:f19d185daf6fb3f36ef5ad577b005b3a57f2e6cfbc48710e67670f65de4230e7",
+      "observed": "2026-01-11T09:00:00Z"
+    },
+    "1.3": {
+      "content": "sha256:f19d185daf6fb3f36ef5ad577b005b3a57f2e6cfbc48710e67670f65de4230e7",
+      "observed": "2026-01-11T09:00:00Z"
+    },
+    "latest": {
+      "content": "sha256:f19d185daf6fb3f36ef5ad577b005b3a57f2e6cfbc48710e67670f65de4230e7",
+      "observed": "2026-01-11T09:00:00Z"
+    }
+  }
+}

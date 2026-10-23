@@ -1,0 +1,56 @@
+{
+  "name": "index-a/lang/go-lite",
+  "repository": "oci://ghcr.io/ocx-contrib/lang/go-lite",
+  "owners": [
+    {
+      "login": "ocx-bot",
+      "github": "ocx-bot",
+      "id": 309019509,
+      "github_id": 309019509
+    }
+  ],
+  "status": "active",
+  "deprecated_message": null,
+  "created": "2026-01-12",
+  "upstream": {
+    "org": "lang",
+    "repository_url": "https://github.com/lang/go-lite",
+    "disclaimer": "Unaffiliated mirror of the upstream lang/go-lite project."
+  },
+  "desc": {
+    "digest": "sha256:065706c6e5e34257bd105c6c51e5aea8bbc07c4f761ee5634ccc2aa0d244be98",
+    "title": "go-lite",
+    "description": "A minimal Go toolchain distribution.",
+    "keywords": [
+      "go",
+      "compiler"
+    ],
+    "readme": "sha256:55fb1ceb5fe7b86fa87e93293184561115c0f6df4de1dc1cd496e0e0e427dc95"
+  },
+  "tags": {
+    "1": {
+      "content": "sha256:588157d71d5580296dc93b92c50bf1d8495b842b1bc3a3fe28235acf27a97319",
+      "observed": "2026-01-12T09:00:00Z"
+    },
+    "1.0.0": {
+      "content": "sha256:b343f4385dccd46acdd0082900b3ce25759240e607531343faaa993fdd7ce54c",
+      "observed": "2026-01-12T09:00:00Z"
+    },
+    "1.1.0": {
+      "content": "sha256:a8117cdc0b40e2fc112a0ea8462ec98e87941c0327bc9b2d3b21da491714e84a",
+      "observed": "2026-01-12T09:00:00Z"
+    },
+    "1.4.0": {
+      "content": "sha256:588157d71d5580296dc93b92c50bf1d8495b842b1bc3a3fe28235acf27a97319",
+      "observed": "2026-01-12T09:00:00Z"
+    },
+    "1.4": {
+      "content": "sha256:588157d71d5580296dc93b92c50bf1d8495b842b1bc3a3fe28235acf27a97319",
+      "observed": "2026-01-12T09:00:00Z"
+    },
+    "latest": {
+      "content": "sha256:588157d71d5580296dc93b92c50bf1d8495b842b1bc3a3fe28235acf27a97319",
+      "observed": "2026-01-12T09:00:00Z"
+    }
+  }
+}

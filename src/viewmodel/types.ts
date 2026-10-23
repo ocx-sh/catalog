@@ -5,14 +5,14 @@
  * `indexbot.model` and produce for `/data/catalog/catalog.json`.
  *
  * These are catalog-scoped SUBSETS, not full ports of the bot's dataclasses:
- * fields the catalog emitter never reads (`owners`, `upstream`, `source`, the
+ * fields the catalog emitter never reads (the
  * vestigial `variants` root field, `desc.digest`, `root_raw`) are omitted.
  * See `bot/src/indexbot/model.py` for the full wire-facing shapes.
  *
- * `repository` (C-501, 2026-08-22 WP5) is the one exception: it IS carried
- * on `CatalogPackageRoot`, faithfully, for package DETAIL pages — but
- * `catalogEntry` (`catalog.ts`) never copies it onto `CatalogEntry`, so it
- * still never reaches `/data/catalog/catalog.json` (C-503, byte-stable).
+ * `repository` (C-501, 2026-08-22 WP5), `owners`, `source` and `upstream` are the
+ * exceptions: they ARE carried on `CatalogPackageRoot`, faithfully, for
+ * package DETAIL pages — but `catalogEntry` (`catalog.ts`) never copies them
+ * onto `CatalogEntry`, so they still never reach `/data/catalog/catalog.json` (C-503, byte-stable).
  * `CatalogPackageDetail` below is the other detail-only addition (C-600) —
  * neither is a "catalog" field despite living in this catalog-scoped file,
  * which is the existing home for every `CatalogSourcePackage`-adjacent type.
@@ -37,6 +37,8 @@ export interface TagEntry {
   readonly content: string;
   readonly observed: string;
   readonly yanked: Yank | null;
+  /** Wire `ephemeral === true` (strict): a snapshot build `ocx package prune` may delete from the registry. */
+  readonly ephemeral: boolean;
 }
 
 /** Catalog-scoped subset of Python `PackageId` (`model.py:114-128`). */
@@ -58,6 +60,18 @@ export interface CatalogDesc {
 }
 
 /**
+ * The vendor a mirrored namespace attributes (the wire root's `upstream`).
+ * Detail-page data only, like `source`: untrusted text, and `disclaimer` is a
+ * governance notice (ND-9) the detail page must always render when present.
+ */
+export interface CatalogUpstream {
+  readonly org: string;
+  /** Untrusted URL text; render it through `wireHref`. */
+  readonly repositoryUrl: string | null;
+  readonly disclaimer: string | null;
+}
+
+/**
  * Catalog-scoped subset of Python `PackageRoot` (`model.py:165-213`) — only
  * the fields `core/render.py`'s catalog functions read.
  */
@@ -71,6 +85,16 @@ export interface CatalogPackageRoot {
    * `CatalogEntry`, so it never reaches `/data/catalog/catalog.json`
    * (C-503). `null` when the wire root omits it; never fabricated. */
   readonly repository: string | null;
+  /** Owner logins in wire order (`ownerLogin`: `login`, else the pre-0.5.0
+   * `github`); an owner carrying neither is dropped. Detail-page data only,
+   * like `repository` — `catalogEntry` never copies it (C-503). */
+  readonly owners: readonly string[];
+  /** The wire root's `source` (the repository whose CI built the artifacts),
+   * `null` when unset. Detail-page data only; untrusted text — render it
+   * through `wireHref`. */
+  readonly source: string | null;
+  /** The wire root's `upstream`, `null` when unset. Detail-page data only. */
+  readonly upstream: CatalogUpstream | null;
   readonly created: string;
   readonly desc: CatalogDesc | null;
   readonly tags: Readonly<Record<string, TagEntry>>;

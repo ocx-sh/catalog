@@ -1,0 +1,57 @@
+{
+  "name": "index-a/db/pgcli-lite",
+  "repository": "oci://ghcr.io/ocx-contrib/db/pgcli-lite",
+  "owners": [
+    {
+      "login": "ocx-bot",
+      "github": "ocx-bot",
+      "id": 309019509,
+      "github_id": 309019509
+    }
+  ],
+  "status": "active",
+  "deprecated_message": null,
+  "created": "2026-01-14",
+  "upstream": {
+    "org": "db",
+    "repository_url": "https://github.com/db/pgcli-lite",
+    "disclaimer": "Unaffiliated mirror of the upstream db/pgcli-lite project."
+  },
+  "desc": {
+    "digest": "sha256:76d41af4bc902993c2451a2f781102abb6acb87c32581adebf0ab8dd367301cf",
+    "title": "pgcli-lite",
+    "description": "A PostgreSQL client with auto-completion.",
+    "keywords": [
+      "postgres",
+      "sql",
+      "cli"
+    ],
+    "readme": "sha256:0efd8c64ffa56803ca4b1caafec66678e0c15f47969598c50611ea7b49bf9b79"
+  },
+  "tags": {
+    "1": {
+      "content": "sha256:4c4f6eab5b2218a150ae921bd73b9c86ea45b994825c7905c25e22341f4a8e6d",
+      "observed": "2026-01-14T09:00:00Z"
+    },
+    "1.0.0": {
+      "content": "sha256:727705ce7dcd556768e2ad4cec7cd5d1d90281760f25fbc2d5c90f0f6b4b5602",
+      "observed": "2026-01-14T09:00:00Z"
+    },
+    "1.1.0": {
+      "content": "sha256:336a24cf00befc619c39cca0605e1bf065b351b8d2ea58abd54c933159677d83",
+      "observed": "2026-01-14T09:00:00Z"
+    },
+    "1.3.0": {
+      "content": "sha256:4c4f6eab5b2218a150ae921bd73b9c86ea45b994825c7905c25e22341f4a8e6d",
+      "observed": "2026-01-14T09:00:00Z"
+    },
+    "1.3": {
+      "content": "sha256:4c4f6eab5b2218a150ae921bd73b9c86ea45b994825c7905c25e22341f4a8e6d",
+      "observed": "2026-01-14T09:00:00Z"
+    },
+    "latest": {
+      "content": "sha256:4c4f6eab5b2218a150ae921bd73b9c86ea45b994825c7905c25e22341f4a8e6d",
+      "observed": "2026-01-14T09:00:00Z"
+    }
+  }
+}

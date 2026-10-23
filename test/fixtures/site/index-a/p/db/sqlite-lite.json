@@ -1,0 +1,58 @@
+{
+  "name": "index-a/db/sqlite-lite",
+  "repository": "oci://ghcr.io/ocx-contrib/db/sqlite-lite",
+  "owners": [
+    {
+      "login": "ocx-bot",
+      "github": "ocx-bot",
+      "id": 309019509,
+      "github_id": 309019509
+    }
+  ],
+  "status": "active",
+  "deprecated_message": null,
+  "created": "2026-01-15",
+  "upstream": {
+    "org": "db",
+    "repository_url": "https://github.com/db/sqlite-lite",
+    "disclaimer": "Unaffiliated mirror of the upstream db/sqlite-lite project."
+  },
+  "desc": {
+    "digest": "sha256:d25c7cd848186248301c656f7e4bba6d263528af6811c28cd0c4539882295d23",
+    "title": "sqlite-lite",
+    "description": "A self-contained SQL database engine shell.",
+    "keywords": [
+      "sqlite",
+      "sql",
+      "embedded"
+    ],
+    "readme": "sha256:21f2f9925af7702a718192863349718927e67901507050882f4502624e14a706",
+    "logo": "sha256:c702e66d7178be97967d1485113373e6f2eefb83a6ec5f024cbbe4f893660168"
+  },
+  "tags": {
+    "1": {
+      "content": "sha256:aedbee63ea6bfc99fdba4d4eb98630232f783758f6f5b8fd42baae020f808a67",
+      "observed": "2026-01-15T09:00:00Z"
+    },
+    "1.0.0": {
+      "content": "sha256:1de490dc47f352e3b4415df621c3a52249c01700400b1dc4bd90f850abd9f837",
+      "observed": "2026-01-15T09:00:00Z"
+    },
+    "1.1.0": {
+      "content": "sha256:73c1dc5d2265bede25bda550ec64ba9d74a48f92055ef1b7cba0900d10b9587d",
+      "observed": "2026-01-15T09:00:00Z"
+    },
+    "1.4.0": {
+      "content": "sha256:aedbee63ea6bfc99fdba4d4eb98630232f783758f6f5b8fd42baae020f808a67",
+      "observed": "2026-01-15T09:00:00Z"
+    },
+    "1.4": {
+      "content": "sha256:aedbee63ea6bfc99fdba4d4eb98630232f783758f6f5b8fd42baae020f808a67",
+      "observed": "2026-01-15T09:00:00Z"
+    },
+    "latest": {
+      "content": "sha256:aedbee63ea6bfc99fdba4d4eb98630232f783758f6f5b8fd42baae020f808a67",
+      "observed": "2026-01-15T09:00:00Z"
+    }
+  }
+}

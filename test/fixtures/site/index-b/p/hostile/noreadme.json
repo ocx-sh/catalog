@@ -1,0 +1,48 @@
+{
+  "name": "index-b/hostile/noreadme",
+  "repository": "oci://ghcr.io/ocx-contrib/hostile/noreadme",
+  "owners": [
+    {
+      "login": "ocx-bot",
+      "github": "ocx-bot",
+      "id": 309019509,
+      "github_id": 309019509
+    }
+  ],
+  "status": "active",
+  "deprecated_message": null,
+  "created": "2026-01-04",
+  "upstream": {
+    "org": "hostile",
+    "repository_url": "https://github.com/hostile/noreadme",
+    "disclaimer": "Unaffiliated mirror of the upstream hostile/noreadme project."
+  },
+  "desc": {
+    "digest": "sha256:0174df14675e917ea79359a0d8540be5e84a302e5754559040cf408fea3b716f",
+    "title": "noreadme",
+    "description": "Publishes no README at all.",
+    "keywords": [
+      "hostile",
+      "readme-less"
+    ],
+    "logo": "sha256:bbcf18f263f87a3aeb077096b3f033403cfa41dee694c1a4f153dd55cc578b24"
+  },
+  "tags": {
+    "1": {
+      "content": "sha256:d57629d29c851c4568a50006fde97dc767b014b55f88ad163161490142080b01",
+      "observed": "2026-01-04T09:00:00Z"
+    },
+    "1.0.0": {
+      "content": "sha256:d57629d29c851c4568a50006fde97dc767b014b55f88ad163161490142080b01",
+      "observed": "2026-01-04T09:00:00Z"
+    },
+    "1.0": {
+      "content": "sha256:d57629d29c851c4568a50006fde97dc767b014b55f88ad163161490142080b01",
+      "observed": "2026-01-04T09:00:00Z"
+    },
+    "latest": {
+      "content": "sha256:d57629d29c851c4568a50006fde97dc767b014b55f88ad163161490142080b01",
+      "observed": "2026-01-04T09:00:00Z"
+    }
+  }
+}

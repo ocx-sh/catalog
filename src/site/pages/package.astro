@@ -1,0 +1,148 @@
+---
+// The package detail page, one per route key. Every listed field is in the HTML (C-013, S-007) except
+// the tags beyond a bounded tree, which the browser fetches on first interaction (D-149). `client/detail.ts`
+// swaps between releases, copies (the theme's `CopyMenu` opens on tags, the name badge and the install
+// commands) and loads what the page left out. Links go through `packageHref`/`joinBase`/`wireHref` only
+// (C-009, C-042).
+import Breadcrumbs from "@ocx-sh/theme/components/ui/Breadcrumbs.astro";
+import site from "virtual:ocx-catalog/site";
+import { wirePrefix } from "../../viewmodel/catalog.js";
+import { joinBase } from "../../viewmodel/url.js";
+import DetailBanners from "../components/DetailBanners.astro";
+import IdentityBlock from "../components/IdentityBlock.astro";
+import InstallCard from "../components/InstallCard.astro";
+import MetaRail from "../components/MetaRail.astro";
+import PlatformMatrix from "../components/PlatformMatrix.astro";
+import ReadmePane from "../components/ReadmePane.astro";
+import VersionList from "../components/VersionList.astro";
+import Page from "../layouts/Page.astro";
+import { readmeProvenance } from "../lib/readmeProvenance.js";
+import { prerender } from "../lib/versionTable.js";
+
+export function getStaticPaths() {
+  return site.routes.map((key) => ({ params: { pkg: key }, props: { routeKey: key } }));
+}
+
+interface Props {
+  routeKey: string;
+}
+const { routeKey: key } = Astro.props;
+const view = site.details[key];
+if (view === undefined) throw new Error(`package page: route ${key} has no detail view`);
+const { base } = site;
+const readmeFile = site.readme[key] ?? null;
+const provenance = readmeProvenance(site.readmeUrl[key] ?? null, base);
+// Tags the page did not prerender load from the package's own root on first interaction (D-149): warm it,
+// by the `_root.json` alias a content blocker cannot match. Nothing to fetch, nothing to warm.
+const rootPath = prerender(view.versions).cut
+  ? `${wirePrefix(view.wireBase)}/p/${view.namespace}/${view.package}/_root.json`
+  : null;
+---
+
+<Page title={view.title} description={view.description} packageName={view.name} width="wide">
+  {rootPath !== null && <link slot="head" rel="preload" as="fetch" crossorigin="anonymous" href={joinBase(base, rootPath)} />}
+  <article class="detail" data-package={view.name} data-detail>
+    <Breadcrumbs items={[{ label: "Packages", href: joinBase(base, "/") }, { label: view.name }]} />
+
+    <DetailBanners view={view} part="banner" />
+    <IdentityBlock view={view} />
+    <DetailBanners view={view} part="disclaimer" />
+
+    <div class="columns">
+      <div class="versions-area">
+        <VersionList view={view} />
+      </div>
+      <div class="readme-area">
+        <ReadmePane file={readmeFile} provenance={provenance} />
+      </div>
+      <div class="rail">
+        <InstallCard view={view} />
+        <PlatformMatrix view={view} base={base} />
+        <MetaRail view={view} />
+      </div>
+    </div>
+  </article>
+</Page>
+
+<script>
+  import { bootDetail } from "../client/detail_entry.js";
+
+  const root = document.querySelector<HTMLElement>("[data-detail]");
+  if (root) bootDetail(root);
+</script>
+
+<style>
+  .detail {
+    display: grid;
+    gap: var(--ocx-space-5);
+    max-inline-size: var(--ocx-page-max);
+    margin-inline: auto;
+    padding: var(--ocx-space-5) var(--ocx-space-6) var(--ocx-space-8);
+  }
+  /* Versions and README stack on the left; the rail spans both. Row 1 hugs the versions card so a short
+     one does not push the README down by the rail's height. */
+  .columns {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) calc(var(--ocx-space-12) * 3);
+    grid-template-areas: "versions rail" "readme rail";
+    grid-template-rows: min-content 1fr;
+    gap: var(--ocx-space-5) var(--ocx-space-7);
+    align-items: start;
+  }
+  .versions-area {
+    grid-area: versions;
+    min-inline-size: 0;
+  }
+  .readme-area {
+    grid-area: readme;
+    min-inline-size: 0;
+  }
+  .rail {
+    grid-area: rail;
+    display: grid;
+    gap: var(--ocx-space-5);
+    min-inline-size: 0;
+  }
+  /* 640-1199px: the rail becomes a two-up band between the versions and the README. */
+  @media (max-width: 75em) {
+    .columns {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-areas: "versions" "rail" "readme";
+      grid-template-rows: auto;
+    }
+    .rail {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .rail > :global(:last-child) {
+      grid-column: 1 / -1;
+    }
+  }
+  /* Phones: install first, then the versions, then the README, one column. */
+  @media (max-width: 40em) {
+    .detail {
+      padding: var(--ocx-space-4) var(--ocx-space-4) var(--ocx-space-6);
+    }
+    .columns {
+      grid-template-areas: "rail" "versions" "readme";
+    }
+    .rail {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+  /* Shared by the rail and main-column components (their own markup, this page's frame). */
+  .detail :global(.rail-heading) {
+    margin: 0 0 var(--ocx-space-3);
+    font-family: var(--ocx-font-mono);
+    font-size: var(--ocx-text-xs);
+    font-weight: var(--ocx-font-weight-semibold);
+    letter-spacing: var(--ocx-tracking-caps);
+    text-transform: uppercase;
+    color: var(--ocx-color-fg-subtle);
+  }
+  .detail :global(.rail-card) {
+    padding: var(--ocx-card-pad);
+    background: var(--ocx-color-surface);
+    border: var(--ocx-border-width) solid var(--ocx-color-border);
+    border-radius: var(--ocx-radius-lg);
+  }
+</style>

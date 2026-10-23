@@ -11,7 +11,7 @@
   "dependencies": {
     "@astrojs/markdown-satteri": "^0.4.0",
     "@astrojs/starlight": ">=0.42.0 <0.43",
-    "@ocx-sh/theme": "^0.2.1",
+    "@ocx-sh/theme": "^0.2.2",
     "astro": "^7.3.5"
   }
 }

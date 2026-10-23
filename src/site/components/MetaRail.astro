@@ -1,0 +1,235 @@
+---
+// The rail's metadata card. Every value is untrusted wire text rendered as text; the only links are
+// the model's `wireHref`-checked source, upstream and owner URLs (re-run through `wireHref` at the sink,
+// C-042) and keyword searches onto the landing page. A `null` URL is plain text. The `registry` row is
+// the physical `oci://` repository as written; a click copies it without the scheme (D-052,
+// `client/detail.ts`).
+// License, source and revision follow the hovered or picked tag (D-060, D-090): the rows are always in
+// the HTML and `client/detail.ts` rewrites them from the `data-release` table below, which carries one
+// entry per distinct image index (an empty attribute means that release has no such fact).
+import Link from "@ocx-sh/theme/components/ui/Link.astro";
+import site from "virtual:ocx-catalog/site";
+import { joinBase, wireHref } from "../../viewmodel/url.js";
+import { prerender } from "../lib/versionTable.js";
+import type { DetailView } from "../model/detail.js";
+
+interface Props {
+  view: DetailView;
+}
+const { view } = Astro.props;
+const { base } = site;
+const opened = view.initialRelease === null ? null : (view.releases[view.initialRelease] ?? null);
+// The first source any release names stands in for the link until a tag with its own is shown.
+// Only the releases of the tags the page prerenders (`prerender`) are in the table; a late tag brings its own.
+const { tags: shownTags } = prerender(view.versions);
+const shownReleases = new Set([view.initialRelease, ...view.tagReleases.filter(([tag]) => shownTags.has(tag)).map(([, i]) => i)]);
+const anySource = view.releases.find((release) => release.sourceHref !== null)?.sourceHref ?? null;
+const sourceHref = opened?.sourceHref ?? anySource;
+---
+
+<section class="rail-block" aria-labelledby="meta-heading" data-metadata>
+  <h2 id="meta-heading" class="rail-heading">Metadata</h2>
+  <div class="rail-card">
+    <dl class="meta-rows">
+      {
+        view.registry !== null && (
+          <div class="meta-row" data-row="registry">
+            <dt>registry</dt>
+            <dd data-field="registry">
+              <button
+                type="button"
+                class="meta-copy meta-truncate"
+                data-registry-copy
+                data-registry={view.registry.address}
+                title="Click to copy physical registry address (without oci://)"
+              >
+                {view.registry.display}
+              </button>
+            </dd>
+          </div>
+        )
+      }
+      {
+        sourceHref !== null && (
+          <div class="meta-row" data-row="source" hidden={opened?.sourceHref == null}>
+            <dt title="Repository whose CI built these artifacts">source</dt>
+            <dd data-field="source">
+              <Link class="meta-truncate" href={wireHref(sourceHref) ?? ""} newTab external>
+                <span data-source-text>{sourceHref}</span>
+              </Link>
+            </dd>
+          </div>
+        )
+      }
+      {
+        view.releases.some((release) => release.license !== null) && (
+          <div class="meta-row" data-row="license" hidden={opened?.license == null}>
+            <dt>license</dt>
+            <dd data-field="license">{opened?.license}</dd>
+          </div>
+        )
+      }
+      {
+        view.releases.some((release) => release.revision !== null) && (
+          <div class="meta-row" data-row="revision" hidden={opened?.revision == null}>
+            <dt>revision</dt>
+            <dd data-field="revision">
+              <code>{opened?.revision}</code>
+            </dd>
+          </div>
+        )
+      }
+      <div class="meta-row" data-row="owners">
+        <dt>owners</dt>
+        <dd data-field="owners">
+          {
+            view.owners.length === 0
+              ? "—"
+              : view.owners.map((owner, i) => (
+                  <>
+                    {owner.href === null ? (
+                      <span data-owner>@{owner.login}</span>
+                    ) : (
+                      <a href={wireHref(owner.href)} target="_blank" rel="noopener noreferrer" data-owner>
+                        @{owner.login}
+                      </a>
+                    )}
+                    {i < view.owners.length - 1 && ", "}
+                  </>
+                ))
+          }
+        </dd>
+      </div>
+      {
+        view.upstream !== null && (
+          <div class="meta-row" data-row="upstream">
+            <dt>upstream</dt>
+            <dd data-field="upstream">
+              {view.upstream.href === null ? (
+                view.upstream.org
+              ) : (
+                <Link href={wireHref(view.upstream.href) ?? ""} newTab external>
+                  {view.upstream.org}
+                </Link>
+              )}
+            </dd>
+          </div>
+        )
+      }
+      {
+        view.latestVersion !== null && (
+          <div class="meta-row" data-row="latest">
+            <dt>latest</dt>
+            <dd data-field="latest">{view.latestVersion}</dd>
+          </div>
+        )
+      }
+      <div class="meta-row" data-row="tags">
+        <dt>tags</dt>
+        <dd data-field="tags">{view.tagCount}</dd>
+      </div>
+      {
+        view.keywords.length > 0 && (
+          <div class="meta-row" data-row="keywords">
+            <dt>keywords</dt>
+            <dd data-field="keywords" class="keywords">
+              {view.keywords.map((keyword) => (
+                <a
+                  class="keyword"
+                  data-keyword
+                  href={joinBase(base, `/?q=${encodeURIComponent(keyword)}`)}
+                  title={`search packages: ${keyword}`}
+                >
+                  {keyword}
+                </a>
+              ))}
+            </dd>
+          </div>
+        )
+      }
+    </dl>
+    <ul hidden data-releases data-initial={view.initialRelease ?? ""}>
+      {
+        view.releases.map((release, i) => shownReleases.has(i) && (
+          <li
+            data-release={i}
+            data-platform-set={release.platformSet}
+            data-license={release.license ?? ""}
+            data-source-url={release.sourceHref ?? ""}
+            data-revision={release.revision ?? ""}
+          />
+        ))
+      }
+    </ul>
+  </div>
+</section>
+
+<style>
+  .meta-rows {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: var(--ocx-space-3) var(--ocx-space-5);
+    margin: 0;
+    font-size: var(--ocx-text-xs);
+  }
+  .meta-row {
+    display: contents;
+  }
+  .meta-row[hidden] {
+    display: none;
+  }
+  .meta-rows :global(.meta-truncate) {
+    display: inline-block;
+    max-inline-size: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: bottom;
+  }
+  .meta-rows dt {
+    font-family: var(--ocx-font-mono);
+    color: var(--ocx-color-fg-subtle);
+  }
+  .meta-rows dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+    font-family: var(--ocx-font-mono);
+    color: var(--ocx-color-fg);
+  }
+  .meta-copy {
+    padding: 0;
+    font: inherit;
+    color: var(--ocx-color-accent-fg);
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+  }
+  .meta-copy[data-copied] {
+    color: var(--ocx-color-success);
+  }
+  .meta-rows a:not(.keyword) {
+    color: var(--ocx-color-accent-fg);
+  }
+  .keywords {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--ocx-space-2) var(--ocx-space-3);
+  }
+  .keyword {
+    /* A link target of at least 24px (WCAG 2.5.8, axe `target-size`): the line box alone is 15px. */
+    display: inline-flex;
+    align-items: center;
+    min-block-size: var(--ocx-space-6);
+    padding: 0 var(--ocx-space-3);
+    background: var(--ocx-color-keyword-tint);
+    color: var(--ocx-color-keyword);
+    text-decoration: none;
+    /* As the identity block's keywords: a transparent border keeps the hover border from shifting the layout. */
+    border: var(--ocx-border-width) solid transparent;
+    transition: border-color var(--ocx-duration-base) var(--ocx-ease-out);
+  }
+  .keyword:hover,
+  .keyword:focus-visible {
+    border-color: var(--ocx-color-keyword);
+  }
+</style>

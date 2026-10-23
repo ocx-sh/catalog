@@ -1,0 +1,123 @@
+---
+// The table-view row shape: rendered once into `<template data-grid-row>` and
+// cloned by the grid island (the table is built on the client only; the server
+// renders cards). Every part is present, the island sets `hidden` and fills
+// the platform slots (`client/grid.ts` documents the `data-field` contract).
+// The version cell is never hidden: a package without one prints an em dash, so
+// platforms and tag count keep their tracks (D-039).
+import LogoTile from "@ocx-sh/theme/components/ui/LogoTile.astro";
+import Tag from "@ocx-sh/theme/components/ui/Tag.astro";
+import { plural } from "../lib/plural.js";
+import { joinBase } from "../../viewmodel/url.js";
+import { cardCopyData } from "../lib/cardCopy.js";
+import { DEFAULT_INSTALL_FLAVORS } from "../lib/installFlavors.js";
+import type { LandingCard } from "../model/landing.js";
+
+interface Props {
+  card: LandingCard;
+  base: string;
+}
+const { card, base } = Astro.props;
+const bare = card.name.split("/").slice(1).join("/");
+const copy = cardCopyData(card.name, card.latestVersion, DEFAULT_INSTALL_FLAVORS);
+---
+
+<a class="pkg-row" data-slot="package-row" data-card data-key={card.name} data-copy={JSON.stringify(copy)} href={card.href}>
+  <LogoTile name="" seed={bare} src={card.logoUrl === null ? undefined : joinBase(base, card.logoUrl)} size="sm" />
+  <span class="row-name">
+    <span class="row-title" data-field="title">{card.title}</span>
+    <Tag variant="stamp" tone="warning" data-field="deprecated" hidden>deprecated</Tag>
+    <Tag variant="stamp" tone="danger" data-field="yanked" hidden>yanked</Tag>
+  </span>
+  <span class="row-ident" data-field="name">{card.name}</span>
+  <span class="row-desc" data-field="description">{card.description}</span>
+  <span class="row-version" data-field="version">{card.latestVersion ?? "—"}</span>
+  <span class="row-platforms" data-field="platforms"></span>
+  <span class="row-tags" data-field="tags">{plural(card.tagCount, "tag")}</span>
+</a>
+
+<style>
+  @layer ocx {
+    .pkg-row {
+      /* A subgrid item: the table's tracks are sized over every row, so a column lines up down the page.
+         Never `content-visibility` here: it implies layout containment, which turns a subgrid into none. */
+      display: grid;
+      grid-column: 1 / -1;
+      grid-template-columns: subgrid;
+      align-items: center;
+      column-gap: var(--ocx-space-4);
+      padding: var(--ocx-space-3) var(--ocx-space-5);
+      color: inherit;
+      text-decoration: none;
+    }
+    /* Row separators are the list's (CatalogGrid): the row only knows its own fill. */
+    .pkg-row:hover,
+    .pkg-row:focus-visible {
+      background: var(--ocx-color-hover);
+    }
+    .pkg-row:focus-visible {
+      outline: var(--ocx-focus-ring);
+      outline-offset: var(--ocx-focus-offset-inset);
+    }
+    .row-name {
+      display: flex;
+      align-items: baseline;
+      gap: var(--ocx-space-3);
+      min-inline-size: 0;
+    }
+    .row-title,
+    .row-ident,
+    .row-desc {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .row-title {
+      font-size: var(--ocx-text-md);
+      font-weight: var(--ocx-font-weight-semibold);
+    }
+    .row-ident,
+    .row-version,
+    .row-tags {
+      font-family: var(--ocx-font-mono);
+      font-size: var(--ocx-text-xs);
+      color: var(--ocx-color-fg-muted);
+    }
+    .row-desc {
+      font-size: var(--ocx-text-base);
+      color: var(--ocx-color-fg-muted);
+    }
+    .row-platforms {
+      /* One slot per OS the catalog publishes (--os-cols, set by the island), supported or not. max(1, …):
+         `repeat(0, …)` is invalid CSS and drops the whole declaration, and a catalog whose packages declare
+         no platform has zero columns. The minimum width gives an "any platform" label room (D-041). */
+      display: grid;
+      grid-template-columns: repeat(max(1, var(--os-cols, 0)), var(--ocx-icon-md));
+      gap: var(--ocx-space-3);
+      align-items: center;
+      justify-items: center;
+      min-inline-size: 4.5rem;
+    }
+    /* A platform-agnostic package: one italic label across every slot, flush left where the first icon would sit (D-040).
+       The island makes the span, so it carries no scope attribute. */
+    .row-platforms :global(.row-any) {
+      grid-column: 1 / -1;
+      justify-self: start;
+      font-size: var(--ocx-text-2xs);
+      font-style: italic;
+      white-space: nowrap;
+    }
+    /* Narrow screens fold the description first, then platforms and tag count; CatalogGrid sets the tracks at the same widths (D-004). */
+    @media (max-width: 899px) {
+      .row-desc {
+        display: none;
+      }
+    }
+    @media (max-width: 639px) {
+      .row-platforms,
+      .row-tags {
+        display: none;
+      }
+    }
+  }
+</style>

@@ -24,7 +24,17 @@ export type ConfigErrorCode =
   /** Two `sources[]` entries declare the same explicit `label`. */
   | "LABEL_CONFLICT"
   /** A `css`/`docs`/`path` value resolves outside the config file's directory. */
-  | "PATH_ESCAPE";
+  | "PATH_ESCAPE"
+  /** `base` (or the path of `siteUrl`, its default) is not a canonical URL path
+   * prefix (C-003): leading and trailing `/`, no dot segment. */
+  | "BASE_INVALID"
+  /** `base` and `siteUrl`'s path both carry a path and differ (C-003). */
+  | "BASE_SITEURL_MISMATCH"
+  /** `chrome: "ocx"` conflicts with `brand`, `nav`, `footer` or `docsNav` (C-003). */
+  | "CHROME_OCX_CONFLICT"
+  /** The output directory overlaps a configured input directory. Declared
+   * here with the other config codes; raised by `cli/out_dir.ts`. */
+  | "OUT_DIR_OVERLAPS_INPUT";
 
 /**
  * Raised by `loadConfig` for any validation failure. `message` always names
