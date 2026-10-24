@@ -145,7 +145,12 @@ export type SourceErrorCode =
   /** `mirror.ts`: a path the mirror writes is already in the output (a
    * consumer `publicDir` file such as `_headers`, or a path two sources both
    * claim) — the mirror never overwrites (C-027). */
-  | "OUTPUT_COLLISION";
+  | "OUTPUT_COLLISION"
+  /** `sources_pipeline.ts`: a source's `config.json` or `c/index.json`
+   * declares a `format_version` other than 1 — a layout this reader does not
+   * know, so it fails rather than rendering a misread tree. An absent
+   * `format_version` is accepted. */
+  | "UNSUPPORTED_FORMAT";
 
 /**
  * Raised by the source-reading layer for any failure listed in

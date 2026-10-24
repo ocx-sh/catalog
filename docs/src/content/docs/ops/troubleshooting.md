@@ -58,6 +58,7 @@ invented.
 | `INDEX_NAMESPACE_COLLISION` | A non-root source's label is also a namespace the `root: true` source publishes, so both claim `/<that name>/**` | Rename the index, or move that namespace out of the root source |
 | `INDEX_LABEL_RESERVED` | A non-root source's label, or a namespace the `root: true` source publishes, equals a top-level path the build writes itself. Both would claim `/<that name>/**`. Compared case-insensitively | Rename the index, or move the namespace. See [Reserved names](../../reference/config-schema/#reserved-names) for the full set |
 | `OUTPUT_COLLISION` | A path the mirror writes is already in the output: a `publicDir` file such as `_headers`, or a path two sources both claim. The message reads `refusing to overwrite "<path>"`. 0.5.x let the generated file win silently | Remove or rename the `publicDir` file, or fix the two sources |
+| `UNSUPPORTED_FORMAT` | A source's `config.json` or `c/index.json` declares a `format_version` other than `1` (an absent one is accepted). Exit `65` | The index is newer than this catalog reads: upgrade `@ocx-sh/catalog`, or point the source at an index published in format 1 |
 
 ### Build errors (exit 65)
 
