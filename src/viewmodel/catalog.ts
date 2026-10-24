@@ -197,11 +197,9 @@ export function wirePrefix(wireBase: string): string {
  * source (`wireBase` `""` never yields `//p/`), `/index/<label>/p/…` for any
  * other. It never contains the site's `base` — `catalog.json` is byte-identical
  * for every `base`, and a client joins the prefix with `joinBase` (`url.ts`).
- * `null` when no
- * digest is configured. A configured digest missing from `extLookup` is a
- * dangling reference — trusted away upstream (`check_no_dangling_references`,
- * G-15); this throws rather than silently degrading the entry, matching the
- * Python `KeyError` propagation this function's doc comment describes.
+ * `null` when no digest is configured, or when the configured digest has no
+ * loaded object in `extLookup` (an optional asset the build could not fetch):
+ * the entry renders without it rather than failing the whole build.
  */
 export function casUrl(
   namespace: string,
@@ -215,7 +213,7 @@ export function casUrl(
   }
   const ext = extLookup.get(digest);
   if (ext === undefined) {
-    throw new Error(`dangling CAS reference: digest ${digest} missing from contentByDigest`);
+    return null;
   }
   return `${wirePrefix(wireBase)}/${casRelpath(namespace, pkg, digest, ext)}`;
 }
@@ -328,9 +326,8 @@ function lexicographicMax(values: readonly string[]): string | null {
  * the digest with its `sha256:` prefix stripped and `ext` is looked up from
  * `source.contentByDigest`'s own keys (format `` `${digest}.${ext}` `` —
  * see `CatalogSourcePackage.contentByDigest`'s doc). A configured digest
- * missing from `contentByDigest` is a dangling reference the bot's upstream
- * validation gate (`check_no_dangling_references`) rejects before render
- * ever runs — trust that invariant rather than degrading the entry.
+ * missing from `contentByDigest` (an optional asset that was not loaded)
+ * yields `null` too: the entry renders without that logo or readme.
  */
 export function catalogEntry(source: CatalogSourcePackage): CatalogEntry {
   const { namespace, package: pkg } = source.packageId;

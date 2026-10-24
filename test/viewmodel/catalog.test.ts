@@ -189,17 +189,22 @@ describe("catalogEntry", () => {
     expect(catalogEntry(sourceOf(emptyRoot({ status: "yanked" }))).status).toBe("yanked");
   });
 
-  // render.py:136-145 (_cas_url): a configured digest missing from
-  // ext_lookup is a dangling reference — the JSDoc's trust posture is
-  // "render trusts its input and lets KeyError propagate ... rather than
-  // silently degrading the catalog entry". No golden fixture can reach
-  // this (the upstream validation gate never lets a dangling reference
-  // reach render in practice); this pins the throw contract directly.
-  it("throws when desc.logo's digest is missing from contentByDigest", () => {
+  // A configured digest whose object was not loaded (an optional asset the
+  // build could not fetch) renders the entry without it instead of failing.
+  it("renders without a logo when desc.logo's digest is missing from contentByDigest", () => {
     const root = emptyRoot({
       desc: { title: "T", description: "d", keywords: [], readme: null, logo: digest("z") },
     });
-    expect(() => catalogEntry(sourceOf(root, {}))).toThrow();
+    expect(catalogEntry(sourceOf(root, {})).logoUrl).toBeNull();
+  });
+
+  it("renders without a readme when desc.readme's digest is missing from contentByDigest", () => {
+    const root = emptyRoot({
+      desc: { title: "T", description: "d", keywords: [], readme: digest("y"), logo: null },
+    });
+    const entry = catalogEntry(sourceOf(root, {}));
+    expect(entry.readmeUrl).toBeNull();
+    expect(entry.title).toBe("T");
   });
 
   // Security panel finding: casRelpath fullmatch-validates digest/ext at the
