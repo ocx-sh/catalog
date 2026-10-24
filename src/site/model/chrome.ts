@@ -31,7 +31,7 @@ export interface ChromeView {
   readonly siteName: string;
   /** Site-wide tagline: the meta description of a page that has none. */
   readonly description: string | null;
-  /** The docs mount's index href, `base`-joined; `null` without a `docs` mount. The ocx header links it (D-139). */
+  /** The docs mount's index href, `base`-joined; `null` without a `docs` mount. The ocx header does not link it: the docs are reached through the ocx.sh ecosystem menu (nav.json). */
   readonly docsHref: string | null;
   /** The catalog's `generated` timestamp, `null` when no package has activity; the footer's freshness stamp reads it. */
   readonly generated: string | null;

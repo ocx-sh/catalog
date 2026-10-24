@@ -273,14 +273,12 @@ describe("C-021 neutral chrome from own builds", () => {
     expect(result.stderr).toContain("favicon");
   });
 
-  it("D-139 with a docs mount, the ocx header links it on every page, current only under the mount", async () => {
+  it("with a docs mount, the ocx header still has no docs link: the ecosystem menu (nav.json) carries it", async () => {
     const { out } = await build({ chrome: "ocx", base: "/catalog/", docs: "./docs", brand: undefined }, { "docs/intro.md": "# Intro\n" });
 
     for (const path of ["/", "/404.html", "/docs/intro/"]) {
       const doc = await readHtml(out, path);
-      const link = doc.querySelector('header a[href="/catalog/docs/"]');
-      expect(link?.textContent?.trim(), path).toBe("docs");
-      expect(link?.getAttribute("aria-current") === "page", path).toBe(path.startsWith("/docs/"));
+      expect([...doc.querySelectorAll("header a")].some((a) => a.textContent?.trim() === "docs" && a.getAttribute("href") === "/catalog/docs/"), path).toBe(false);
     }
   });
 
