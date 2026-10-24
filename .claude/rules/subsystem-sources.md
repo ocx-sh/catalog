@@ -79,6 +79,15 @@ every fetch:
   returned (`SourceError("DIGEST_MISMATCH", …)`), never a silent pass-through.
 - Concurrency capped at 16 (`Semaphore`); 3 retries after the first attempt with
   jittered exponential backoff.
+- **A tag's image-index object may 404.** It is the one fetch whose absence is
+  survivable: `loadOrFetch(…, missingOk)` accepts the 404 on the first attempt
+  (no retry, no sleep), `ctx.warn` names source/package/tag/digest, and the path
+  stays out of `files`. 5xx, network, redirect, oversize and `DIGEST_MISMATCH`
+  stay fatal, as does a 404 on every other file. `catalogPlatforms` then skips
+  the unloaded live digest (a malformed blob still throws, exit 65).
+  `path`/`git` sources have no fetch to 404 on, so `readOneSource` warns for a
+  live tag whose object is absent from the tree (`url` is skipped there — the
+  walker already warned).
 
 ## Git source: option-injection guard + LFS detection
 

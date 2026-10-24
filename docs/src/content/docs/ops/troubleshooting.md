@@ -46,7 +46,7 @@ invented.
 | Code | What triggers it | What to change |
 |---|---|---|
 | `PATH_ESCAPE` | A file's realpath resolves outside its source root (symlink escape), a git `git`/`ref`/`dir` value starts with `-` (looks like a git option), or a malformed CAS digest was about to be used in a cache path | Fix the symlink target, or the offending config value |
-| `FETCH_FAILED` | A `url` source stayed unreachable after exhausting its retries, or a request received a redirect (never followed) | Check the source URL is reachable and returns no redirects |
+| `FETCH_FAILED` | A `url` source stayed unreachable after exhausting its retries, or a request received a redirect (never followed). A 404 on a tag's image-index object is not this: that tag is skipped with a warning | Check the source URL is reachable and returns no redirects |
 | `DIGEST_MISMATCH` | A fetched file's bytes don't match the digest it was fetched against | The source is serving inconsistent data — fix it at the source, this isn't fixable from the catalog config |
 | `GIT_SHA_UNSUPPORTED` | A commit-SHA `ref` was requested but the remote won't let you fetch an arbitrary commit it never advertised | Use a branch/tag name instead of a raw SHA, or a remote that allows `allow-tips-sha1-in-want` |
 | `LFS_POINTER` | A sourced blob is a Git LFS pointer file, not the real bytes (a `--depth 1` clone never fetches LFS objects) | Don't LFS-track files this package needs to read, or fetch them another way |

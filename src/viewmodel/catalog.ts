@@ -238,20 +238,24 @@ export function casUrl(
  * Untrusted-input posture, ported verbatim: `platform` is unvalidated
  * publisher-supplied JSON all the way to here — the upstream image-index
  * shape gate stops at each descriptor's `digest`. A malformed CAS blob, an
- * index with no `manifests` key, a live-tag digest missing from
- * `contentByDigest`, or a `manifests[]` entry that is not itself an object
- * should propagate as a parse/lookup failure, not be silently swallowed —
+ * index with no `manifests` key, or a `manifests[]` entry that is not itself
+ * an object should propagate as a parse failure, not be silently swallowed —
  * matching Python's `descriptor.get("platform")`, which raises
  * `AttributeError` on a non-dict descriptor rather than skipping it. Only
  * `platform` — one field *inside* an already-object descriptor — gets the
  * lenient "skip, don't throw" treatment described above.
+ *
+ * A live-tag digest missing from `contentByDigest` is skipped too, unlike
+ * Python's `KeyError`: the source layer drops a tag object the publisher's
+ * tree no longer serves (and warns by name), so that tag costs the entry its
+ * platforms, not the build.
  */
 export function catalogPlatforms(source: CatalogSourcePackage): readonly string[] {
   const platforms = new Set<string>();
   for (const digest of liveTagContentDigests(source.root)) {
     const bytes = source.contentByDigest[`${digest}.json`];
     if (bytes === undefined) {
-      throw new Error(`live tag digest ${digest} missing from contentByDigest`);
+      continue;
     }
     const index = JSON.parse(textDecoder.decode(bytes)) as { manifests?: unknown };
     if (!Array.isArray(index.manifests)) {

@@ -114,12 +114,15 @@ export interface ResolvedCatalog {
 }
 
 /** Surfaces a source reader's non-fatal warning (`types.ts`'s
- * `SourceWarning` — today only `git.ts`'s `.gitmodules` notice and
- * `walker.ts`'s unfetchable-desc-asset notice) on stderr. That module never
+ * `SourceWarning` — today `git.ts`'s `.gitmodules` notice and `walker.ts`'s
+ * unfetchable-desc-asset and missing-tag-object notices) on stderr. That module never
  * writes to a stream itself, deliberately; this is the build's choice of
  * sink, and stderr keeps it out of any `stdout` a caller might be piping. */
 export function warnToStderr(message: string): void {
-  process.stderr.write(`ocx-catalog: ${message}\n`);
+  // A warning can carry remote text (a tag name): escape every control
+  // character so it cannot open a log line (`::error::`) or drive the terminal.
+  const inert = message.replace(/\p{Cc}/gu, (c) => `\\u${c.charCodeAt(0).toString(16).padStart(4, "0")}`);
+  process.stderr.write(`ocx-catalog: ${inert}\n`);
 }
 
 /** Names a source by its config index and its own target, so a failure
@@ -182,6 +185,24 @@ export interface SourceResult {
  */
 export type RemoteCache = Map<string, SourceResult>;
 
+/** A `path`/`git` source has no fetch to 404 on, so a live tag whose image
+ * index is absent from the tree is found here instead — the same outage the
+ * `url` reader warns about, and it costs the tag its platforms the same way
+ * (`catalogPlatforms` skips it). `url` sources are not checked: `walker.ts`
+ * already warned for them, naming the 404. */
+function warnMissingTagObjects(source: string, packages: readonly CatalogSourcePackage[]): void {
+  for (const { packageId, root, contentByDigest } of packages) {
+    for (const [tag, entry] of Object.entries(root.tags)) {
+      if (entry.yanked === null && contentByDigest[`${entry.content}.json`] === undefined) {
+        warnToStderr(
+          `${source}: ${packageId.namespace}/${packageId.package} tag ${JSON.stringify(tag)}: image index ${JSON.stringify(entry.content)} ` +
+            `is missing from the tree — the tag keeps its place in the catalog but loses its platforms and release facts`,
+        );
+      }
+    }
+  }
+}
+
 async function readOneSource(
   source: ResolvedSource,
   index: number,
@@ -207,6 +228,7 @@ async function readOneSource(
     // so a non-root source's assets resolve to the `index/<label>/p/...`
     // tree the mirror actually writes.
     const packages = extracted.map((pkg) => ({ ...pkg, wireBase }));
+    if (source.entry.url === undefined) warnMissingTagObjects(describeSource(index, source.entry), packages);
     return { resolved: { label, files, root }, packages, wireBase };
   } catch (err) {
     throw asBuildError(err, describeSource(index, source.entry));

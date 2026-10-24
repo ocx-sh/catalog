@@ -461,6 +461,115 @@ describe("readUrlSource — a 404 on a required fetch is FETCH_FAILED, never sil
   });
 });
 
+// A tag's image-index object is the one required-looking fetch whose absence is
+// survivable: the package root already names the tag, and only its platforms are
+// lost. A 404 there costs that tag's metadata (one warning), never the build —
+// while every other failure on the same fetch keeps failing it.
+describe("readUrlSource — a tag object that 404s is skipped with a warning", () => {
+  const tagBytes = utf8(JSON.stringify({ schemaVersion: 2, manifests: [] }));
+  const tagDigest = sha256Digest(tagBytes);
+  const tagWirePath = `p/ns/pkg/o/sha256/${tagDigest.slice("sha256:".length)}.json`;
+  const lostDigest = `sha256:${"9".repeat(64)}`;
+  const lostWirePath = `p/ns/pkg/o/sha256/${lostDigest.slice("sha256:".length)}.json`;
+
+  function singleTagServer(tagRoute: Route) {
+    const root = rootJsonBytes({
+      name: "ocx.sh/ns/pkg",
+      tags: { "1.0.0": { content: tagDigest, observed: "2026-01-01T00:00:00Z" } },
+    });
+    return fakeFetch([
+      [
+        "/c/index.json",
+        () => ({ status: 200, body: indexJson({ "ns/pkg": sha256Digest(root) }), headers: { ETag: '"idx1"' } }),
+      ],
+      ["/p/ns/pkg.json", () => ({ status: 200, body: root })],
+      [tagWirePath, tagRoute],
+    ]);
+  }
+
+  it("warns naming source, package, tag and digest; omits the path; fetches it once and never sleeps", async () => {
+    const cacheDir = await tempCacheDir();
+    const root = rootJsonBytes({
+      name: "ocx.sh/ns/pkg",
+      tags: {
+        "1.0.0": { content: lostDigest, observed: "2026-01-01T00:00:00Z" },
+        "2.0.0": { content: tagDigest, observed: "2026-01-02T00:00:00Z" },
+      },
+    });
+    const { impl, calls } = fakeFetch([
+      [
+        "/c/index.json",
+        () => ({ status: 200, body: indexJson({ "ns/pkg": sha256Digest(root) }), headers: { ETag: '"idx1"' } }),
+      ],
+      ["/p/ns/pkg.json", () => ({ status: 200, body: root })],
+      [lostWirePath, () => ({ status: 404 })],
+      [tagWirePath, () => ({ status: 200, body: tagBytes })],
+    ]);
+    const warnings: string[] = [];
+    const { sleepImpl, delays } = recordingSleep();
+
+    const files = await readUrlSource(
+      { url: BASE_URL },
+      { cacheDir, fetchImpl: impl, sleepImpl, warn: (m) => warnings.push(m) },
+    );
+
+    expect(files.has(lostWirePath)).toBe(false);
+    expect(bytesEqual(files.get(tagWirePath)!, tagBytes)).toBe(true);
+    expect(files.has("p/ns/pkg.json")).toBe(true);
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toContain(BASE_URL);
+    expect(warnings[0]).toContain("ns/pkg");
+    expect(warnings[0]).toContain("1.0.0");
+    expect(warnings[0]).toContain(lostDigest);
+    expect(calls.filter((c) => c.url.endsWith(lostWirePath))).toHaveLength(1);
+    expect(delays).toEqual([]);
+  });
+
+  it("still raises FETCH_FAILED after the full retry budget on a 5xx", async () => {
+    const cacheDir = await tempCacheDir();
+    const { impl } = singleTagServer(() => ({ status: 503 }));
+    const { sleepImpl, delays } = recordingSleep();
+    const warnings: string[] = [];
+
+    await expect(
+      readUrlSource({ url: BASE_URL }, { cacheDir, fetchImpl: impl, sleepImpl, warn: (m) => warnings.push(m) }),
+    ).rejects.toMatchObject({ name: "SourceError", code: "FETCH_FAILED" });
+    expect(delays).toHaveLength(3);
+    expect(warnings).toEqual([]);
+  });
+
+  it("still refuses a redirect on a tag object", async () => {
+    const cacheDir = await tempCacheDir();
+    const { impl } = singleTagServer(() => ({ status: 302, headers: { Location: METADATA_URL } }));
+
+    await expect(
+      readUrlSource({ url: BASE_URL }, { cacheDir, fetchImpl: impl, sleepImpl: IMMEDIATE_SLEEP }),
+    ).rejects.toMatchObject({ name: "SourceError", code: "FETCH_FAILED" });
+  });
+
+  it("still raises DIGEST_MISMATCH on a tag object whose bytes do not hash to its digest", async () => {
+    const cacheDir = await tempCacheDir();
+    const { impl } = singleTagServer(() => ({ status: 200, body: utf8("tampered") }));
+
+    await expect(
+      readUrlSource({ url: BASE_URL }, { cacheDir, fetchImpl: impl, sleepImpl: IMMEDIATE_SLEEP }),
+    ).rejects.toMatchObject({ name: "SourceError", code: "DIGEST_MISMATCH" });
+  });
+
+  it("still raises FETCH_FAILED on an oversized tag object", async () => {
+    const cacheDir = await tempCacheDir();
+    const { impl } = singleTagServer(() => ({
+      status: 200,
+      body: utf8("irrelevant"),
+      headers: { "content-length": String(64 * 1024 * 1024) },
+    }));
+
+    await expect(
+      readUrlSource({ url: BASE_URL }, { cacheDir, fetchImpl: impl, sleepImpl: IMMEDIATE_SLEEP }),
+    ).rejects.toMatchObject({ name: "SourceError", code: "FETCH_FAILED", message: expect.stringContaining("exceeding") });
+  });
+});
+
 /** Security panel WARN (2026-08-22, W5 / CWE-918): the default
  * `redirect: "follow"` let a hostile source 30x the builder onto a host only
  * the builder can reach (cloud metadata, an internal service) and land those

@@ -91,14 +91,34 @@ describe("catalogPlatforms", () => {
     expect(catalogPlatforms(source)).toEqual(["any/any"]);
   });
 
-  // JSDoc: "a live-tag digest missing from contentByDigest" must propagate
-  // as a lookup failure, never be silently swallowed into an empty result.
-  it("throws when a live tag's digest is missing from contentByDigest", () => {
+  // A live tag whose image index was never loaded (the fetch layer skipped it
+  // with a warning) costs that tag its platforms; the rest still count.
+  it("skips a live tag's digest that is missing from contentByDigest", () => {
     const d = digest("b");
     const root = emptyRoot({
       tags: { "1.0.0": { content: d, observed: "2026-01-01T00:00:00Z", yanked: null } },
     });
-    expect(() => catalogPlatforms(sourceOf(root, {}))).toThrow();
+    expect(catalogPlatforms(sourceOf(root, {}))).toEqual([]);
+  });
+
+  it("keeps the platforms of the live tags whose image index did load", () => {
+    const lost = digest("b");
+    const kept = digest("d");
+    const root = emptyRoot({
+      tags: {
+        "1.0.0": { content: lost, observed: "2026-01-01T00:00:00Z", yanked: null },
+        "2.0.0": { content: kept, observed: "2026-01-02T00:00:00Z", yanked: null },
+      },
+    });
+    const source = sourceOf(root, {
+      [`${kept}.json`]: indexOf({
+        mediaType: "application/vnd.oci.image.manifest.v1+json",
+        digest: "sha256:placeholder",
+        size: 1,
+        platform: { os: "linux", architecture: "amd64" },
+      }),
+    });
+    expect(catalogPlatforms(source)).toEqual(["linux/amd64"]);
   });
 
   // JSDoc: "a malformed CAS blob" must propagate as a parse failure.
