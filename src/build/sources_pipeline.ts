@@ -15,7 +15,7 @@ import {
 } from "../sources/labels.js";
 import { compareQualifiedIds, mirrorSources } from "../sources/mirror.js";
 import { readPathSource } from "../sources/path.js";
-import { extractPackages, SourceError, type ResolvedSourceFiles, type WirePath } from "../sources/types.js";
+import { extractPackages, listFailures, SourceError, type ResolvedSourceFiles, type WirePath } from "../sources/types.js";
 import { readUrlSource } from "../sources/walker.js";
 import { catalogIndex, serializeCatalog } from "../viewmodel/catalog.js";
 import { detailWire, type DetailWire } from "../site/model/detail.js";
@@ -239,9 +239,11 @@ async function readOneSource(
  * Reads every configured source, resolves its label, and merges their
  * packages into the one catalog the site renders.
  *
- * Sources are read SEQUENTIALLY, in `sources[]` order: the first failure is
- * the reported one (no interleaved stderr from a second source's reader
- * racing it), and no source is fetched after another has already failed.
+ * Sources are read SEQUENTIALLY, in `sources[]` order (no interleaved stderr
+ * from a second source's reader racing it), and a failing source does not
+ * stop the rest: every failure is reported. One is rethrown unchanged;
+ * several become one `BuildError` listing them all, `DATA` when any of them
+ * is, else `UNAVAILABLE`. A failed source is never cached.
  *
  * Merge rules:
  * - Every source's packages are kept. A qualified package id
@@ -270,16 +272,23 @@ export async function resolveCatalog(
   const cache: RemoteCache = remoteCache ?? new Map();
   const results: SourceResult[] = [];
   const used = new Set<string>();
+  const failures: BuildError[] = [];
   for (const [index, source] of sources.entries()) {
-    if (source.entry.path !== undefined) {
-      results.push(await readOneSource(source, index, configDir, fallbackLabel));
-      continue;
+    const key = source.entry.path === undefined ? JSON.stringify(source.entry) : undefined;
+    if (key !== undefined) used.add(key);
+    try {
+      const cached = key === undefined ? undefined : cache.get(key);
+      const result = cached ?? (await readOneSource(source, index, configDir, fallbackLabel));
+      if (key !== undefined) cache.set(key, result);
+      results.push(result);
+    } catch (err) {
+      failures.push(err as BuildError);
     }
-    const key = JSON.stringify(source.entry);
-    used.add(key);
-    const result = cache.get(key) ?? (await readOneSource(source, index, configDir, fallbackLabel));
-    cache.set(key, result);
-    results.push(result);
+  }
+  if (failures.length === 1) throw failures[0];
+  if (failures.length > 1) {
+    const code = failures.some((failure) => failure.code === "DATA") ? "DATA" : "UNAVAILABLE";
+    throw new BuildError(code, listFailures(failures.map((f) => f.message)));
   }
   // Entries the config no longer names are dropped, so the cache cannot outgrow it.
   for (const key of cache.keys()) if (!used.has(key)) cache.delete(key);

@@ -164,6 +164,18 @@ export class SourceError extends Error {
   }
 }
 
+/** How many failures a combined error spells out; the rest are counted. */
+const MAX_LISTED_FAILURES = 20;
+
+/** One message for several failures: the count, then at most
+ * `MAX_LISTED_FAILURES` of them, so a wholesale outage does not print
+ * thousands of lines. */
+export function listFailures(messages: readonly string[]): string {
+  const lines = messages.slice(0, MAX_LISTED_FAILURES).map((message) => `- ${message}`);
+  if (messages.length > MAX_LISTED_FAILURES) lines.push(`… and ${messages.length - MAX_LISTED_FAILURES} more`);
+  return `${messages.length} failures:\n${lines.join("\n")}`;
+}
+
 /**
  * Parses every package-root wire file found in `files` into a
  * `CatalogSourcePackage` (`viewmodel/types.ts`) — the shape C-004's
