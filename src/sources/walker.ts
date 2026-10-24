@@ -464,7 +464,7 @@ function collectCasRefs(
   wirePath: WirePath,
   rootBytes: Uint8Array,
 ): {
-  tags: readonly { tag: string; digest: string }[];
+  tags: readonly { tag: string; digest: string; yanked: boolean }[];
   readme: string | null;
   logo: string | null;
 } {
@@ -477,13 +477,13 @@ function collectCasRefs(
   if (typeof obj.tags !== "object" || obj.tags === null) {
     throw new Error(`malformed root at ${wirePath}: "tags" is required and must be an object`);
   }
-  const tags: { tag: string; digest: string }[] = [];
+  const tags: { tag: string; digest: string; yanked: boolean }[] = [];
   for (const [tag, entry] of Object.entries(obj.tags as Record<string, unknown>)) {
     const content = (entry as { content?: unknown } | null)?.content;
     if (typeof content !== "string") {
       throw new Error(`malformed root at ${wirePath}: tags["${tag}"].content is required and must be a string`);
     }
-    tags.push({ tag, digest: content });
+    tags.push({ tag, digest: content, yanked: (entry as { yanked?: unknown }).yanked != null });
   }
 
   const descRaw = obj.desc;
@@ -544,14 +544,19 @@ async function processPackage(
   const tasks: Promise<void>[] = [];
 
   // Tags sharing a digest share one object: fetch, store and report it once.
-  const tagsByDigest = new Map<string, string[]>();
-  for (const { tag, digest: tagDigest } of tags) {
-    const names = tagsByDigest.get(tagDigest);
-    if (names === undefined) tagsByDigest.set(tagDigest, [tag]);
-    else names.push(tag);
+  // A yanked tag keeps its object, so it is still fetched; a 404 is only
+  // expected (silent) when no live tag references the digest.
+  const tagsByDigest = new Map<string, { names: string[]; yankedOnly: boolean }>();
+  for (const { tag, digest: tagDigest, yanked } of tags) {
+    const group = tagsByDigest.get(tagDigest);
+    if (group === undefined) tagsByDigest.set(tagDigest, { names: [tag], yankedOnly: yanked });
+    else {
+      group.names.push(tag);
+      group.yankedOnly &&= yanked;
+    }
   }
 
-  for (const [tagDigest, tagNames] of tagsByDigest) {
+  for (const [tagDigest, { names: tagNames, yankedOnly }] of tagsByDigest) {
     const wirePath: WirePath = `p/${qualifiedId}/o/sha256/${tagDigest.slice("sha256:".length)}.json`;
     tasks.push(
       loadOrFetch(ctx, wirePath, tagDigest, "json", true).then((bytes) => {
@@ -559,6 +564,7 @@ async function processPackage(
           files.set(wirePath, bytes);
           return;
         }
+        if (yankedOnly) return;
         ctx.warn(
           `${ctx.baseUrl}: ${qualifiedId} tag ${tagNames.map((name) => JSON.stringify(name)).join(", ")}: image index ${tagDigest} not found (404) — ` +
             `the tag keeps its place in the catalog but loses its platforms and release facts`,
