@@ -879,6 +879,26 @@ describe("sources_pipeline resolveCatalog — failures map to the CLI's exit cod
     }
   });
 
+  it("a yanked tag whose image index is missing from a path source builds without a warning", async () => {
+    const dir = await tempDir("catalog-pipeline-yanked-dangling-");
+    const yanked = { reason: "bad", at: "2026-01-03T00:00:00Z" };
+    const root = rootJsonBytes({
+      name: "ocx.sh/acme/widget",
+      created: "2026-01-01",
+      tags: { "1.0.0": { content: IMAGE_INDEX_DIGEST, observed: "2026-01-02T00:00:00Z", yanked } },
+    });
+    await writeTree(join(dir, "index"), { "p/acme/widget.json": root });
+    const errSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+
+    try {
+      await resolveCatalog([pathSource("index", { label: "ocx.sh" })], dir);
+
+      expect(errSpy.mock.calls.map((call) => String(call[0])).join("")).not.toContain(IMAGE_INDEX_DIGEST);
+    } finally {
+      errSpy.mockRestore();
+    }
+  });
+
   it("D-062: a latest tag's image index with a malformed annotations value costs that release its annotations, not the build", async () => {
     const dir = await tempDir("catalog-pipeline-annotations-");
     const index = utf8(JSON.stringify({ ...JSON.parse(new TextDecoder().decode(IMAGE_INDEX)), annotations: "oops" }));

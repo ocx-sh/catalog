@@ -25,7 +25,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { SourceError } from "../../src/sources/types.js";
 import { readUrlSource, type SleepFn } from "../../src/sources/walker.js";
-import { bytesEqual, rootJsonBytes, sha256Digest, utf8 } from "./helpers.js";
+import { bytesEqual, rootJsonBytes, sha256Digest, utf8, type RootTag } from "./helpers.js";
 
 /** Retry tests inject this instead of `vi.useFakeTimers()` — fake timers plus
  * `readUrlSource`'s own real cache/fs I/O (`readVerifiedCache`, the `cas/`
@@ -1407,5 +1407,86 @@ describe("readUrlSource — /c/index.json entry-count cap (C-405)", () => {
     const files = await readUrlSource({ url: BASE_URL }, { cacheDir, fetchImpl: impl });
 
     expect(files.has("p/ns/pkg.json")).toBe(true);
+  });
+});
+
+// A yanked tag keeps its object, so the catalog still fetches it; only a missing
+// object that no live tag references is expected and stays silent.
+describe("readUrlSource — a yanked tag's missing object is not an error", () => {
+  const yanked = { reason: "bad build", at: "2026-02-01T00:00:00Z" };
+  const objBytes = utf8(JSON.stringify({ schemaVersion: 2, manifests: [] }));
+  const objDigest = sha256Digest(objBytes);
+  const objWirePath = `p/ns/pkg/o/sha256/${objDigest.slice("sha256:".length)}.json`;
+
+  function serverFor(tags: Record<string, RootTag>, objRoute: Route) {
+    const root = rootJsonBytes({ name: "ocx.sh/ns/pkg", tags });
+    return fakeFetch([
+      [
+        "/c/index.json",
+        () => ({ status: 200, body: indexJson({ "ns/pkg": sha256Digest(root) }), headers: { ETag: '"idx1"' } }),
+      ],
+      ["/p/ns/pkg.json", () => ({ status: 200, body: root })],
+      [objWirePath, objRoute],
+    ]);
+  }
+
+  it("a yanked-only object that 404s builds with no warning and no retry", async () => {
+    const cacheDir = await tempCacheDir();
+    const { impl, calls } = serverFor(
+      { "1.0.0": { content: objDigest, observed: "2026-01-01T00:00:00Z", yanked } },
+      () => ({ status: 404 }),
+    );
+    const { sleepImpl, delays } = recordingSleep();
+    const warnings: string[] = [];
+
+    const files = await readUrlSource(
+      { url: BASE_URL },
+      { cacheDir, fetchImpl: impl, sleepImpl, warn: (m) => warnings.push(m) },
+    );
+
+    expect(files.has(objWirePath)).toBe(false);
+    expect(files.has("p/ns/pkg.json")).toBe(true);
+    expect(warnings).toEqual([]);
+    expect(calls.filter((c) => c.url.endsWith(objWirePath))).toHaveLength(1);
+    expect(delays).toEqual([]);
+  });
+
+  it("a yanked tag's object that exists is still fetched into the tree", async () => {
+    const cacheDir = await tempCacheDir();
+    const { impl } = serverFor(
+      { "1.0.0": { content: objDigest, observed: "2026-01-01T00:00:00Z", yanked } },
+      () => ({ status: 200, body: objBytes }),
+    );
+    const warnings: string[] = [];
+
+    const files = await readUrlSource(
+      { url: BASE_URL },
+      { cacheDir, fetchImpl: impl, sleepImpl: IMMEDIATE_SLEEP, warn: (m) => warnings.push(m) },
+    );
+
+    expect(bytesEqual(files.get(objWirePath)!, objBytes)).toBe(true);
+    expect(warnings).toEqual([]);
+  });
+
+  it("a missing object shared by a yanked and a live tag still warns, naming the tags that reference it", async () => {
+    const cacheDir = await tempCacheDir();
+    const { impl } = serverFor(
+      {
+        "1.0.0": { content: objDigest, observed: "2026-01-01T00:00:00Z", yanked },
+        "1.0.1": { content: objDigest, observed: "2026-01-02T00:00:00Z" },
+        "1.0.2": { content: objDigest, observed: "2026-01-03T00:00:00Z", yanked },
+      },
+      () => ({ status: 404 }),
+    );
+    const warnings: string[] = [];
+
+    await readUrlSource(
+      { url: BASE_URL },
+      { cacheDir, fetchImpl: impl, sleepImpl: IMMEDIATE_SLEEP, warn: (m) => warnings.push(m) },
+    );
+
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toContain("1.0.1");
+    expect(warnings[0]).toContain(objDigest);
   });
 });

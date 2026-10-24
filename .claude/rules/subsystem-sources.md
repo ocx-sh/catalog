@@ -88,6 +88,8 @@ every fetch:
   `path`/`git` sources have no fetch to 404 on, so `readOneSource` warns for a
   live tag whose object is absent from the tree (`url` is skipped there — the
   walker already warned).
+  A yanked tag keeps its object and is still fetched, but a 404 on a digest
+  referenced only by yanked tags is silent.
 
 ## Git source: option-injection guard + LFS detection
 
