@@ -58,7 +58,6 @@ const catalogLink = { label: "catalog", href: joinBase(base, "/"), ...(underDocs
 const chromeProps =
   brand === null
     ? {
-        extraNav: docsHref === null ? [] : [{ label: "docs", href: docsHref }],
         extraFooterLinks: [catalogJson],
       }
     : {
