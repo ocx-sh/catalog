@@ -424,7 +424,7 @@ describe("readUrlSource — retry and FETCH_FAILED", () => {
 // S-002's exit-69 mapping can catch), or surfaced as DIGEST_MISMATCH instead
 // of FETCH_FAILED for a root. Root-cause fix: `retryFetch` no longer
 // special-cases 404 at all — every REQUIRED fetch treats it like any other
-// unacceptable status, retried then raised as a named FETCH_FAILED.
+// unacceptable status, raised as a named FETCH_FAILED (without a retry).
 describe("readUrlSource — a 404 on a required fetch is FETCH_FAILED, never silently accepted", () => {
   it("a 404 on /config.json raises FETCH_FAILED, never mirrors the 404 body", async () => {
     const cacheDir = await tempCacheDir();
@@ -525,6 +525,27 @@ describe("readUrlSource — a tag object that 404s is skipped with a warning", (
     expect(delays).toEqual([]);
   });
 
+  it("renders a hostile tag name inert: no newline, no workflow command, no ANSI escape", async () => {
+    const cacheDir = await tempCacheDir();
+    const hostile = "1.0\n::error::pwned\u001b[31m";
+    const root = rootJsonBytes({
+      name: "ocx.sh/ns/pkg",
+      tags: { [hostile]: { content: lostDigest, observed: "2026-01-01T00:00:00Z" } },
+    });
+    const { impl } = fakeFetch([
+      ["/c/index.json", () => ({ status: 200, body: indexJson({ "ns/pkg": sha256Digest(root) }) })],
+      ["/p/ns/pkg.json", () => ({ status: 200, body: root })],
+      [lostWirePath, () => ({ status: 404 })],
+    ]);
+    const warnings: string[] = [];
+
+    await readUrlSource({ url: BASE_URL }, { cacheDir, fetchImpl: impl, warn: (m) => warnings.push(m) });
+
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toContain(String.raw`1.0\n::error::pwned\u001b[31m`);
+    expect(warnings[0]).not.toMatch(/\p{Cc}/u);
+  });
+
   it("still raises FETCH_FAILED after the full retry budget on a 5xx", async () => {
     const cacheDir = await tempCacheDir();
     const { impl } = singleTagServer(() => ({ status: 503 }));
@@ -567,6 +588,75 @@ describe("readUrlSource — a tag object that 404s is skipped with a warning", (
     await expect(
       readUrlSource({ url: BASE_URL }, { cacheDir, fetchImpl: impl, sleepImpl: IMMEDIATE_SLEEP }),
     ).rejects.toMatchObject({ name: "SourceError", code: "FETCH_FAILED", message: expect.stringContaining("exceeding") });
+  });
+});
+
+// Tags that share a digest share one object: it is fetched, written and (when
+// missing) reported once, and a 404 is a deterministic answer, never retried.
+describe("readUrlSource — each digest is fetched once, a missing object is not retried", () => {
+  const tagBytes = utf8(JSON.stringify({ schemaVersion: 2, manifests: [] }));
+  const tagDigest = sha256Digest(tagBytes);
+  const tagWirePath = `p/ns/pkg/o/sha256/${tagDigest.slice("sha256:".length)}.json`;
+  const sharedTags = {
+    "1.0.0": { content: tagDigest, observed: "2026-01-01T00:00:00Z" },
+    "1.0": { content: tagDigest, observed: "2026-01-01T00:00:00Z" },
+    latest: { content: tagDigest, observed: "2026-01-01T00:00:00Z" },
+  };
+
+  function serverFor(tagRoute: Route) {
+    const root = rootJsonBytes({ name: "ocx.sh/ns/pkg", tags: sharedTags });
+    return fakeFetch([
+      [
+        "/c/index.json",
+        () => ({ status: 200, body: indexJson({ "ns/pkg": sha256Digest(root) }), headers: { ETag: '"idx1"' } }),
+      ],
+      ["/p/ns/pkg.json", () => ({ status: 200, body: root })],
+      [tagWirePath, tagRoute],
+    ]);
+  }
+
+  it("three tags on one digest cost exactly one GET for that object", async () => {
+    const cacheDir = await tempCacheDir();
+    const { impl, calls } = serverFor(() => ({ status: 200, body: tagBytes }));
+
+    const files = await readUrlSource({ url: BASE_URL }, { cacheDir, fetchImpl: impl, sleepImpl: IMMEDIATE_SLEEP });
+
+    expect(calls.filter((c) => c.url.endsWith(tagWirePath))).toHaveLength(1);
+    expect(bytesEqual(files.get(tagWirePath)!, tagBytes)).toBe(true);
+  });
+
+  it("a missing object shared by three tags is fetched once, never slept on, and warned once naming every tag", async () => {
+    const cacheDir = await tempCacheDir();
+    const { impl, calls } = serverFor(() => ({ status: 404 }));
+    const { sleepImpl, delays } = recordingSleep();
+    const warnings: string[] = [];
+
+    await readUrlSource({ url: BASE_URL }, { cacheDir, fetchImpl: impl, sleepImpl, warn: (m) => warnings.push(m) });
+
+    expect(calls.filter((c) => c.url.endsWith(tagWirePath))).toHaveLength(1);
+    expect(delays).toEqual([]);
+    expect(warnings).toHaveLength(1);
+    for (const tag of Object.keys(sharedTags)) expect(warnings[0]).toContain(tag);
+    expect(warnings[0]).toContain(tagDigest);
+  });
+
+  it("a 404 on a package root fails after one GET and no sleep", async () => {
+    const cacheDir = await tempCacheDir();
+    const { impl, calls } = fakeFetch([
+      [
+        "/c/index.json",
+        () => ({ status: 200, body: indexJson({ "ns/pkg": `sha256:${"e".repeat(64)}` }), headers: { ETag: '"idx1"' } }),
+      ],
+      ["/p/ns/pkg.json", () => ({ status: 404 })],
+    ]);
+    const { sleepImpl, delays } = recordingSleep();
+
+    await expect(readUrlSource({ url: BASE_URL }, { cacheDir, fetchImpl: impl, sleepImpl })).rejects.toMatchObject({
+      name: "SourceError",
+      code: "FETCH_FAILED",
+    });
+    expect(calls.filter((c) => c.url.endsWith("/p/ns/pkg.json"))).toHaveLength(1);
+    expect(delays).toEqual([]);
   });
 });
 
