@@ -183,6 +183,41 @@ async function resolveShaRef(gitUrl: string, ref: string): Promise<string> {
   return ref;
 }
 
+/** Clones or fetches `entry` into `scratchDir`. Throws a raw `Error` for any
+ * git failure and `GIT_SHA_UNSUPPORTED` for a remote that refuses a bare SHA. */
+async function checkoutSource(entry: GitSourceEntry, scratchDir: string): Promise<void> {
+  const ref = entry.ref;
+
+  if (ref !== undefined && SHA_RE.test(ref)) {
+    await runGit(["init", "-q"], { cwd: scratchDir });
+    await runGit(["remote", "add", "origin", "--", entry.git], { cwd: scratchDir });
+    const resolvedRef = await resolveShaRef(entry.git, ref);
+    try {
+      await runGit(["fetch", "--depth", "1", "origin", "--", resolvedRef], { cwd: scratchDir });
+    } catch (err) {
+      // `runGit`'s wrapper always tags a rejection with `.stderr` (Node's
+      // execFile callback always supplies one, even empty) — no fallback
+      // needed, and none would be reachable from this call site.
+      const stderr = (err as { stderr: string }).stderr;
+      if (SHA_UNSUPPORTED_RE.test(stderr)) {
+        throw new SourceError(
+          "GIT_SHA_UNSUPPORTED",
+          `remote ${entry.git} does not support fetching commit SHA ${ref} directly`,
+        );
+      }
+      throw err;
+    }
+    await runGit(["checkout", "-q", "FETCH_HEAD"], { cwd: scratchDir });
+  } else {
+    const args = ["clone", "--depth", "1", "-q"];
+    if (needsBranchFlag(ref)) {
+      args.push("--branch", ref);
+    }
+    args.push("--", entry.git, scratchDir);
+    await runGit(args);
+  }
+}
+
 export async function readGitSource(
   entry: GitSourceEntry,
   options: GitSourceOptions,
@@ -194,35 +229,14 @@ export async function readGitSource(
   const scratchDir = await mkdtemp(join(options.tmpDir ?? tmpdir(), "ocx-catalog-git-"));
 
   try {
-    const ref = entry.ref;
-
-    if (ref !== undefined && SHA_RE.test(ref)) {
-      await runGit(["init", "-q"], { cwd: scratchDir });
-      await runGit(["remote", "add", "origin", "--", entry.git], { cwd: scratchDir });
-      const resolvedRef = await resolveShaRef(entry.git, ref);
-      try {
-        await runGit(["fetch", "--depth", "1", "origin", "--", resolvedRef], { cwd: scratchDir });
-      } catch (err) {
-        // `runGit`'s wrapper always tags a rejection with `.stderr` (Node's
-        // execFile callback always supplies one, even empty) — no fallback
-        // needed, and none would be reachable from this call site.
-        const stderr = (err as { stderr: string }).stderr;
-        if (SHA_UNSUPPORTED_RE.test(stderr)) {
-          throw new SourceError(
-            "GIT_SHA_UNSUPPORTED",
-            `remote ${entry.git} does not support fetching commit SHA ${ref} directly`,
-          );
-        }
-        throw err;
-      }
-      await runGit(["checkout", "-q", "FETCH_HEAD"], { cwd: scratchDir });
-    } else {
-      const args = ["clone", "--depth", "1", "-q"];
-      if (needsBranchFlag(ref)) {
-        args.push("--branch", ref);
-      }
-      args.push("--", entry.git, scratchDir);
-      await runGit(args);
+    try {
+      await checkoutSource(entry, scratchDir);
+    } catch (err) {
+      // Any git failure that is not already a named error (an unreachable or
+      // missing remote, a bad ref, a transport fault) is the git analogue of
+      // an unreachable `url` source: the CLI maps FETCH_FAILED to exit 69.
+      if (err instanceof SourceError) throw err;
+      throw new SourceError("FETCH_FAILED", `git source ${entry.git}: ${(err as Error).message}`);
     }
 
     const root =

@@ -895,7 +895,7 @@ describe("sources_pipeline resolveCatalog — failures map to the CLI's exit cod
     expect(message).toContain("… and 5 more");
   });
 
-  it("a git source that cannot be cloned is DATA, naming the repository", async () => {
+  it("a git source that cannot be cloned is UNAVAILABLE (exit 69), naming the repository", async () => {
     const dir = await tempDir("catalog-pipeline-badgit-");
     const missingRepo = join(dir, "no-such-repo");
 
@@ -904,7 +904,7 @@ describe("sources_pipeline resolveCatalog — failures map to the CLI's exit cod
     );
 
     expect(error).toBeInstanceOf(BuildError);
-    expect((error as BuildError).code).toBe("DATA");
+    expect((error as BuildError).code).toBe("UNAVAILABLE");
     expect((error as BuildError).message).toContain(`sources[0] (${missingRepo})`);
   }, 20_000);
 

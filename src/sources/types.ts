@@ -90,9 +90,11 @@ export type SourceErrorCode =
    * realpath — a symlink escape `loadConfig`'s LEXICAL-only containment
    * check cannot see (see that check's own doc comment in `config/load.ts`). */
   | "PATH_ESCAPE"
-  /** `walker.ts`: a source URL stayed unreachable after exhausting the 3
-   * retries with exponential backoff (S-002: the CLI maps this to exit 69,
-   * naming the source + the last HTTP status or network error). */
+  /** A source could not be fetched: `walker.ts` — a URL stayed unreachable
+   * after exhausting the 3 retries with exponential backoff, answered a
+   * required file with a 404 (not retried), exceeded the response size cap,
+   * or redirected; `git.ts` — a clone or fetch failed. The CLI maps this to
+   * exit 69, naming the source + the last HTTP status or git/network error. */
   | "FETCH_FAILED"
   /** `walker.ts`: a fetched file's bytes don't hash to the digest the
    * caller verified it against (a root vs its `/c/index.json` entry, or a
