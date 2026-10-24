@@ -22,8 +22,8 @@ type ExecFileCallback = (error: (Error & { stderr?: string }) | null, stdout: st
 
 /** Stderr text the mocked `git fetch` call fails with — swapped per test so
  * the same mock exercises both the `GIT_SHA_UNSUPPORTED` mapping AND a
- * generic (non-matching) fetch failure, which must propagate as a plain
- * `Error`, never conflated with the named mapping. */
+ * generic (non-matching) fetch failure, which must surface as
+ * `FETCH_FAILED` (exit 69), never conflated with the named mapping. */
 let fetchStderr = "remote error: upload-pack: not our ref deadbeefdeadbeefdeadbeefdeadbeefdeadbeef";
 
 const execFileMock = vi.fn(
@@ -61,18 +61,19 @@ describe("readGitSource — GIT_SHA_UNSUPPORTED (mocked git, unit-level)", () =>
     expect(error?.message).toContain(sha);
   });
 
-  it("a generic fetch failure (stderr not matching the SHA-unsupported pattern) propagates as a plain Error, not GIT_SHA_UNSUPPORTED", async () => {
+  it("a generic fetch failure (stderr not matching the SHA-unsupported pattern) is FETCH_FAILED, not GIT_SHA_UNSUPPORTED", async () => {
     fetchStderr = "fatal: could not read from remote repository";
     const sha = "b".repeat(40);
 
-    let error: unknown;
+    let error: SourceErrorType | undefined;
     try {
       await readGitSource({ git: "https://example.test/remote.git", ref: sha }, { warn: vi.fn() });
     } catch (err) {
-      error = err;
+      error = err as SourceErrorType;
     }
 
-    expect(error).toBeInstanceOf(Error);
-    expect(error).not.toBeInstanceOf(SourceError);
+    expect(error).toBeInstanceOf(SourceError);
+    expect(error?.code).toBe("FETCH_FAILED");
+    expect(error?.message).toContain("https://example.test/remote.git");
   });
 });

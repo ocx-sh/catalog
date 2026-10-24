@@ -125,7 +125,7 @@ file or a different working directory short of `cd`-ing there first.
 | `1` | `FAIL` | The Astro render failed (a `RenderError`: the child exited non-zero, was killed, could not start, or failed a `dev --smoke` request), or an error this CLI did not recognize as one of its own failure classes. Neither is caught by the command's action. The child's own diagnostics are already on stderr. |
 | `64` | `USAGE` | Command-line usage error — either commander itself rejecting the invocation (unknown option, missing required argument), or a subcommand's own explicit usage check (see `dev`'s mutual-exclusion and `--port` checks above). |
 | `65` | `DATA` | A schema or drift mismatch in catalog source data: a `ConfigError` (any command, including `OUT_DIR_OVERLAPS_INPUT`), a `BuildError` with code `DATA` (`build`/`dev`), or a `CiError` (`ci`). |
-| `69` | `UNAVAILABLE` | A required service or resource is unavailable: a `BuildError` with code `UNAVAILABLE` (an unreachable `url` source, or `dev`'s port already bound). |
+| `69` | `UNAVAILABLE` | A required service or resource is unavailable: a `BuildError` with code `UNAVAILABLE` (an unreachable `url` source, a `git` source whose clone or fetch failed, or `dev`'s port already bound). |
 
 `main()`'s own doc comment states its contract directly: it "never calls
 `process.exit`; sets `process.exitCode` and returns so callers control

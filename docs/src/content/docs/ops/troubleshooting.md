@@ -46,7 +46,7 @@ invented.
 | Code | What triggers it | What to change |
 |---|---|---|
 | `PATH_ESCAPE` | A file's realpath resolves outside its source root (symlink escape), a git `git`/`ref`/`dir` value starts with `-` (looks like a git option), or a malformed CAS digest was about to be used in a cache path | Fix the symlink target, or the offending config value |
-| `FETCH_FAILED` | A `url` source stayed unreachable after exhausting its retries, or a request received a redirect (never followed). A 404 on a tag's image-index object is not this: that tag is skipped with a warning | Check the source URL is reachable and returns no redirects |
+| `FETCH_FAILED` | A `url` source stayed unreachable after exhausting its retries (network error or a non-2xx status), answered a required file with a 404 (not retried), sent a response over the size cap, or answered with a redirect (never followed); or a `git` source's clone or fetch failed (unreachable or missing remote, bad `ref`). A 404 on a tag's image-index object is not this: that tag is skipped with a warning | Check the source URL or repository is reachable, serves its own wire tree and returns no redirects |
 | `DIGEST_MISMATCH` | A fetched file's bytes don't match the digest it was fetched against | The source is serving inconsistent data — fix it at the source, this isn't fixable from the catalog config. A source redeployed while the build was reading it can show this once; the build already re-reads `c/index.json` once when a root fails its digest or 404s, or a tag's image-index object 404s, and walks the new tree if it changed. A failure that survives the re-read is real — re-run the build only after the deploy settles |
 | `GIT_SHA_UNSUPPORTED` | A commit-SHA `ref` was requested but the remote won't let you fetch an arbitrary commit it never advertised | Use a branch/tag name instead of a raw SHA, or a remote that allows `allow-tips-sha1-in-want` |
 | `LFS_POINTER` | A sourced blob is a Git LFS pointer file, not the real bytes (a `--depth 1` clone never fetches LFS objects) | Don't LFS-track files this package needs to read, or fetch them another way |
@@ -100,7 +100,7 @@ Every `ocx-catalog` invocation sets one of five sysexits-derived codes
 | `1` | FAIL | The Astro render failed (its own diagnostics were already printed to stderr), or an unexpected, uncaught error. Neither is one of the classified failure modes below |
 | `64` | USAGE | Bad CLI invocation: an unknown flag, `dev --source` and `--config` given together, or an invalid `--port` value |
 | `65` | DATA | A `ConfigError`, a `CiError`, or a `BuildError` with code `DATA` — a config-shape problem or malformed/inconsistent source data (see the error-code tables above) |
-| `69` | UNAVAILABLE | A `BuildError` with code `UNAVAILABLE` — an unreachable `url` source, or `dev`'s port already bound |
+| `69` | UNAVAILABLE | A `BuildError` with code `UNAVAILABLE` — an unreachable `url` source, a `git` source whose clone or fetch failed, or `dev`'s port already bound |
 
 ## Leftover `.<out>.ocx-catalog-<pid>` or `<out>.staging-<pid>` beside the output
 
