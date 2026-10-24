@@ -203,6 +203,33 @@ function warnMissingTagObjects(source: string, packages: readonly CatalogSourceP
   }
 }
 
+/** The two wire documents that carry `format_version`; the reader only knows
+ * version 1, and a missing field is read as 1. */
+const FORMAT_VERSIONED_FILES = ["config.json", "c/index.json"] as const;
+
+function checkFormatVersion(files: ReadonlyMap<WirePath, Uint8Array>): void {
+  for (const file of FORMAT_VERSIONED_FILES) {
+    const bytes = files.get(file);
+    if (bytes === undefined) continue;
+    let document: unknown;
+    try {
+      document = JSON.parse(new TextDecoder().decode(bytes));
+    } catch (err) {
+      throw new SourceError("UNSUPPORTED_FORMAT", `${file} is not valid JSON: ${(err as Error).message}`);
+    }
+    if (typeof document !== "object" || document === null || Array.isArray(document)) {
+      throw new SourceError("UNSUPPORTED_FORMAT", `${file} is not a JSON object`);
+    }
+    const { format_version } = document as { format_version?: unknown };
+    if (format_version !== undefined && format_version !== 1) {
+      throw new SourceError(
+        "UNSUPPORTED_FORMAT",
+        `${file} declares format_version ${JSON.stringify(format_version)}; this catalog reads format_version 1`,
+      );
+    }
+  }
+}
+
 async function readOneSource(
   source: ResolvedSource,
   index: number,
@@ -211,6 +238,7 @@ async function readOneSource(
 ): Promise<SourceResult> {
   try {
     const files = await readSource(source.entry, configDir);
+    checkFormatVersion(files);
     // `labels.ts`: an explicit label is used verbatim, a `null` one is
     // derived from this source's OWN roots — which is why a source with
     // neither an explicit `label` nor a single package root is a hard error

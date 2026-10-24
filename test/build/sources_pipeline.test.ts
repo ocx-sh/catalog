@@ -12,7 +12,7 @@ import { emitCatalogTree, resolveCatalog, warnToStderr, type RemoteCache } from 
 import type { ResolvedSource } from "../../src/config/types.js";
 import { compareQualifiedIds } from "../../src/sources/mirror.js";
 import { readPathSource } from "../../src/sources/path.js";
-import { extractPackages } from "../../src/sources/types.js";
+import { extractPackages, type SourceError } from "../../src/sources/types.js";
 import { catalogIndex, serializeCatalog } from "../../src/viewmodel/catalog.js";
 import { findFreePort } from "./helpers.js";
 import { rootJsonBytes, sha256Digest, utf8 } from "../sources/helpers.js";
@@ -755,6 +755,81 @@ describe("sources_pipeline resolveCatalog — failures map to the CLI's exit cod
     expect((error as BuildError).code).toBe("DATA");
     expect((error as BuildError).message).toContain("sources[0] (index)");
     expect((error as BuildError).message).toContain("p/acme/widget.json");
+  });
+
+  describe("format_version", () => {
+    const widgetTree = (overrides: Readonly<Record<string, Uint8Array>>): Readonly<Record<string, Uint8Array>> => ({
+      ...WIRE_TREE,
+      ...overrides,
+    });
+
+    it.each([
+      ["config.json", { "config.json": utf8(JSON.stringify({ format_version: 2 })) }],
+      ["c/index.json", { "c/index.json": utf8(JSON.stringify({ format_version: 2, packages: [] })) }],
+    ])("a %s declaring format_version 2 is DATA (exit 65), UNSUPPORTED_FORMAT, naming the file", async (file, overrides) => {
+      const dir = await tempDir("catalog-pipeline-format-");
+      await writeTree(join(dir, "index"), widgetTree(overrides));
+
+      const error = await resolveCatalog([pathSource("index", { label: "ocx.sh" })], dir).catch((err: unknown) => err);
+
+      expect(error).toBeInstanceOf(BuildError);
+      expect((error as BuildError).code).toBe("DATA");
+      expect(((error as BuildError).cause as SourceError).code).toBe("UNSUPPORTED_FORMAT");
+      expect((error as BuildError).message).toContain("sources[0] (index)");
+      expect((error as BuildError).message).toContain(file);
+    });
+
+    const wrongVersions = [
+      ["a string", '"1"'],
+      ["null", "null"],
+      ["zero", "0"],
+      ["true", "true"],
+    ] as const;
+    const documentsOf = (file: "config.json" | "c/index.json", body: string): Readonly<Record<string, Uint8Array>> => ({
+      [file]: utf8(file === "config.json" ? `{"format_version":${body}}` : `{"format_version":${body},"packages":[]}`),
+    });
+
+    for (const file of ["config.json", "c/index.json"] as const) {
+      it.each(wrongVersions)(`a ${file} declaring format_version as %s is UNSUPPORTED_FORMAT`, async (_name, body) => {
+        const dir = await tempDir("catalog-pipeline-format-bad-");
+        await writeTree(join(dir, "index"), widgetTree(documentsOf(file, body)));
+
+        const error = await resolveCatalog([pathSource("index", { label: "ocx.sh" })], dir).catch((err: unknown) => err);
+
+        expect(error).toBeInstanceOf(BuildError);
+        expect((error as BuildError).code).toBe("DATA");
+        expect(((error as BuildError).cause as SourceError).code).toBe("UNSUPPORTED_FORMAT");
+        expect((error as BuildError).message).toContain(file);
+      });
+    }
+
+    it.each([
+      ["null", "null"],
+      ["an array", "[]"],
+      ["malformed JSON", "{ not json"],
+    ])("a config.json that is %s is UNSUPPORTED_FORMAT naming the file", async (_name, body) => {
+      const dir = await tempDir("catalog-pipeline-format-shape-");
+      await writeTree(join(dir, "index"), widgetTree({ "config.json": utf8(body) }));
+
+      const error = await resolveCatalog([pathSource("index", { label: "ocx.sh" })], dir).catch((err: unknown) => err);
+
+      expect(error).toBeInstanceOf(BuildError);
+      expect((error as BuildError).code).toBe("DATA");
+      expect(((error as BuildError).cause as SourceError).code).toBe("UNSUPPORTED_FORMAT");
+      expect((error as BuildError).message).toContain("config.json");
+    });
+
+    it.each([
+      ["absent from config.json and c/index.json", { "config.json": utf8("{}"), "c/index.json": utf8('{"packages":[]}') }],
+      ["1 in both", { "c/index.json": utf8(JSON.stringify({ format_version: 1, packages: [] })) }],
+    ])("format_version %s is accepted", async (_name, overrides) => {
+      const dir = await tempDir("catalog-pipeline-format-ok-");
+      await writeTree(join(dir, "index"), widgetTree(overrides));
+
+      const catalog = await resolveCatalog([pathSource("index", { label: "ocx.sh" })], dir);
+
+      expect(catalog.routes).toHaveLength(2);
+    });
   });
 
   async function deadUrl(): Promise<string> {
