@@ -577,6 +577,35 @@ describe("sources_pipeline resolveCatalog — url source", () => {
     }
   }, 20_000);
 
+  it("a url source whose tag object 404s builds, warns once, and drops that tag's platform", async () => {
+    // The index image object is absent from the served tree (a 404), as when
+    // a publisher's tree lost it.
+    const server = await serveTree({
+      "config.json": CONFIG_JSON,
+      "c/index.json": utf8(
+        JSON.stringify({ format_version: 1, packages: { "acme/widget": sha256Digest(WIDGET_ROOT) } }),
+      ),
+      "p/acme/widget.json": WIDGET_ROOT,
+    });
+    cleanupDirs.push(join(await cacheBaseDir(), "url", createHash("sha256").update(server.url).digest("hex").slice(0, 16)));
+    const errSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+
+    try {
+      const catalog = await resolveCatalog([{ entry: { url: server.url }, label: "ocx.sh" }], process.cwd());
+
+      const warned = errSpy.mock.calls.map((call) => String(call[0])).filter((line) => line.includes(IMAGE_INDEX_DIGEST));
+      expect(warned).toHaveLength(1);
+      expect(warned[0]).toContain("acme/widget");
+      expect(warned[0]).toContain("1.0.0");
+      expect(catalog.sources[0]?.files.has(`p/acme/widget/o/sha256/${IMAGE_INDEX_HEX}.json`)).toBe(false);
+      const parsed = JSON.parse(catalog.catalogJson) as { packages: { platforms: string[] }[] };
+      expect(parsed.packages.map((entry) => entry.platforms)).toEqual([[]]);
+    } finally {
+      errSpy.mockRestore();
+      await server.close();
+    }
+  }, 20_000);
+
   it(
     "an unreachable url source maps to BuildError UNAVAILABLE naming the source",
     async () => {
@@ -768,17 +797,86 @@ describe("sources_pipeline resolveCatalog — failures map to the CLI's exit cod
     expect((error as BuildError).message).toContain("sources[0] and sources[1]");
   });
 
-  it("a live tag whose image index is missing from the source is DATA", async () => {
+  it("a live tag whose image index is missing from a path source builds, warns naming the tag, and loses its platform", async () => {
     const dir = await tempDir("catalog-pipeline-dangling-");
-    // The root references an image index digest, but its CAS blob is absent
-    // — `catalogEntry` raises, and that must be exit 65, not a crash.
+    // The root references an image index digest, but its CAS blob is absent.
     await writeTree(join(dir, "index"), { "p/acme/widget.json": WIDGET_ROOT });
+    const errSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
 
-    const error = await resolveCatalog([pathSource("index", { label: "ocx.sh" })], dir).catch((err: unknown) => err);
+    try {
+      const catalog = await resolveCatalog([pathSource("index", { label: "ocx.sh" })], dir);
 
-    expect(error).toBeInstanceOf(BuildError);
-    expect((error as BuildError).code).toBe("DATA");
-    expect((error as BuildError).message).toContain("catalog:");
+      const warned = errSpy.mock.calls.map((call) => String(call[0])).join("");
+      expect(warned).toContain("acme/widget");
+      expect(warned).toContain("1.0.0");
+      expect(warned).toContain(IMAGE_INDEX_DIGEST);
+      expect(Object.values(catalog.wire).map((wire) => wire.releases)).toEqual([
+        [{ platforms: [], license: null, source: null, revision: null }],
+      ]);
+      const parsed = JSON.parse(catalog.catalogJson) as { packages: { platforms: string[] }[] };
+      expect(parsed.packages.map((entry) => entry.platforms)).toEqual([[]]);
+    } finally {
+      errSpy.mockRestore();
+    }
+  });
+
+  it("a path source whose tree holds every image index warns about nothing", async () => {
+    const dir = await tempDir("catalog-pipeline-healthy-");
+    await writeTree(join(dir, "index"), WIRE_TREE);
+    const errSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+
+    try {
+      await resolveCatalog([pathSource("index", { label: "ocx.sh" })], dir);
+
+      expect(errSpy.mock.calls.map((call) => String(call[0])).join("")).not.toContain("missing from the tree");
+    } finally {
+      errSpy.mockRestore();
+    }
+  });
+
+  it("a git source missing a live tag's image index warns naming the tag and digest", async () => {
+    const repo = await tempDir("catalog-pipeline-git-dangling-");
+    await writeTree(repo, { "p/acme/widget.json": WIDGET_ROOT });
+    execFileSync("git", ["init", "-q"], { cwd: repo });
+    execFileSync("git", ["config", "user.email", "test@example.com"], { cwd: repo });
+    execFileSync("git", ["config", "user.name", "Test"], { cwd: repo });
+    execFileSync("git", ["add", "-A"], { cwd: repo });
+    execFileSync("git", ["commit", "-q", "-m", "dangling"], { cwd: repo });
+    const errSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+
+    try {
+      await resolveCatalog([{ entry: { git: repo }, label: "ocx.sh" }], process.cwd());
+
+      const warned = errSpy.mock.calls.map((call) => String(call[0])).join("");
+      expect(warned).toContain("1.0.0");
+      expect(warned).toContain(IMAGE_INDEX_DIGEST);
+    } finally {
+      errSpy.mockRestore();
+    }
+  }, 30_000);
+
+  it("a tag name carrying a newline, a workflow command and an ANSI escape is rendered inert", async () => {
+    const dir = await tempDir("catalog-pipeline-hostile-tag-");
+    const hostile = "1.0\n::error::pwned\u001b[31m";
+    const root = rootJsonBytes({
+      name: "ocx.sh/acme/widget",
+      created: "2026-01-01",
+      tags: { [hostile]: { content: IMAGE_INDEX_DIGEST, observed: "2026-01-02T00:00:00Z" } },
+    });
+    await writeTree(join(dir, "index"), { "p/acme/widget.json": root });
+    const errSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+
+    try {
+      await resolveCatalog([pathSource("index", { label: "ocx.sh" })], dir);
+
+      const warned = errSpy.mock.calls.map((call) => String(call[0])).join("");
+      expect(warned).toContain("missing from the tree");
+      expect(warned).toContain(String.raw`1.0\n::error::pwned\u001b[31m`);
+      expect(warned.split("\n")).toHaveLength(2);
+      expect(warned).not.toContain("\u001b");
+    } finally {
+      errSpy.mockRestore();
+    }
   });
 
   it("D-062: a latest tag's image index with a malformed annotations value costs that release its annotations, not the build", async () => {
@@ -877,6 +975,16 @@ describe("sources_pipeline warnToStderr", () => {
     try {
       warnToStderr("submodules are not cloned: .gitmodules");
       expect(errSpy).toHaveBeenCalledWith("ocx-catalog: submodules are not cloned: .gitmodules\n");
+    } finally {
+      errSpy.mockRestore();
+    }
+  });
+
+  it("escapes control characters, so a message cannot start a log line or paint the terminal", () => {
+    const errSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    try {
+      warnToStderr("a\n::error::b\u001b[31mc\u009bd\u007fe");
+      expect(errSpy).toHaveBeenCalledWith(String.raw`ocx-catalog: a\u000a::error::b\u001b[31mc\u009bd\u007fe` + "\n");
     } finally {
       errSpy.mockRestore();
     }

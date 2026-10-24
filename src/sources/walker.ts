@@ -208,10 +208,12 @@ export class Semaphore {
 /**
  * Retries `fetchImpl(url, init)` up to `MAX_ATTEMPTS` times (network error,
  * or a status `acceptStatus` rejects) with jittered exponential backoff.
- * EVERY call site of this function fetches a REQUIRED wire file (`config.json`,
- * `c/index.json`, a package root, or a tag's image-index CAS blob) — a `404`
- * is therefore treated exactly like any other unacceptable status, subject
- * to the same retry-then-fail path (never returned to the caller un-checked:
+ * EVERY call site of this function fetches a wire file the build needs
+ * (`config.json`, `c/index.json`, a package root, or a tag's image-index CAS
+ * blob) — a `404` is therefore treated exactly like any other unacceptable
+ * status, subject to the same retry-then-fail path, unless the caller names
+ * it acceptable (only a tag's image-index blob does, and then it is returned
+ * on the first attempt, never retried) — never returned to the caller un-checked:
  * a prior version special-cased 404 as an immediate pass-through, which let
  * a 404 body reach `JSON.parse`/get mirrored verbatim/fail digest
  * verification instead of raising a named error — see `loadOptionalAsset`'s
@@ -330,14 +332,31 @@ interface WalkerContext {
   readonly sleep: SleepFn;
 }
 
-/** Loads a REQUIRED wire file (a package root, or a tag's `.json` image-index
- * content) at `wirePath`/`digest` — content-addressed cache hit first, else
- * a retried network fetch, digest-verified before being trusted or cached
- * (quality-indexbot-security.md). A cache hit here is what makes the
+/** Loads a wire file (a package root, or a tag's `.json` image-index content)
+ * at `wirePath`/`digest` — content-addressed cache hit first, else a retried
+ * network fetch, digest-verified before being trusted or cached
+ * (quality-indexbot-security.md). With `missingOk` a `404` returns `null`
+ * on the first attempt (a tag object the publisher's tree lost); every other
+ * failure — 5xx, network, redirect, oversize, digest mismatch — stays fatal,
+ * and without `missingOk` so does a `404`. A cache hit here is what makes the
  * documented "digest-diff: unchanged entries served from cache" behavior
  * fall out for free — no separate previous-vs-current index comparison is
  * needed: an unchanged digest is, by construction, already on disk. */
-async function loadOrFetch(ctx: WalkerContext, wirePath: WirePath, digest: string, ext: string): Promise<Uint8Array> {
+function loadOrFetch(
+  ctx: WalkerContext,
+  wirePath: WirePath,
+  digest: string,
+  ext: string,
+  missingOk: true,
+): Promise<Uint8Array | null>;
+function loadOrFetch(ctx: WalkerContext, wirePath: WirePath, digest: string, ext: string): Promise<Uint8Array>;
+async function loadOrFetch(
+  ctx: WalkerContext,
+  wirePath: WirePath,
+  digest: string,
+  ext: string,
+  missingOk = false,
+): Promise<Uint8Array | null> {
   const cacheFile = casCachePath(ctx.cacheDir, digest, ext);
 
   // Security panel WARN (2026-08-22): the cache READ used to run before
@@ -354,9 +373,10 @@ async function loadOrFetch(ctx: WalkerContext, wirePath: WirePath, digest: strin
       ctx.fetchImpl,
       `${ctx.baseUrl}/${wirePath}`,
       undefined,
-      (status) => status === 200,
+      (status) => status === 200 || (missingOk && status === 404),
       ctx.sleep,
     );
+    if (response.status === 404) return null;
     const bytes = await readBoundedBody(response, `${ctx.baseUrl}/${wirePath}`);
     verifyDigest(wirePath, bytes, digest);
     await writeFile(cacheFile, bytes);
@@ -445,7 +465,7 @@ function collectCasRefs(
   wirePath: WirePath,
   rootBytes: Uint8Array,
 ): {
-  tagDigests: readonly string[];
+  tags: readonly { tag: string; digest: string }[];
   readme: string | null;
   logo: string | null;
 } {
@@ -458,13 +478,13 @@ function collectCasRefs(
   if (typeof obj.tags !== "object" || obj.tags === null) {
     throw new Error(`malformed root at ${wirePath}: "tags" is required and must be an object`);
   }
-  const tagDigests: string[] = [];
+  const tags: { tag: string; digest: string }[] = [];
   for (const [tag, entry] of Object.entries(obj.tags as Record<string, unknown>)) {
     const content = (entry as { content?: unknown } | null)?.content;
     if (typeof content !== "string") {
       throw new Error(`malformed root at ${wirePath}: tags["${tag}"].content is required and must be a string`);
     }
-    tagDigests.push(content);
+    tags.push({ tag, digest: content });
   }
 
   const descRaw = obj.desc;
@@ -473,7 +493,7 @@ function collectCasRefs(
   }
   const desc = descRaw as Record<string, unknown> | null;
   return {
-    tagDigests,
+    tags,
     readme: descDigest(wirePath, desc, "readme"),
     logo: descDigest(wirePath, desc, "logo"),
   };
@@ -521,12 +541,23 @@ async function processPackage(
   const rootBytes = await loadOrFetch(ctx, rootWirePath, digest, "json");
   files.set(rootWirePath, rootBytes);
 
-  const { tagDigests, readme, logo } = collectCasRefs(rootWirePath, rootBytes);
+  const { tags, readme, logo } = collectCasRefs(rootWirePath, rootBytes);
   const tasks: Promise<void>[] = [];
 
-  for (const tagDigest of tagDigests) {
+  for (const { tag, digest: tagDigest } of tags) {
     const wirePath: WirePath = `p/${qualifiedId}/o/sha256/${tagDigest.slice("sha256:".length)}.json`;
-    tasks.push(loadOrFetch(ctx, wirePath, tagDigest, "json").then((bytes) => void files.set(wirePath, bytes)));
+    tasks.push(
+      loadOrFetch(ctx, wirePath, tagDigest, "json", true).then((bytes) => {
+        if (bytes !== null) {
+          files.set(wirePath, bytes);
+          return;
+        }
+        ctx.warn(
+          `${ctx.baseUrl}: ${qualifiedId} tag ${tag}: image index ${tagDigest} not found (404) — ` +
+            `the tag keeps its place in the catalog but loses its platforms and release facts`,
+        );
+      }),
+    );
   }
 
   const assets: { digest: string; extCandidates: readonly string[]; assetName: string }[] = [];
@@ -580,8 +611,8 @@ export interface UrlSourceOptions {
    * without ever making a real network call. */
   readonly fetchImpl?: typeof fetch;
   /** Reports a `desc.readme`/`desc.logo` digest that no extension candidate
-   * could fetch (see `types.ts` `SourceWarning`'s doc) — never a build
-   * failure. Defaults to a no-op: unlike `git.ts`'s `.gitmodules` warning,
+   * could fetch, and a tag whose image-index object is a `404` (see
+   * `types.ts` `SourceWarning`'s doc) — never a build failure. Defaults to a no-op: unlike `git.ts`'s `.gitmodules` warning,
    * every committed fixture for this source kind omits `desc` entirely, so
    * this never fires in the existing suite without an explicit `desc`. */
   readonly warn?: SourceWarning;
@@ -611,7 +642,9 @@ export interface UrlSourceOptions {
  *    lookup directly; no separate diff against a previously cached index is
  *    kept.
  * 3. For each root loaded, inspect its `tags[*].content` (always `.json`,
- *    an OCI image index) and `desc.readme`/`desc.logo` digests and fetch any
+ *    an OCI image index; a `404` there skips that tag's object with a warning
+ *    naming source, package, tag and digest — no retry) and
+ *    `desc.readme`/`desc.logo` digests and fetch any
  *    CAS blob (`p/<ns>/<pkg>/o/sha256/<hex>.<ext>`) not already present in
  *    `cacheDir`. No registry-side extension discovery: `readme` is always
  *    `.md` (schema-pinned); `logo` tries `.svg` then `.png`, in that order
@@ -619,7 +652,7 @@ export interface UrlSourceOptions {
  *    from `contentByDigest`) — both
  *    absent degrades to "no asset" plus a warning, never a build failure.
  * 4. Concurrency 16 across the combined root+CAS fetch queue; each request
- *    retries up to 3 times AFTER its initial attempt (4 total) on failure,
+ *    (bar a tag object's `404`, see 3) retries up to 3 times AFTER its initial attempt (4 total) on failure,
  *    with exponential backoff (500ms base, jittered), before that ONE file
  *    is considered failed.
  * 5. EVERY freshly fetched byte sequence is digest-verified before being

@@ -39,6 +39,7 @@ Beyond the protocol requirement, the reader (`src/sources/walker.ts`):
 - Never follows redirects — a 3xx response fails the build outright, naming the refused hop.
 - Does a conditional GET (`If-None-Match`) against `/c/index.json`, so an unchanged index costs one round trip.
 - Digest-verifies every content-addressed byte it fetches.
+- Skips a tag whose image-index object answers 404 — one warning naming the source, package, tag and digest; the tag loses its platforms, the build continues. Any other failure on that object (5xx, redirect, oversize, digest mismatch) still fails the build. A `path`/`git` source with a live tag whose image index is missing warns the same way.
 - Caps each response body at 8 MiB, caps in-flight requests at 16 concurrent, retries a failed fetch 3 times after the initial attempt (4 total) with jittered backoff, and caps `/c/index.json` at 50,000 declared package entries.
 
 ### `git`
