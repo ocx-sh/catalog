@@ -757,6 +757,69 @@ describe("sources_pipeline resolveCatalog — failures map to the CLI's exit cod
     expect((error as BuildError).message).toContain("p/acme/widget.json");
   });
 
+  async function deadUrl(): Promise<string> {
+    const url = `http://127.0.0.1:${await findFreePort()}`;
+    cleanupDirs.push(join(await cacheBaseDir(), "url", createHash("sha256").update(url).digest("hex").slice(0, 16)));
+    return url;
+  }
+
+  it("a DATA and an UNAVAILABLE source failing together report both, as DATA", async () => {
+    const dir = await tempDir("catalog-pipeline-both-");
+    await writeTree(join(dir, "index"), { "p/acme/widget.json": utf8("{ not json") });
+    const url = await deadUrl();
+    const cache: RemoteCache = new Map();
+
+    // The unreachable source comes first: the data failure must still win the class.
+    const error = await resolveCatalog(
+      [{ entry: { url }, label: "dead" }, pathSource("index", { label: "ocx.sh" })],
+      dir,
+      undefined,
+      undefined,
+      cache,
+    ).catch((err: unknown) => err);
+
+    expect(error).toBeInstanceOf(BuildError);
+    expect((error as BuildError).code).toBe("DATA");
+    expect((error as BuildError).message).toContain("2 failures");
+    expect((error as BuildError).message).toContain("sources[0]");
+    expect((error as BuildError).message).toContain("sources[1] (index)");
+    expect(cache.size).toBe(0);
+  }, 30_000);
+
+  it("two UNAVAILABLE sources report both, as UNAVAILABLE", async () => {
+    const [first, second] = [await deadUrl(), await deadUrl()];
+
+    const error = await resolveCatalog(
+      [
+        { entry: { url: first }, label: "one" },
+        { entry: { url: second }, label: "two" },
+      ],
+      process.cwd(),
+    ).catch((err: unknown) => err);
+
+    expect(error).toBeInstanceOf(BuildError);
+    expect((error as BuildError).code).toBe("UNAVAILABLE");
+    expect((error as BuildError).message).toContain("2 failures");
+    expect((error as BuildError).message).toContain(first);
+    expect((error as BuildError).message).toContain(second);
+  }, 60_000);
+
+  it("the listing is capped at 20 sources and counts the rest", async () => {
+    const dir = await tempDir("catalog-pipeline-many-");
+    const names = Array.from({ length: 25 }, (_, i) => `index-${i}`);
+    for (const name of names) await writeTree(join(dir, name), { "p/acme/widget.json": utf8("{ not json") });
+
+    const error = await resolveCatalog(
+      names.map((name) => pathSource(name, { label: name })),
+      dir,
+    ).catch((err: unknown) => err);
+
+    const message = (error as BuildError).message;
+    expect(message).toContain("25 failures");
+    expect(message.split("\n").filter((line) => line.startsWith("- "))).toHaveLength(20);
+    expect(message).toContain("… and 5 more");
+  });
+
   it("a git source that cannot be cloned is DATA, naming the repository", async () => {
     const dir = await tempDir("catalog-pipeline-badgit-");
     const missingRepo = join(dir, "no-such-repo");

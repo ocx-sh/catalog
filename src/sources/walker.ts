@@ -13,7 +13,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { UrlSourceEntry } from "../config/types.js";
 import { assertSafePackagePath, DIGEST_RE } from "../viewmodel/catalog.js";
-import { SourceError, type SourceWarning, type WirePath } from "./types.js";
+import { listFailures, SourceError, type SourceWarning, type WirePath } from "./types.js";
 
 /** `4` = an initial attempt plus 3 retries — the C-003 contract's "3
  * retries with exponential backoff", read literally (3 retries AFTER the
@@ -529,6 +529,31 @@ function assertSafeQualifiedId(qualifiedId: string): void {
   }
 }
 
+/** Failures a combined error carries, so an outer `settleAll` lists them flat. */
+interface CombinedFailures {
+  readonly failures: readonly unknown[];
+}
+
+/**
+ * Awaits every task and reports ALL failures, not whichever rejected first
+ * (which one that is depends on network timing). One failure is rethrown
+ * unchanged; several become one error listing every message. The combined
+ * error keeps the build's exit-code class: it stays `FETCH_FAILED` only when
+ * every failure was one, otherwise it takes a non-fetch failure's class.
+ */
+async function settleAll(tasks: readonly Promise<unknown>[]): Promise<void> {
+  const failures = (await Promise.allSettled(tasks)).flatMap((result) =>
+    result.status === "rejected" ? ((result.reason as Partial<CombinedFailures>).failures ?? [result.reason]) : [],
+  );
+  if (failures.length === 0) return;
+  if (failures.length === 1) throw failures[0];
+  const message = listFailures(failures.map((f) => (f as Error).message));
+  const representative = failures.find((f) => !(f instanceof SourceError && f.code === "FETCH_FAILED")) ?? failures[0];
+  const combined =
+    representative instanceof SourceError ? new SourceError(representative.code, message) : new Error(message);
+  throw Object.assign(combined, { failures } satisfies CombinedFailures);
+}
+
 async function processPackage(
   qualifiedId: string,
   digest: string,
@@ -585,7 +610,7 @@ async function processPackage(
     );
   }
 
-  await Promise.all(tasks);
+  await settleAll(tasks);
 }
 
 interface CachedIndex {
@@ -753,7 +778,7 @@ export async function readUrlSource(
       `${indexUrl}: c/index.json declares ${entries.length} packages, exceeding the ${MAX_INDEX_ENTRIES}-package maximum`,
     );
   }
-  await Promise.all(entries.map(([qualifiedId, digest]) => processPackage(qualifiedId, digest, ctx, files)));
+  await settleAll(entries.map(([qualifiedId, digest]) => processPackage(qualifiedId, digest, ctx, files)));
 
   return files;
 }

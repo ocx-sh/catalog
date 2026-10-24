@@ -1490,3 +1490,156 @@ describe("readUrlSource — a yanked tag's missing object is not an error", () =
     expect(warnings[0]).toContain(objDigest);
   });
 });
+
+describe("readUrlSource — every failure is reported, not only the first", () => {
+  function objectOf(label: string): { bytes: Uint8Array; digest: string; wirePath: string } {
+    const bytes = utf8(JSON.stringify({ schemaVersion: 2, label }));
+    const digest = sha256Digest(bytes);
+    return { bytes, digest, wirePath: `o/sha256/${digest.slice("sha256:".length)}.json` };
+  }
+
+  const WRONG_BYTES = utf8("not the object the digest names");
+
+  /** Serves `packages` (id -> tag objects); each object's route comes from `route`. */
+  function serverFor(packages: Record<string, ReturnType<typeof objectOf>[]>, route: (o: { digest: string }) => Route) {
+    const roots = new Map<string, Uint8Array>();
+    const routes: [string, Route][] = [];
+    for (const [id, objects] of Object.entries(packages)) {
+      const tags: Record<string, RootTag> = {};
+      objects.forEach((o, i) => {
+        tags[`1.0.${i}`] = { content: o.digest, observed: "2026-01-01T00:00:00Z" };
+        routes.push([`p/${id}/${o.wirePath}`, route(o)]);
+      });
+      roots.set(id, rootJsonBytes({ name: `ocx.sh/${id}`, tags }));
+    }
+    const index = Object.fromEntries([...roots].map(([id, bytes]) => [id, sha256Digest(bytes)]));
+    return fakeFetch([
+      ["/c/index.json", () => ({ status: 200, body: indexJson(index), headers: { ETag: '"idx1"' } })],
+      ...[...roots].map(([id, bytes]): [string, Route] => [`/p/${id}.json`, () => ({ status: 200, body: bytes })]),
+      ...routes,
+    ]);
+  }
+
+  const mismatch: Route = () => ({ status: 200, body: WRONG_BYTES });
+  const unavailable: Route = () => ({ status: 500 });
+
+  it("two objects of one package that fail digest verification are listed in one error", async () => {
+    const [a, b] = [objectOf("a"), objectOf("b")];
+    const { impl } = serverFor({ "ns/pkg": [a, b] }, () => mismatch);
+    const error = await readUrlSource({ url: BASE_URL }, { cacheDir: await tempCacheDir(), fetchImpl: impl }).catch(
+      (err: unknown) => err,
+    );
+
+    expect(error).toMatchObject({ name: "SourceError", code: "DIGEST_MISMATCH" });
+    expect((error as Error).message).toContain("2 failures");
+    expect((error as Error).message).toContain(a.digest.slice("sha256:".length));
+    expect((error as Error).message).toContain(b.digest.slice("sha256:".length));
+  });
+
+  it("one failing object is rethrown as before, with no failure count", async () => {
+    const [a, b] = [objectOf("a"), objectOf("b")];
+    const { impl } = serverFor({ "ns/pkg": [a, b] }, (o) => (o.digest === a.digest ? mismatch : () => ({ status: 200, body: b.bytes })));
+    const error = await readUrlSource({ url: BASE_URL }, { cacheDir: await tempCacheDir(), fetchImpl: impl }).catch(
+      (err: unknown) => err,
+    );
+
+    expect(error).toMatchObject({ name: "SourceError", code: "DIGEST_MISMATCH" });
+    expect((error as Error).message).not.toContain("failures");
+    expect((error as Error).message).toContain(a.digest.slice("sha256:".length));
+  });
+
+  it("failing objects across two packages are all listed, flat", async () => {
+    const objects = [objectOf("a"), objectOf("b"), objectOf("c"), objectOf("d")];
+    const { impl } = serverFor({ "ns/one": objects.slice(0, 2), "ns/two": objects.slice(2) }, () => mismatch);
+    const error = await readUrlSource({ url: BASE_URL }, { cacheDir: await tempCacheDir(), fetchImpl: impl }).catch(
+      (err: unknown) => err,
+    );
+
+    expect((error as Error).message).toContain("4 failures");
+    for (const o of objects) expect((error as Error).message).toContain(o.digest.slice("sha256:".length));
+    expect((error as Error).message).not.toContain("2 failures");
+  });
+
+  it("only fetch failures stay FETCH_FAILED", async () => {
+    const { impl } = serverFor({ "ns/pkg": [objectOf("a"), objectOf("b")] }, () => unavailable);
+    const error = await readUrlSource(
+      { url: BASE_URL },
+      { cacheDir: await tempCacheDir(), fetchImpl: impl, sleepImpl: IMMEDIATE_SLEEP },
+    ).catch((err: unknown) => err);
+
+    expect(error).toMatchObject({ name: "SourceError", code: "FETCH_FAILED" });
+    expect((error as Error).message).toContain("2 failures");
+  });
+
+  it("a data failure among fetch failures takes the data class", async () => {
+    const [a, b] = [objectOf("a"), objectOf("b")];
+    const { impl } = serverFor({ "ns/pkg": [a, b] }, (o) => (o.digest === a.digest ? unavailable : mismatch));
+    const error = await readUrlSource(
+      { url: BASE_URL },
+      { cacheDir: await tempCacheDir(), fetchImpl: impl, sleepImpl: IMMEDIATE_SLEEP },
+    ).catch((err: unknown) => err);
+
+    expect(error).toMatchObject({ name: "SourceError", code: "DIGEST_MISMATCH" });
+  });
+
+  it("the listing is capped at 20 failures and counts the rest", async () => {
+    const objects = Array.from({ length: 25 }, (_, i) => objectOf(`obj-${i}`));
+    const { impl } = serverFor({ "ns/pkg": objects }, () => mismatch);
+    const error = await readUrlSource({ url: BASE_URL }, { cacheDir: await tempCacheDir(), fetchImpl: impl }).catch(
+      (err: unknown) => err,
+    );
+
+    const message = (error as Error).message;
+    expect(message).toContain("25 failures");
+    expect(message.split("\n").filter((line) => line.startsWith("- "))).toHaveLength(20);
+    expect(message).toContain("… and 5 more");
+  });
+
+  describe.each([
+    ["the plain error first", ["ns/one", "ns/two"]],
+    ["the fetch failure first", ["ns/two", "ns/one"]],
+  ])("a plain error and a 5xx together, %s", (_name, order) => {
+    it("takes the plain error's class, never FETCH_FAILED", async () => {
+      const bad = utf8("42");
+      const down = utf8("{}");
+      const roots: Record<string, Uint8Array> = { "ns/one": bad, "ns/two": down };
+      const { impl } = fakeFetch([
+        [
+          "/c/index.json",
+          () => ({
+            status: 200,
+            body: indexJson(Object.fromEntries(order.map((id) => [id, sha256Digest(roots[id]!)]))),
+            headers: { ETag: '"idx1"' },
+          }),
+        ],
+        ["/p/ns/one.json", () => ({ status: 200, body: bad })],
+        ["/p/ns/two.json", () => ({ status: 503 })],
+      ]);
+      const error = await readUrlSource(
+        { url: BASE_URL },
+        { cacheDir: await tempCacheDir(), fetchImpl: impl, sleepImpl: IMMEDIATE_SLEEP },
+      ).catch((err: unknown) => err);
+
+      expect(error).not.toBeInstanceOf(SourceError);
+      expect((error as Error).message).toContain("2 failures");
+    });
+  });
+
+  it("two malformed package roots are listed in one plain error", async () => {
+    const bad = utf8("42");
+    const index = { "ns/one": sha256Digest(bad), "ns/two": sha256Digest(bad) };
+    const { impl } = fakeFetch([
+      ["/c/index.json", () => ({ status: 200, body: indexJson(index), headers: { ETag: '"idx1"' } })],
+      ["/p/ns/one.json", () => ({ status: 200, body: bad })],
+      ["/p/ns/two.json", () => ({ status: 200, body: bad })],
+    ]);
+    const error = await readUrlSource({ url: BASE_URL }, { cacheDir: await tempCacheDir(), fetchImpl: impl }).catch(
+      (err: unknown) => err,
+    );
+
+    expect(error).not.toBeInstanceOf(SourceError);
+    expect((error as Error).message).toContain("2 failures");
+    expect((error as Error).message).toContain("p/ns/one.json");
+    expect((error as Error).message).toContain("p/ns/two.json");
+  });
+});
