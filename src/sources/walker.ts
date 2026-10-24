@@ -208,19 +208,16 @@ export class Semaphore {
 /**
  * Retries `fetchImpl(url, init)` up to `MAX_ATTEMPTS` times (network error,
  * or a status `acceptStatus` rejects) with jittered exponential backoff.
- * EVERY call site of this function fetches a wire file the build needs
- * (`config.json`, `c/index.json`, a package root, or a tag's image-index CAS
- * blob) — a `404` is therefore treated exactly like any other unacceptable
- * status, subject to the same retry-then-fail path, unless the caller names
- * it acceptable (only a tag's image-index blob does, and then it is returned
- * on the first attempt, never retried) — never returned to the caller un-checked:
- * a prior version special-cased 404 as an immediate pass-through, which let
- * a 404 body reach `JSON.parse`/get mirrored verbatim/fail digest
- * verification instead of raising a named error — see `loadOptionalAsset`'s
- * `fetchOptionalAsset` for the actually-optional desc-asset case, which is a
- * different function precisely because it wants a different, 404-tolerant
- * contract). Exhausting every attempt throws `SourceError("FETCH_FAILED", …)`
- * naming `url` and the last observed status/network error.
+ * EVERY call site fetches a wire file the build needs (`config.json`,
+ * `c/index.json`, a package root, or a tag's image-index CAS blob), so a
+ * rejected status — `404` included — raises a named `FETCH_FAILED` instead of
+ * handing the caller a body to parse or mirror. A `404` is the server's
+ * settled answer, so it is not retried: it throws on the first attempt, as a
+ * `NotFoundError`. A caller that names `404` acceptable (only a tag's
+ * image-index blob does) gets the response back on that first attempt.
+ * `fetchOptionalAsset` is the separate, 404-tolerant path for the optional
+ * desc assets. A failing request throws `SourceError("FETCH_FAILED", …)`
+ * naming `url` and the last observed status or network error.
  *
  * A 3xx is NOT retried: with `redirect: "manual"` (see `NO_REDIRECT`) a
  * redirect is a deterministic policy refusal, not a transient failure, so it
@@ -255,6 +252,8 @@ async function retryFetch(
       return response;
     }
     lastStatus = String(response.status);
+    // A 404 is the server's settled answer for that object, not a transient fault.
+    if (response.status === 404) break;
     if (attempt < MAX_ATTEMPTS - 1) await sleep(backoffDelayMs(attempt));
   }
   throw new SourceError("FETCH_FAILED", `failed to fetch ${url}: ${lastStatus}`);
@@ -544,7 +543,15 @@ async function processPackage(
   const { tags, readme, logo } = collectCasRefs(rootWirePath, rootBytes);
   const tasks: Promise<void>[] = [];
 
+  // Tags sharing a digest share one object: fetch, store and report it once.
+  const tagsByDigest = new Map<string, string[]>();
   for (const { tag, digest: tagDigest } of tags) {
+    const names = tagsByDigest.get(tagDigest);
+    if (names === undefined) tagsByDigest.set(tagDigest, [tag]);
+    else names.push(tag);
+  }
+
+  for (const [tagDigest, tagNames] of tagsByDigest) {
     const wirePath: WirePath = `p/${qualifiedId}/o/sha256/${tagDigest.slice("sha256:".length)}.json`;
     tasks.push(
       loadOrFetch(ctx, wirePath, tagDigest, "json", true).then((bytes) => {
@@ -553,7 +560,7 @@ async function processPackage(
           return;
         }
         ctx.warn(
-          `${ctx.baseUrl}: ${qualifiedId} tag ${tag}: image index ${tagDigest} not found (404) — ` +
+          `${ctx.baseUrl}: ${qualifiedId} tag ${tagNames.map((name) => JSON.stringify(name)).join(", ")}: image index ${tagDigest} not found (404) — ` +
             `the tag keeps its place in the catalog but loses its platforms and release facts`,
         );
       }),

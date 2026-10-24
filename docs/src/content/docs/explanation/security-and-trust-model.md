@@ -62,7 +62,7 @@ caps, read directly from `src/sources/walker.ts` and `src/sources/mirror.ts`:
 |---|---|---|
 | Response body size | 8 MiB | One `url`-fetched file's decompressed byte count |
 | Fetch/write concurrency | 16 in flight | The combined root+CAS fetch queue, and the mirror write queue |
-| Fetch attempts | 4 (1 + 3 retries) | Exponential backoff per URL; a 3xx is never retried, and neither is a 404 on a tag's image-index object (that tag is skipped with a warning instead) |
+| Fetch attempts | 4 (1 + 3 retries) | Exponential backoff per URL; neither a 3xx nor a 404 is retried (a 404 on a tag's image-index object skips that tag with a warning; on any other required file it fails the build) |
 | `/c/index.json` entries | 50,000 packages | How large one source's enumeration may declare itself |
 | CAS content asset size | 1 MiB | A mirrored README/logo blob from a `path`/`git` source (oversized ones are skipped and warned, never silently included) |
 
