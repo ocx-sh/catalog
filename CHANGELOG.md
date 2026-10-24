@@ -5,6 +5,18 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.6.1] - 2026-10-24
+
+### Fixed
+
+- The ocx chrome drops its header docs link *(theme)*
+- A cold `?q=` URL releases the reserved list height with the first results *(theme)*
+- A yanked tag's missing object is not an error; every failing source is reported; git fetch failures exit 69 *(sources)*
+
+### Changed
+
+- @ocx-sh/theme 0.2.3: the ocx.sh header reads "solutions"
+
 ## [0.6.0] - 2026-10-23
 
 ### Added
@@ -114,6 +126,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Added
 
 - Initial commit of @ocx-sh/catalog
+[0.6.1]: https://github.com/ocx-sh/catalog/compare/v0.6.0..v0.6.1
 [0.6.0]: https://github.com/ocx-sh/catalog/compare/v0.5.3..v0.6.0
 [0.5.3]: https://github.com/ocx-sh/catalog/compare/v0.5.2..v0.5.3
 [0.5.2]: https://github.com/ocx-sh/catalog/compare/v0.5.1..v0.5.2
