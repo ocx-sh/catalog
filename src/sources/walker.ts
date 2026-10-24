@@ -256,7 +256,8 @@ async function retryFetch(
     if (response.status === 404) break;
     if (attempt < MAX_ATTEMPTS - 1) await sleep(backoffDelayMs(attempt));
   }
-  throw new SourceError("FETCH_FAILED", `failed to fetch ${url}: ${lastStatus}`);
+  const message = `failed to fetch ${url}: ${lastStatus}`;
+  throw lastStatus === "404" ? new NotFoundError(message) : new SourceError("FETCH_FAILED", message);
 }
 
 /** Fetches an OPTIONAL CAS asset (a `desc.readme`/`desc.logo` candidate) —
@@ -274,6 +275,16 @@ async function fetchOptionalAsset(fetchImpl: typeof fetch, url: string): Promise
     return response.status === 200 ? response : null;
   } catch {
     return null;
+  }
+}
+
+/** A required fetch the server answered `404` — a `FETCH_FAILED` that
+ * `readUrlSource` can tell apart from a 5xx or network failure, because a
+ * root that 404s while its `c/index.json` entry exists is how a tree that
+ * moved mid-read looks. */
+class NotFoundError extends SourceError {
+  constructor(message: string) {
+    super("FETCH_FAILED", message);
   }
 }
 
@@ -329,6 +340,9 @@ interface WalkerContext {
   readonly semaphore: Semaphore;
   readonly warn: SourceWarning;
   readonly sleep: SleepFn;
+  /** Set when a live tag's image-index object was a 404: one of the signs
+   * the tree moved under the walk (`readUrlSource` re-reads the index). */
+  readonly sawMissingTagObject: { value: boolean };
 }
 
 /** Loads a wire file (a package root, or a tag's `.json` image-index content)
@@ -534,6 +548,11 @@ interface CombinedFailures {
   readonly failures: readonly unknown[];
 }
 
+/** The individual failures behind `error`: a combined error's list, else `error` itself. */
+function failuresOf(error: unknown): readonly unknown[] {
+  return (error as Partial<CombinedFailures>).failures ?? [error];
+}
+
 /**
  * Awaits every task and reports ALL failures, not whichever rejected first
  * (which one that is depends on network timing). One failure is rethrown
@@ -543,7 +562,7 @@ interface CombinedFailures {
  */
 async function settleAll(tasks: readonly Promise<unknown>[]): Promise<void> {
   const failures = (await Promise.allSettled(tasks)).flatMap((result) =>
-    result.status === "rejected" ? ((result.reason as Partial<CombinedFailures>).failures ?? [result.reason]) : [],
+    result.status === "rejected" ? failuresOf(result.reason) : [],
   );
   if (failures.length === 0) return;
   if (failures.length === 1) throw failures[0];
@@ -590,6 +609,7 @@ async function processPackage(
           return;
         }
         if (yankedOnly) return;
+        ctx.sawMissingTagObject.value = true;
         ctx.warn(
           `${ctx.baseUrl}: ${qualifiedId} tag ${tagNames.map((name) => JSON.stringify(name)).join(", ")}: image index ${tagDigest} not found (404) — ` +
             `the tag keeps its place in the catalog but loses its platforms and release facts`,
@@ -631,6 +651,15 @@ async function readCachedIndex(cacheDir: string): Promise<CachedIndex | null> {
   } catch {
     return null;
   }
+}
+
+/** One walk over a fetched `c/index.json`. `suspect`: the index it followed may
+ * be stale (see `readUrlSource`'s re-read). */
+interface WalkOutcome {
+  readonly files: ReadonlyMap<WirePath, Uint8Array>;
+  readonly warnings: readonly string[];
+  readonly failed: { readonly error: unknown } | null;
+  readonly suspect: boolean;
 }
 
 /**
@@ -700,6 +729,12 @@ export interface UrlSourceOptions {
  *    `SourceError("DIGEST_MISMATCH", …)` naming the file plus both the
  *    expected and actual digest — a corrupted/tampered fetch must never
  *    silently enter the build.
+ * 5b. A root that fails its digest or 404s, or a live tag's image-index object
+ *    that 404s, is what a deploy landing mid-build looks like. The index is
+ *    then re-read ONCE without `If-None-Match`: changed bytes are walked once
+ *    more (that walk's outcome is final), identical bytes leave the first
+ *    walk's outcome — its error, or its warnings — standing. Warnings are
+ *    reported only for the outcome that stands.
  * 6. A source that stays unreachable after step 4's retries throws
  *    `SourceError("FETCH_FAILED", …)` naming `entry.url` and the last HTTP
  *    status (or network error) observed — S-002: the CLI maps this to
@@ -726,59 +761,100 @@ export async function readUrlSource(
   const sleep = options.sleepImpl ?? realSleep;
 
   const semaphore = new Semaphore(MAX_CONCURRENCY);
-  const ctx: WalkerContext = { fetchImpl, baseUrl: entry.url, cacheDir: options.cacheDir, semaphore, warn, sleep };
-  const files = new Map<WirePath, Uint8Array>();
 
   // Step 0 (ADR: the wire root's own `/config.json` — a frozen shape a
   // mirrored source is incomplete without, per `product-context.md`; not
   // conditionally cached, it's tiny and this keeps the cache layout simple).
   const configUrl = `${entry.url}/config.json`;
   const configResponse = await retryFetch(fetchImpl, configUrl, undefined, (status) => status === 200, sleep);
-  files.set("config.json", await readBoundedBody(configResponse, configUrl));
+  const configBytes = await readBoundedBody(configResponse, configUrl);
 
-  // Step 1: conditional GET on c/index.json.
-  const cachedIndex = await readCachedIndex(options.cacheDir);
-  const indexHeaders = cachedIndex !== null ? { headers: { "If-None-Match": cachedIndex.etag } } : undefined;
+  // Step 1: GET c/index.json — conditional on the cached ETag, or (the
+  // re-read after a suspected torn read) unconditional.
   const indexUrl = `${entry.url}/c/index.json`;
-  const indexResponse = await retryFetch(
-    fetchImpl,
-    indexUrl,
-    indexHeaders,
-    (status) => status === 200 || status === 304,
-    sleep,
-  );
-
-  let indexBytes: Uint8Array;
-  if (indexResponse.status === 304) {
-    // Only reachable after sending If-None-Match, i.e. only when
-    // `cachedIndex` is already non-null.
-    indexBytes = cachedIndex!.bytes;
-  } else {
-    indexBytes = await readBoundedBody(indexResponse, indexUrl);
-    await writeFile(join(options.cacheDir, "index.json"), indexBytes);
+  const fetchIndex = async (conditional: boolean): Promise<Uint8Array> => {
+    const cachedIndex = conditional ? await readCachedIndex(options.cacheDir) : null;
+    const indexHeaders = cachedIndex !== null ? { headers: { "If-None-Match": cachedIndex.etag } } : undefined;
+    const indexResponse = await retryFetch(
+      fetchImpl,
+      indexUrl,
+      indexHeaders,
+      (status) => status === 200 || status === 304,
+      sleep,
+    );
+    if (indexResponse.status === 304) {
+      // Only reachable after sending If-None-Match, i.e. only when
+      // `cachedIndex` is already non-null.
+      return cachedIndex!.bytes;
+    }
+    const bytes = await readBoundedBody(indexResponse, indexUrl);
+    await writeFile(join(options.cacheDir, "index.json"), bytes);
     const etagHeader = indexResponse.headers.get("ETag");
     if (etagHeader !== null) {
       await writeFile(join(options.cacheDir, "index.etag"), etagHeader);
     }
-  }
-  files.set("c/index.json", indexBytes);
+    return bytes;
+  };
 
   // Steps 2-5: every currently enumerated package, root + its CAS refs —
   // content-addressed cache hits fold "unchanged" straight into "already
   // have it", so no separate diff against the previous index is needed.
-  // `cas/` only needs to exist once cache WRITES start (here) — deliberately
-  // not created any earlier, so a fake-timer-driven retry test covering the
-  // config.json/c/index.json fetches above never races real directory-
-  // creation I/O against the timer-draining loop.
-  await mkdir(join(options.cacheDir, "cas"), { recursive: true });
-  const { packages } = JSON.parse(new TextDecoder().decode(indexBytes)) as { packages: Record<string, string> };
-  const entries = Object.entries(packages);
-  if (entries.length > MAX_INDEX_ENTRIES) {
-    throw new Error(
-      `${indexUrl}: c/index.json declares ${entries.length} packages, exceeding the ${MAX_INDEX_ENTRIES}-package maximum`,
-    );
-  }
-  await settleAll(entries.map(([qualifiedId, digest]) => processPackage(qualifiedId, digest, ctx, files)));
+  // Warnings are held back until the outcome is final, so a walk that is
+  // thrown away for a re-read never reports twice.
+  const walk = async (indexBytes: Uint8Array): Promise<WalkOutcome> => {
+    const warnings: string[] = [];
+    const sawMissingTagObject = { value: false };
+    const ctx: WalkerContext = {
+      fetchImpl,
+      baseUrl: entry.url,
+      cacheDir: options.cacheDir,
+      semaphore,
+      warn: (message) => warnings.push(message),
+      sleep,
+      sawMissingTagObject,
+    };
+    const files = new Map<WirePath, Uint8Array>([
+      ["config.json", configBytes],
+      ["c/index.json", indexBytes],
+    ]);
+    // `cas/` only needs to exist once cache WRITES start (here) — deliberately
+    // not created any earlier, so a fake-timer-driven retry test covering the
+    // config.json/c/index.json fetches above never races real directory-
+    // creation I/O against the timer-draining loop.
+    await mkdir(join(options.cacheDir, "cas"), { recursive: true });
+    const { packages } = JSON.parse(new TextDecoder().decode(indexBytes)) as { packages: Record<string, string> };
+    const entries = Object.entries(packages);
+    if (entries.length > MAX_INDEX_ENTRIES) {
+      throw new Error(
+        `${indexUrl}: c/index.json declares ${entries.length} packages, exceeding the ${MAX_INDEX_ENTRIES}-package maximum`,
+      );
+    }
+    try {
+      await settleAll(entries.map(([qualifiedId, digest]) => processPackage(qualifiedId, digest, ctx, files)));
+    } catch (error) {
+      const suspect =
+        sawMissingTagObject.value ||
+        failuresOf(error).some(
+          (f) => f instanceof NotFoundError || (f instanceof SourceError && f.code === "DIGEST_MISMATCH"),
+        );
+      return { files, warnings, failed: { error }, suspect };
+    }
+    return { files, warnings, failed: null, suspect: sawMissingTagObject.value };
+  };
 
-  return files;
+  const indexBytes = await fetchIndex(true);
+  let outcome = await walk(indexBytes);
+  if (outcome.suspect) {
+    // A root that no longer matches its digest or is gone, or a tag object
+    // that vanished, is what a deploy landing mid-build looks like: the index
+    // this walk followed is stale. Re-read it once, unconditionally; only
+    // changed bytes earn one more walk — an unchanged index means the failure
+    // is real and the first outcome stands. A re-read that itself fails
+    // leaves the first outcome standing too.
+    const reread = await fetchIndex(false).catch(() => null);
+    if (reread !== null && Buffer.compare(reread, indexBytes) !== 0) outcome = await walk(reread);
+  }
+  for (const message of outcome.warnings) warn(message);
+  if (outcome.failed !== null) throw outcome.failed.error;
+  return outcome.files;
 }

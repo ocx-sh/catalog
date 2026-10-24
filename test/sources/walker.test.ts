@@ -23,7 +23,7 @@ import { mkdtemp, readdir, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { SourceError } from "../../src/sources/types.js";
+import { SourceError, type WirePath } from "../../src/sources/types.js";
 import { readUrlSource, type SleepFn } from "../../src/sources/walker.js";
 import { bytesEqual, rootJsonBytes, sha256Digest, utf8, type RootTag } from "./helpers.js";
 
@@ -1641,5 +1641,225 @@ describe("readUrlSource — every failure is reported, not only the first", () =
     expect((error as Error).message).toContain("2 failures");
     expect((error as Error).message).toContain("p/ns/one.json");
     expect((error as Error).message).toContain("p/ns/two.json");
+  });
+});
+
+// A deploy landing while a build runs leaves the index it fetched pointing at
+// roots and objects that no longer exist or no longer match. The walk re-reads
+// `c/index.json` once, unconditionally: new bytes earn one more walk, identical
+// bytes mean the failure is real and the first outcome stands.
+describe("readUrlSource — a source that changes mid-build is re-read once", () => {
+  const rootA = rootJsonBytes({ name: "ocx.sh/ns/pkg", created: "2026-01-01" });
+  const rootB = rootJsonBytes({ name: "ocx.sh/ns/pkg", created: "2026-02-02" });
+  const digestA = sha256Digest(rootA);
+  const digestB = sha256Digest(rootB);
+  const indexA: RouteResult = { status: 200, body: indexJson({ "ns/pkg": digestA }), headers: { ETag: '"a"' } };
+  const indexB: RouteResult = { status: 200, body: indexJson({ "ns/pkg": digestB }), headers: { ETag: '"b"' } };
+
+  /** Serves `indexes[n]` on the nth `c/index.json` GET (the last one repeats). */
+  function movingServer(indexes: readonly RouteResult[], routes: readonly [string, Route][]) {
+    let served = 0;
+    const server = fakeFetch([["/c/index.json", () => indexes[Math.min(served++, indexes.length - 1)]!], ...routes]);
+    return { ...server, indexCalls: () => server.calls.filter((c) => c.url.endsWith("/c/index.json")) };
+  }
+  const rootRoute = (...bodies: (Uint8Array | 404)[]): [string, Route] => {
+    let n = 0;
+    return [
+      "/p/ns/pkg.json",
+      () => {
+        const body = bodies[Math.min(n++, bodies.length - 1)]!;
+        return body === 404 ? { status: 404 } : { status: 200, body };
+      },
+    ];
+  };
+  async function build(impl: typeof fetch, warn?: (m: string) => void, cacheDir?: string) {
+    return readUrlSource(
+      { url: BASE_URL },
+      { cacheDir: cacheDir ?? (await tempCacheDir()), fetchImpl: impl, sleepImpl: IMMEDIATE_SLEEP, warn },
+    );
+  }
+
+  it("a root failing its digest, then a moved index: the new tree wins after two index GETs", async () => {
+    const cacheDir = await tempCacheDir();
+    const seed = fakeFetch([["/c/index.json", () => ({ status: 200, body: indexJson({}), headers: { ETag: '"e0"' } })]]);
+    await build(seed.impl, undefined, cacheDir);
+
+    const { impl, indexCalls } = movingServer([indexA, indexB], [rootRoute(rootB)]);
+    const files = await build(impl, undefined, cacheDir);
+
+    expect(bytesEqual(files.get("p/ns/pkg.json")!, rootB)).toBe(true);
+    expect(bytesEqual(files.get("c/index.json")!, indexB.body as Uint8Array)).toBe(true);
+    expect(indexCalls()).toHaveLength(2);
+    expect(getRequestHeader(indexCalls()[0]?.init, "If-None-Match")).toBe('"e0"');
+    expect(getRequestHeader(indexCalls()[1]?.init, "If-None-Match")).toBeUndefined();
+  });
+
+  it("a root that 404s, then a moved index: the new tree wins", async () => {
+    const { impl, indexCalls } = movingServer([indexA, indexB], [rootRoute(404, rootB)]);
+    const files = await build(impl);
+
+    expect(bytesEqual(files.get("p/ns/pkg.json")!, rootB)).toBe(true);
+    expect(indexCalls()).toHaveLength(2);
+  });
+
+  describe("a tag object", () => {
+    const objA = utf8(JSON.stringify({ schemaVersion: 2, manifests: [], n: "a" }));
+    const objB = utf8(JSON.stringify({ schemaVersion: 2, manifests: [], n: "b" }));
+    const tagRoot = (obj: Uint8Array) =>
+      rootJsonBytes({
+        name: "ocx.sh/ns/pkg",
+        tags: { "1.0.0": { content: sha256Digest(obj), observed: "2026-01-01T00:00:00Z" } },
+      });
+    const objPath = (obj: Uint8Array) => `/p/ns/pkg/o/sha256/${sha256Digest(obj).slice("sha256:".length)}.json`;
+    const [rootOfA, rootOfB] = [tagRoot(objA), tagRoot(objB)];
+    const indexWith = (root: Uint8Array): RouteResult => ({
+      status: 200,
+      body: indexJson({ "ns/pkg": sha256Digest(root) }),
+    });
+    const unchangedRoutes: [string, Route][] = [
+      ["/p/ns/pkg.json", () => ({ status: 200, body: rootOfA })],
+      [objPath(objA), () => ({ status: 404 })],
+    ];
+
+    it("that 404s, then a moved index: the new tree wins and the discarded walk's warning is dropped", async () => {
+      let rootGets = 0;
+      const { impl, indexCalls } = movingServer(
+        [indexWith(rootOfA), indexWith(rootOfB)],
+        [
+          ["/p/ns/pkg.json", () => ({ status: 200, body: rootGets++ === 0 ? rootOfA : rootOfB })],
+          [objPath(objA), () => ({ status: 404 })],
+          [objPath(objB), () => ({ status: 200, body: objB })],
+        ],
+      );
+      const warnings: string[] = [];
+      const files = await build(impl, (m) => warnings.push(m));
+
+      expect(bytesEqual(files.get(objPath(objB).slice(1) as WirePath)!, objB)).toBe(true);
+      expect(warnings).toEqual([]);
+      expect(indexCalls()).toHaveLength(2);
+    });
+
+    it("that fails its digest, then a moved index: the new tree wins", async () => {
+      let rootGets = 0;
+      const { impl, indexCalls } = movingServer(
+        [indexWith(rootOfA), indexWith(rootOfB)],
+        [
+          ["/p/ns/pkg.json", () => ({ status: 200, body: rootGets++ === 0 ? rootOfA : rootOfB })],
+          [objPath(objA), () => ({ status: 200, body: utf8("tampered") })],
+          [objPath(objB), () => ({ status: 200, body: objB })],
+        ],
+      );
+      const files = await build(impl);
+
+      expect(files.has(objPath(objB).slice(1) as WirePath)).toBe(true);
+      expect(indexCalls()).toHaveLength(2);
+    });
+
+    it("that 404s under an unchanged index: the warning stands after two index GETs", async () => {
+      const { impl, indexCalls } = movingServer([indexWith(rootOfA)], unchangedRoutes);
+      const warnings: string[] = [];
+      const files = await build(impl, (m) => warnings.push(m));
+
+      expect(files.has("p/ns/pkg.json")).toBe(true);
+      expect(warnings).toHaveLength(1);
+      expect(warnings[0]).toContain(sha256Digest(objA));
+      expect(indexCalls()).toHaveLength(2);
+    });
+
+    it("that 404s while the index re-read fails: the warning stands", async () => {
+      const failing: RouteResult = { status: 503 };
+      const { impl } = movingServer([indexWith(rootOfA), failing], unchangedRoutes);
+      const warnings: string[] = [];
+      const files = await build(impl, (m) => warnings.push(m));
+
+      expect(files.has("p/ns/pkg.json")).toBe(true);
+      expect(warnings).toHaveLength(1);
+    });
+
+    it("that 404s only for a yanked tag: no re-read", async () => {
+      const yankedRoot = rootJsonBytes({
+        name: "ocx.sh/ns/pkg",
+        tags: {
+          "1.0.0": {
+            content: sha256Digest(objA),
+            observed: "2026-01-01T00:00:00Z",
+            yanked: { reason: "bad", at: "2026-01-02T00:00:00Z" },
+          },
+        },
+      });
+      const { impl, indexCalls } = movingServer(
+        [indexWith(yankedRoot)],
+        [
+          ["/p/ns/pkg.json", () => ({ status: 200, body: yankedRoot })],
+          [objPath(objA), () => ({ status: 404 })],
+        ],
+      );
+      await build(impl);
+
+      expect(indexCalls()).toHaveLength(1);
+    });
+
+    it("that 404s while another package fails with a different error: still re-read, the moved tree wins", async () => {
+      const indexOf = (packages: Record<string, string>): RouteResult => ({ status: 200, body: indexJson(packages) });
+      let rootGets = 0;
+      const { impl, indexCalls } = movingServer(
+        [
+          indexOf({ "ns/pkg": sha256Digest(rootOfA), "ns/other": digestA }),
+          indexOf({ "ns/pkg": sha256Digest(rootOfB) }),
+        ],
+        [
+          ["/p/ns/pkg.json", () => ({ status: 200, body: rootGets++ === 0 ? rootOfA : rootOfB })],
+          ["/p/ns/other.json", () => ({ status: 503 })],
+          [objPath(objA), () => ({ status: 404 })],
+          [objPath(objB), () => ({ status: 200, body: objB })],
+        ],
+      );
+      const files = await build(impl);
+
+      expect(files.has(objPath(objB).slice(1) as WirePath)).toBe(true);
+      expect(indexCalls()).toHaveLength(2);
+    });
+
+    it("that 5xxs is not a torn read: no re-read", async () => {
+      const { impl, indexCalls } = movingServer(
+        [indexWith(rootOfA), indexWith(rootOfB)],
+        [
+          ["/p/ns/pkg.json", () => ({ status: 200, body: rootOfA })],
+          [objPath(objA), () => ({ status: 503 })],
+        ],
+      );
+
+      await expect(build(impl)).rejects.toMatchObject({ name: "SourceError", code: "FETCH_FAILED" });
+      expect(indexCalls()).toHaveLength(1);
+    });
+  });
+
+  it("a root failing its digest under an unchanged index: the original error, after two index GETs", async () => {
+    const { impl, indexCalls } = movingServer([indexA], [rootRoute(rootB)]);
+
+    await expect(build(impl)).rejects.toMatchObject({ name: "SourceError", code: "DIGEST_MISMATCH" });
+    expect(indexCalls()).toHaveLength(2);
+  });
+
+  it("a root that 404s under an unchanged index: the original FETCH_FAILED, after two index GETs", async () => {
+    const { impl, indexCalls } = movingServer([indexA], [rootRoute(404)]);
+
+    await expect(build(impl)).rejects.toMatchObject({ name: "SourceError", code: "FETCH_FAILED" });
+    expect(indexCalls()).toHaveLength(2);
+  });
+
+  it("a moved index whose new tree also fails: that failure is final, with no third index GET", async () => {
+    // The first walk fails 404, the second fails its digest: only the second walk's error may surface.
+    const { impl, indexCalls } = movingServer([indexA, indexB], [rootRoute(404, rootA)]);
+
+    await expect(build(impl)).rejects.toMatchObject({ name: "SourceError", code: "DIGEST_MISMATCH" });
+    expect(indexCalls()).toHaveLength(2);
+  });
+
+  it("a root that 5xxs is not a torn read: no re-read", async () => {
+    const { impl, indexCalls } = movingServer([indexA, indexB], [["/p/ns/pkg.json", () => ({ status: 503 })]]);
+
+    await expect(build(impl)).rejects.toMatchObject({ name: "SourceError", code: "FETCH_FAILED" });
+    expect(indexCalls()).toHaveLength(1);
   });
 });
