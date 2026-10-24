@@ -312,16 +312,12 @@ describe("C15 loading, empty and error", () => {
     expect(dom.skeleton.hidden).toBe(true);
   });
 
-  test("D-026 the first render keeps the reserved height and the next releases it, so a cold URL shifts nothing and a short result list never sits in a viewport-tall box", async () => {
+  test("D-026 the first results release the reserved height, so a cold ?q= with few matches never sits in a viewport-tall box", async () => {
     history.replaceState(null, "", "/?q=one");
     const dom = gridDom({ ssrCards: ["a/x/one"] });
     Object.defineProperty(dom.cards, "offsetHeight", { configurable: true, value: 300 });
     run.mount(dom, data);
     await vi.waitFor(() => expect(dom.skeleton.hidden).toBe(true));
-    const reserved = dom.root.style.getPropertyValue("--reserve");
-    expect(reserved).not.toBe("");
-
-    type(dom.search, "two");
     expect(dom.root.style.getPropertyValue("--reserve")).toBe("");
   });
 

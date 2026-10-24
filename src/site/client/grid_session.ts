@@ -208,7 +208,7 @@ export function startSession(
   let current: CatalogData | null = null;
   // What the last render computed, so growing the window does not recompute the result set.
   let last: ListView | null = null;
-  // The first render keeps the reserved height (the cold boot shifts nothing); the next one releases it (D-026).
+  // True once the first results are on screen; the reserved height is released with them (D-026).
   let rendered = false;
   let observer: IntersectionObserver | null = null;
   // What the built items were made for: the server cards were made for the scope the page opened on.
@@ -399,9 +399,8 @@ export function startSession(
     syncControls(hasScope ? (scope ?? ALL_SCOPE_VALUE) : undefined);
     renderList(view);
     renderMore();
-    // Releasing on the first render moves the footer on a cold filtered URL (CLS > 0); keeping it past the second
-    // leaves a short result list in a viewport-tall box.
-    if (rendered) root.style.removeProperty("--reserve");
+    // The reserve only bridges the skeleton: kept past the first results, a short list (a cold `?q=`) sits in a viewport-tall box.
+    root.style.removeProperty("--reserve");
     rendered = true;
 
     const query = serializeCatalogUrlState({
