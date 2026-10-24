@@ -5,14 +5,9 @@ name: pages
 # (Pagefind bundle present, `ocx-site check`, lychee over the rendered HTML), so
 # a dead link fails the PR.
 #
-# HOST HAND-OFF (owner-run, not automatic): the docs now build for
-# https://ocx.sh/apps/catalog/ (the website's deploy owns that URL), but
-# https://ocx-sh.github.io/catalog/ still serves the LAST MkDocs deployment.
-# Nothing here deploys from `main` any more: the old site cannot be rebuilt (its
-# MkDocs sources moved to docs/src/content/docs), and deploying the new
-# base-pathed output at the old URL would break every asset. GitHub Pages keeps
-# serving the old site until the owner runs `redirect-stubs` below, after the
-# website deploy has claimed /apps/catalog/.
+# A push to main deploys the docs to https://ocx.sh/apps/catalog/ (`deploy`).
+# https://ocx-sh.github.io/catalog/ still serves the LAST MkDocs deployment
+# until the owner runs `redirect-stubs` below, after /apps/catalog/ serves.
 
 on:
   pull_request:
@@ -70,6 +65,40 @@ jobs:
 
       - name: Check docs (Pagefind, ocx-site check, lychee)
         run: task docs:check
+
+      - name: Upload the docs
+        if: github.event_name == 'push'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
+        with:
+          name: docs
+          path: docs/dist
+
+  # https://ocx.sh/apps/catalog/: Bunny storage zone sh-ocx-catalog, through
+  # ocx-sh/website's deploy action. Main pushes only (the `ocx.sh` environment
+  # admits main alone); the key never reaches the build job.
+  deploy:
+    name: deploy
+    needs: build
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment:
+      name: ocx.sh
+      url: ${{ steps.deploy.outputs.url }}
+    concurrency:
+      group: ocx-sh-deploy
+      cancel-in-progress: false
+    permissions: {}
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333  # v8.0.2
+        with:
+          name: docs
+          path: dist
+      - name: Deploy
+        id: deploy
+        uses: ocx-sh/website/.github/actions/deploy@1b898a76d4c3bbe60d9619a931c74f21660f4eb4  # v0.1.1
+        with:
+          dist: dist
+          storage-key: ${{ secrets.BUNNY_STORAGE_KEY }}
 
   # Manual, owner-run, AFTER the website deploy serves /apps/catalog/. Replaces
   # the old MkDocs site on GitHub Pages with one meta-refresh stub per old URL
