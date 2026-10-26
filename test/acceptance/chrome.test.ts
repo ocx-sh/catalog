@@ -157,6 +157,11 @@ describe("C-021 neutral chrome (root fixture, base /)", () => {
 });
 
 describe("C-021 ocx chrome (catalog fixture, base /catalog/)", () => {
+  it("the ocx header carries data-nav-rev, which the theme's /_shell/ sync reads; neutral chrome has none", async () => {
+    expect((await readHtml(site("catalog"), "/")).querySelector("[data-nav-rev]")?.getAttribute("data-nav-rev")).toMatch(/^[0-9a-f]+$/);
+    expect((await readHtml(site("root"), "/")).querySelector("[data-nav-rev]")).toBeNull();
+  });
+
   it("renders the nav.json header: ocx brand, its sections, the catalog one current", async () => {
     const doc = await readHtml(site("catalog"), "/");
 

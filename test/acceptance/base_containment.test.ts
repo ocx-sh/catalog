@@ -23,7 +23,8 @@
  * A root-relative reference passes when it starts `/catalog/` or is exactly an
  * allowed chrome link: the user `nav`/`footer`/`docsNav` links as written in
  * the fixture config and, under `chrome: "ocx"`, the hrefs of the theme's
- * `nav.json` plus `/favicon.svg`.
+ * `nav.json` plus `/favicon.svg`. Every Shell page also carries the theme's `/_shell/v1/`
+ * literal (the live-header pointer, a site-root contract that is off ocx.sh a no-op).
  *
  * An absolute (or protocol-relative) reference passes when its origin is one
  * of: an origin written anywhere in the config or in the source trees the
@@ -162,7 +163,7 @@ async function allowlistFor(name: SiteName): Promise<Allowed> {
   const config = JSON.parse(configText) as FixtureConfig;
   const ocx = config.chrome === "ocx";
 
-  const paths = new Set<string>(ocx ? [...themeHrefs, "/favicon.svg"] : []);
+  const paths = new Set<string>(["/_shell/v1/", ...(ocx ? [...themeHrefs, "/favicon.svg"] : [])]);
   const userLinks = [...(config.nav ?? []), ...(config.docsNav ?? []), ...(config.footer?.links ?? [])];
   for (const { link } of userLinks) paths.add(link);
 
