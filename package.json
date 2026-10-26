@@ -55,7 +55,7 @@
   "dependencies": {
     "@astrojs/markdown-satteri": "0.4.3",
     "@astrojs/sitemap": "^3.7.4",
-    "@ocx-sh/theme": "^0.2.3",
+    "@ocx-sh/theme": "^0.3.0",
     "astro": "~7.3",
     "commander": "^14.0.2",
     "dompurify": "^3.4.14",

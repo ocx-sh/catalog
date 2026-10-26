@@ -127,6 +127,6 @@ just `ocx-sh/index`, can `npm install @ocx-sh/catalog` from the registry.
 
 **`0.6.0` is unreleased** and is the Astro + `@ocx-sh/theme` port: it removes
 the VitePress/Vue renderer and the `@ocx-sh/catalog/theme` export, and stays
-pre-1.0. It consumes `@ocx-sh/theme` 0.2.2 from npm (a `file:` dependency is
+pre-1.0. It consumes `@ocx-sh/theme` 0.3.0 from npm (a `file:` dependency is
 guarded off `main`, see `quality-security.md`) and cannot ship until the C-049
 probe gate has passed on the target host.

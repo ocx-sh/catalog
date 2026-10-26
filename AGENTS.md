@@ -35,7 +35,7 @@ not restate it here.
 > GitHub remote [`ocx-sh/catalog`](https://github.com/ocx-sh/catalog) is
 > public. **`0.6.0` is unreleased**: the Astro + `@ocx-sh/theme` port (the
 > VitePress/Vue renderer and the `@ocx-sh/catalog/theme` export are gone). It
-> consumes `@ocx-sh/theme` 0.2.2 from npm (a `file:` dependency must never
+> consumes `@ocx-sh/theme` 0.3.0 from npm (a `file:` dependency must never
 > reach `main`) and waits on the post-deploy probe gate in [`product-context.md`](./.claude/rules/product-context.md). The user
 > documentation is an Astro/Starlight site under `docs/`, built for
 > `https://ocx.sh/apps/catalog/` (GitHub Pages still serves the last MkDocs
