@@ -96,7 +96,7 @@ tasks:
   # and the absolute https://ocx.sh/apps/catalog/ URLs the theme writes (canonical,
   # sitemap) are remapped onto the same tree, because the site is not live there
   # yet. The excluded paths are the theme chrome's links into OTHER sections of
-  # ocx.sh (/docs/, /catalog/, /integrations/, /install/, /apps/): they do not
+  # ocx.sh (/docs/, /catalog/, /integrations/, /install/, /learn/, /apps/): they do not
   # exist in this build. `/404/` is the canonical of 404.html, which the build
   # emits as 404.html only. External links go through lychee.toml as usual.
   # lychee 0.24 cannot resolve a #fragment on a directory-index link, so anchors
@@ -112,7 +112,7 @@ tasks:
         ln -s "$PWD/docs/dist" "$stage/apps/catalog"
         lychee --config lychee.toml --root-dir "$stage" \
           --remap "^https://ocx.sh/apps/catalog/ file://$stage/apps/catalog/" \
-          --exclude "^file://$stage/(docs|catalog|integrations|install)(/|$)" \
+          --exclude "^file://$stage/(docs|catalog|integrations|install|learn)(/|$)" \
           --exclude "^file://$stage/apps/?$" \
           --exclude "^file://$stage/apps/catalog/404/$" \
           "$stage/apps/catalog"
