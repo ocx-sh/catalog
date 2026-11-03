@@ -5,6 +5,12 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.6.3] - 2026-11-03
+
+### Fixed
+
+- A version track of pre-releases or builds is headed by its unstamped parent tag (`2.0.0-rc` before `2.0.0-rc_<stamp>`), not its newest build *(site)*
+
 ## [0.6.2] - 2026-11-01
 
 ### Changed
@@ -133,6 +139,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Added
 
 - Initial commit of @ocx-sh/catalog
+[0.6.3]: https://github.com/ocx-sh/catalog/compare/v0.6.2..v0.6.3
+[0.6.2]: https://github.com/ocx-sh/catalog/compare/v0.6.1..v0.6.2
 [0.6.1]: https://github.com/ocx-sh/catalog/compare/v0.6.0..v0.6.1
 [0.6.0]: https://github.com/ocx-sh/catalog/compare/v0.5.3..v0.6.0
 [0.5.3]: https://github.com/ocx-sh/catalog/compare/v0.5.2..v0.5.3
