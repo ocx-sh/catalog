@@ -78,8 +78,8 @@ export interface VariantRow {
 
 /**
  * One line of pre-releases and snapshot builds: the tags sharing a track key (the tag minus its trailing build
- * stamp: `mr11`, `canary`, `2.0.0-rc`). `tag` and `label` are the newest live build, `patches` the other builds,
- * newest first, so a track renders like a minor line.
+ * stamp: `mr11`, `canary`, `2.0.0-rc`). `tag` and `label` are the unstamped parent when it is live, else the newest
+ * live build; `patches` the other builds, newest first, so a track renders like a minor line.
  */
 export interface TrackGroup extends MinorGroup {
   readonly key: string;
@@ -290,9 +290,11 @@ export function buildVersionTable(tags: Readonly<Record<string, TableTag>>, stat
   const unknownTags: RenderedTag[] = [];
   const trackTags: typeof parsed = [];
   const entries: { readonly variant: string | null; readonly entry: Entry }[] = [];
+  // A bare name with stamped builds (`mr11` beside `mr11_<stamp>`) is that track's parent, not an "other" tag.
+  const trackKeys = new Set(parsed.flatMap(({ parsedTag, tag }) => (isTrackTag(parsedTag) ? [trackKey(tag)] : [])));
   for (const { wire, parsedTag, tag } of parsed) {
     const base = { tag, digest: wire.content, yanked: wire.yanked, ephemeral: wire.ephemeral === true };
-    if (isTrackTag(parsedTag) && !variants.has(tag)) trackTags.push({ wire, parsedTag, tag });
+    if ((isTrackTag(parsedTag) || (parsedTag.kind === "other" && trackKeys.has(tag))) && !variants.has(tag)) trackTags.push({ wire, parsedTag, tag });
     else if (parsedTag.kind === "latest") entries.push({ variant: null, entry: { ...base, version: null, depth: 0 } });
     else if (parsedTag.kind === "version") {
       entries.push({ variant: parsedTag.version.variant, entry: { ...base, version: parsedTag.version, depth: versionDepth(parsedTag.version) } });
@@ -312,8 +314,10 @@ const byBuild = new Intl.Collator("en", { numeric: true });
 function buildTracks(tags: readonly { readonly tag: string; readonly wire: TableTag }[]): TrackGroup[] {
   const tracks = [...groupBy(tags, ({ tag }) => trackKey(tag))].map(([key, members]) => {
     const builds = members.sort((a, b) => byBuild.compare(b.tag, a.tag));
-    // The headline build is the newest one that is not withdrawn; a withdrawn newer build stays in the list.
-    const head = builds[Math.max(0, builds.findIndex(({ wire }) => wire.yanked === null))];
+    // The headline is the live unstamped parent (`2.0.0-rc` over its `_<stamp>` builds), else the newest build that
+    // is not withdrawn; a withdrawn newer build stays in the list.
+    const live = builds.filter(({ wire }) => wire.yanked === null);
+    const head = live.find(({ tag }) => tag === key) ?? live[0] ?? builds[0];
     const asRendered = ({ tag, wire }: (typeof builds)[number]): RenderedTag => ({ tag, yanked: wire.yanked, ephemeral: wire.ephemeral === true });
     const activity = members.reduce((max, { wire }) => (wire.observed !== undefined && wire.observed > max ? wire.observed : max), "");
     const track: TrackGroup = {

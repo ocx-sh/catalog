@@ -76,6 +76,15 @@ describe("tracks of pre-releases and builds on the detail page (acme/builds)", (
       "mr11_20261020T101500Z",
     ]);
     expect(head("3.0.0-rc")?.getAttribute("data-tag")).toBe("3.0.0-rc.2");
+    // A live unstamped parent heads its track; its kicker would only repeat the chip, so it is hidden.
+    expect(head("mr13")?.getAttribute("data-tag")).toBe("mr13");
+    expect(track("mr13")?.querySelector<HTMLElement>("[data-kicker]")?.hidden).toBe(true);
+    expect(track("mr11")?.querySelector<HTMLElement>("[data-kicker]")?.hidden).toBe(false);
+    expect([...track("mr13")!.querySelectorAll("[data-patch-list] [data-tag]")].map((el) => el.getAttribute("data-tag"))).toEqual([
+      "mr13_20261022T080000Z",
+      "mr13_20261022T070000Z",
+      "mr13_20261021T120000Z",
+    ]);
   });
 
   it("marks every build pre-release, and ephemeral only where the wire says so", () => {

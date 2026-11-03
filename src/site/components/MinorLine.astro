@@ -1,7 +1,7 @@
 ---
 // One minor line: its chip, then its patch tags behind a `<details>` whose panel floats under the toggle
 // (D-053, D-054, D-076). `MajorGroup` renders one per minor; `VersionList` renders one per track of
-// pre-releases and builds, with the track key as `kicker` and `prerelease` set. The `data-*` hooks are
+// pre-releases and builds, with the track key as `kicker` (hidden when the head chip is the key itself) and `prerelease` set. The `data-*` hooks are
 // `client/versions.ts`'s contract. Tag names are untrusted text: attributes and text only.
 import Icon from "@ocx-sh/theme/components/ui/Icon.astro";
 import { minorIsCut, type MinorGroup } from "../lib/versionTable.js";
@@ -22,7 +22,7 @@ const visible = (item: object) => shown === null || shown.has(item);
 ---
 
 <div class="minor-group" data-minor>
-  {kicker !== undefined && <span class="kicker" data-kicker>{kicker}</span>}
+  {kicker !== undefined && <span class="kicker" data-kicker hidden={kicker === minor.tag}>{kicker}</span>}
   <div class="chips" data-head>
     <TagChip tag={minor.tag} label={minor.label} yanked={minor.yanked} ephemeral={minor.ephemeral} prerelease={prerelease} release={releaseOf.get(minor.tag)} variant="minor" />
   </div>

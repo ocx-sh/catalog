@@ -478,6 +478,32 @@ describe("tracks — pre-releases and builds apart from the stable tree", () => 
     expect(names(rc.patches)).toEqual(["2.0.0-rc.9"]);
   });
 
+  it("a track headlines its live unstamped parent and folds every stamped build under it", () => {
+    const { tracks } = buildVersionTable(
+      { "2.0.0-rc": live(B), "2.0.0-rc_20261020T101500Z": eph(B, ""), "2.0.0-rc_20261021T090000Z": eph(B, "") },
+      "active",
+    );
+
+    expect(tracks[0]).toMatchObject({ key: "2.0.0-rc", tag: "2.0.0-rc", label: "2.0.0-rc" });
+    expect(names(tracks[0]!.patches)).toEqual(["2.0.0-rc_20261021T090000Z", "2.0.0-rc_20261020T101500Z"]);
+  });
+
+  it("a bare name beside its stamped builds heads that track instead of the other row; alone it stays other", () => {
+    const { tracks, unknownTags } = buildVersionTable({ mr11: live(B), mr11_20261020T101500Z: eph(B, ""), edge: live(C) }, "active");
+
+    expect(tracks).toHaveLength(1);
+    expect(tracks[0]).toMatchObject({ key: "mr11", tag: "mr11" });
+    expect(names(tracks[0]!.patches)).toEqual(["mr11_20261020T101500Z"]);
+    expect(names(unknownTags)).toEqual(["edge"]);
+  });
+
+  it("a withdrawn unstamped parent yields the headline to the newest live build", () => {
+    const { tracks } = buildVersionTable({ "2.0.0-rc": yanked(B), "2.0.0-rc_20261020T101500Z": eph(B, "") }, "active");
+
+    expect(tracks[0]!.tag).toBe("2.0.0-rc_20261020T101500Z");
+    expect(names(tracks[0]!.patches)).toEqual(["2.0.0-rc"]);
+  });
+
   it("a withdrawn newest build is not the headline but stays in the list", () => {
     const { tracks } = buildVersionTable({ "3.0.0-rc.1": live(A), "3.0.0-rc.2": yanked(A) }, "active");
 

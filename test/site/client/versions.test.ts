@@ -128,6 +128,7 @@ describe("showAll — tracks of pre-releases and builds", () => {
     const root = dom({ tracks: true });
     const many = Object.fromEntries(Array.from({ length: SSR_TRACKS + 1 }, (_, i) => [`mr${i}_2026102${i}`, { content: DIGEST, observed: `2026-10-0${i + 1}T00:00:00Z`, ephemeral: true }]));
     many["mr0_20261029"] = { content: DIGEST, observed: "2026-10-09T00:00:00Z", ephemeral: true };
+    many["mr1"] = { content: DIGEST, observed: "2026-10-02T00:00:00Z", ephemeral: true };
     const { fetchFn } = stub({ [ROOT_URL]: { status: 200, body: wireRoot(many) } });
 
     expect(await createVersions(root, { fetch: fetchFn }).showAll(false)).toBe(true);
@@ -139,6 +140,10 @@ describe("showAll — tracks of pre-releases and builds", () => {
     expect(root.querySelector("#prerendered-track")).toBeNull();
     const first = list.querySelector("[data-minor]")!;
     expect(text(first.querySelector("[data-kicker]"))).toBe("mr0");
+    expect(first.querySelector<HTMLElement>("[data-kicker]")!.hidden).toBe(false);
+    const parent = [...root.querySelectorAll("[data-minor]")].find((line) => line.querySelector("[data-kicker]")?.textContent === "mr1")!;
+    expect(parent.querySelector<HTMLElement>("[data-head] [data-tag]")!.dataset.tag).toBe("mr1");
+    expect(parent.querySelector<HTMLElement>("[data-kicker]")!.hidden).toBe(true);
     const head = first.querySelector<HTMLElement>("[data-head] [data-tag]")!;
     expect(head.dataset.tag).toBe("mr0_20261029");
     expect(head.className).toBe("tag minor ephemeral prerelease");

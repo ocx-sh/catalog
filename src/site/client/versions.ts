@@ -169,7 +169,9 @@ export function createVersions(root: HTMLElement, options: VersionsOptions = {})
 
   function renderTrack(track: TrackGroup): HTMLElement {
     const node = renderMinor(clone("track"), track, true);
-    requireEl(node, "[data-kicker]").textContent = track.key;
+    const kicker = requireEl<HTMLElement>(node, "[data-kicker]");
+    kicker.textContent = track.key;
+    kicker.hidden = track.key === track.tag;
     return node;
   }
 
