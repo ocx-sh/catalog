@@ -55,6 +55,9 @@ tasks:
       - test node_modules/.package-lock.json -nt package-lock.json
       - '{{if .OCX_THEME_DIR}}test -d "{{.OCX_THEME_DIR}}/node_modules"{{end}}'
     cmds:
+      # npm ci's own rmdir of node_modules fails ENOTEMPTY on a leftover build scratch
+      # root (node_modules/.cache/ocx-catalog/<id>/.astro); rm -rf first always clears it.
+      - rm -rf node_modules
       - npm ci
       # A local theme checkout resolves its own deps (pnpm workspace two levels up).
       - '{{if .OCX_THEME_DIR}}echo "THEME OVERRIDE: node_modules/@ocx-sh/theme -> {{.OCX_THEME_DIR}} (local only, never a verified install)" >&2 && ln -sfn "{{.OCX_THEME_DIR}}" node_modules/@ocx-sh/theme && pnpm --dir "{{.OCX_THEME_DIR}}/../.." install --frozen-lockfile{{end}}'
