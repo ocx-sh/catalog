@@ -14,13 +14,13 @@
  * ## Where the packages come from
  *
  * No single corpus covers what this needs, so it mixes three, and nothing is
- * committed here — the same shape `ocx-sh/index`'s own `demo:seed` uses for
- * its gitignored `demo/p/`:
+ * committed here — the same edge-state fixtures `ocx-sh/index`'s own `demo:seed`
+ * copies into its gitignored `demo/p/`:
  *
  * | corpus | what only it has |
  * |---|---|
  * | `<index repo>/p` | volume — 124 roots across 100 namespaces, `bazelbuild/bazel` at 135 tags, the longest real package names |
- * | `<index repo>/demo/p` | a deprecated package, a yanked TAG, roots with no readme/logo |
+ * | `<index repo>/scripts/demo-fixtures/p` | a deprecated package, a yanked TAG, roots with no readme/logo |
  * | `test/fixtures/ephemeral-index` | `acme/nightly` (ephemeral snapshot tags, the strict-`true` decoys) and `acme/builds` (tracks: rc, canary, merge-request builds) |
  * | `test/fixtures/quality-index` | the only whole-package `status: yanked` anywhere, plus a `desc`-rich root and the only platform-agnostic (`any/any`) package |
  *
@@ -81,7 +81,7 @@ const TREES = join(OUT, "trees");
 
 const CORPORA = {
   real: join(INDEX_REPO, "p"),
-  demo: join(INDEX_REPO, "demo", "p"),
+  demo: join(INDEX_REPO, "scripts", "demo-fixtures", "p"),
   quality: join(REPO, "test", "fixtures", "quality-index", "p"),
   ephemeral: join(REPO, "test", "fixtures", "ephemeral-index", "p"),
 };
@@ -189,6 +189,10 @@ async function main() {
 
   const real = await collectRoots(CORPORA.real);
   const demo = await collectRoots(CORPORA.demo);
+  if (demo.length === 0) {
+    console.error(`dev-indexes: no demo roots under ${CORPORA.demo}; did ocx-sh/index move its demo fixtures?`);
+    process.exit(1);
+  }
   const quality = await collectRoots(CORPORA.quality);
   const ephemeral = await collectRoots(CORPORA.ephemeral);
 

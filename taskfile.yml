@@ -179,7 +179,7 @@ tasks:
   dev:catalog:
     desc: >-
       Serve one seeded case with a real `ocx-catalog dev` — `task dev:catalog
-      CASE=multi-root`. Run `task dev:indexes` first. The invalid-* cases are
+      CASE=multi-root`. Seeds .dev-indexes/ on first use. The invalid-* cases are
       expected to FAIL to build; that is what they are for.
     # No default: CASE names which of nine quite different renders you get, and
     # silently picking one for you is how a review ends up looking at the wrong
@@ -202,6 +202,8 @@ tasks:
             - invalid-collision
     deps: [install]
     cmds:
+      # Seed the cases on first use instead of failing on a missing config.
+      - '[ -f .dev-indexes/{{.CASE}}.config.json ] || task dev:indexes'
       - npm run build
       - node dist/cli/index.js dev --config .dev-indexes/{{.CASE}}.config.json
 
