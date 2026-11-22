@@ -10,7 +10,7 @@
  * ## What is measured, per page
  *
  *   - DOM nodes    `document.body.querySelectorAll('*')`, the way Lighthouse's
- *                  `dom-size` counts, so one budget means the same in both.
+ *                  `dom-size-insight` counts, so one budget means the same in both.
  *   - gz HTML      gzip of the document response body.
  *   - pre-input JS gzip of every script body fetched, plus inline scripts,
  *                  once the page is idle and BEFORE any input.

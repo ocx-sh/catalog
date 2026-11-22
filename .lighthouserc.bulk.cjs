@@ -28,7 +28,7 @@
  *   performance      99-100       1.00   warn
  *
  *   audit                  measured    floor
- *   dom-size               986         1100   error  (deterministic)
+ *   dom-size-insight       986         1100   error  (deterministic)
  *   total-blocking-time    0 ms        200 ms error
  *
  * The performance SCORE is a timing aggregate that a shared GitHub runner moves
@@ -38,7 +38,7 @@
  * visible warn and the two quantities that the window bounds actually pin are
  * the errors:
  *
- *   `dom-size` is an element count, the same on every machine; 986 is 24 cards
+ *   `dom-size-insight` is an element count, the same on every machine; 986 is 24 cards
  *   of the fixture's richest card shape plus the chrome, and it must not grow
  *   with the catalog (the pre-window, pre-bounds page had 7,579 elements at
  *   250 packages).
@@ -67,7 +67,7 @@ module.exports = {
         'categories:best-practices': ['error', { minScore: 1 }],
         'categories:seo': ['error', { minScore: 1 }],
         'categories:performance': ['warn', { minScore: 1 }],
-        'dom-size': ['error', { maxNumericValue: 1100 }],
+        'dom-size-insight': ['error', { maxNumericValue: 1100 }],
         'total-blocking-time': ['error', { maxNumericValue: 200 }],
       },
     },
