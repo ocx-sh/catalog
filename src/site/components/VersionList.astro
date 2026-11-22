@@ -295,6 +295,20 @@ const PLACEHOLDER: Major = {
     font-size: var(--ocx-text-xs);
     color: var(--ocx-color-fg-subtle);
   }
+  /* A kicker that would only repeat its head chip is blank, not gone: the chip keeps the chips column. */
+  .version-table :global(.kicker[hidden]) {
+    display: block;
+    visibility: hidden;
+  }
+  /* The overflow tracks already carry the label column (their kickers) and their toggle follows the list, not
+     the row's top-right corner, where the track summary's own count sits. */
+  .track-row > .breakdown {
+    margin-inline-start: 0;
+  }
+  .track-row > .breakdown > :global(summary) {
+    position: static;
+    padding-inline-start: calc(var(--label-w) + var(--ocx-space-3));
+  }
   .alias-hint {
     font-family: var(--ocx-font-mono);
     font-size: var(--ocx-text-2xs);
@@ -337,7 +351,6 @@ const PLACEHOLDER: Major = {
     display: grid;
     gap: var(--ocx-space-3);
     margin-block-start: var(--ocx-space-3);
-    margin-inline-start: var(--ocx-space-3);
   }
   /* One row per major: its chip, then every minor line inline, each with its patch toggle right beside it. */
   .version-table :global(.major-group) {

@@ -488,6 +488,16 @@ describe("tracks — pre-releases and builds apart from the stable tree", () => 
     expect(names(tracks[0]!.patches)).toEqual(["2.0.0-rc_20261021T090000Z", "2.0.0-rc_20261020T101500Z"]);
   });
 
+  it("a numbered pre-release heads its track over its own stamped builds", () => {
+    const { tracks } = buildVersionTable(
+      { "2.0.0-rc.1": live(B), "2.0.0-rc.2": live(B), "2.0.0-rc.2_20261021T090000Z": eph(B, ""), "2.0.0-rc.1_20261020T101500Z": eph(B, "") },
+      "active",
+    );
+
+    expect(tracks[0]).toMatchObject({ key: "2.0.0-rc", tag: "2.0.0-rc.2" });
+    expect(names(tracks[0]!.patches)).toEqual(["2.0.0-rc.2_20261021T090000Z", "2.0.0-rc.1_20261020T101500Z", "2.0.0-rc.1"]);
+  });
+
   it("a bare name beside its stamped builds heads that track instead of the other row; alone it stays other", () => {
     const { tracks, unknownTags } = buildVersionTable({ mr11: live(B), mr11_20261020T101500Z: eph(B, ""), edge: live(C) }, "active");
 
