@@ -5,6 +5,18 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.6.4] - 2026-11-22
+
+### Fixed
+
+- A numbered pre-release heads its track over its own stamped builds (`2.0.0-rc.2` before `2.0.0-rc.2_<stamp>`), and track chips start on the same column as every other version chip *(site)*
+- `task install` clears only the build scratch root before `npm ci`, so a failed install no longer leaves the checkout without `node_modules` *(task)*
+- `task dev:indexes` reads `ocx-sh/index`'s moved demo fixtures, and `task dev:catalog` seeds the cases on first use *(dev)*
+
+### Changed
+
+- `@lhci/cli` 0.16.1 (Lighthouse 13); the bulk gate asserts `dom-size-insight` *(quality)*
+
 ## [0.6.3] - 2026-11-03
 
 ### Fixed
@@ -139,6 +151,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Added
 
 - Initial commit of @ocx-sh/catalog
+[0.6.4]: https://github.com/ocx-sh/catalog/compare/v0.6.3..v0.6.4
 [0.6.3]: https://github.com/ocx-sh/catalog/compare/v0.6.2..v0.6.3
 [0.6.2]: https://github.com/ocx-sh/catalog/compare/v0.6.1..v0.6.2
 [0.6.1]: https://github.com/ocx-sh/catalog/compare/v0.6.0..v0.6.1
