@@ -195,9 +195,18 @@ const PLACEHOLDER: Major = {
 </section>
 
 <style>
+  /* Registered, so `1ch` resolves once, on `.version-table` in the labels' mono xs font, and every row inherits the
+     same length: unregistered, each user (the row grid, a kicker, a toggle) resolved it in its own font. */
+  @property --label-w {
+    syntax: "<length>";
+    inherits: true;
+    initial-value: 0px;
+  }
   .version-table {
     --label-w: calc(var(--label-ch) * 1ch);
     display: grid;
+    font-family: var(--ocx-font-mono);
+    font-size: var(--ocx-text-xs);
   }
   .variant-row {
     position: relative;
