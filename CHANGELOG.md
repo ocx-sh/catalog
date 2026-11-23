@@ -5,6 +5,12 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.6.5] - 2026-11-23
+
+### Fixed
+
+- The version list's label column has one width on every row, so the default row's chips and the pre-release chips start on the same column *(site)*
+
 ## [0.6.4] - 2026-11-22
 
 ### Fixed
@@ -151,6 +157,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Added
 
 - Initial commit of @ocx-sh/catalog
+[0.6.5]: https://github.com/ocx-sh/catalog/compare/v0.6.4..v0.6.5
 [0.6.4]: https://github.com/ocx-sh/catalog/compare/v0.6.3..v0.6.4
 [0.6.3]: https://github.com/ocx-sh/catalog/compare/v0.6.2..v0.6.3
 [0.6.2]: https://github.com/ocx-sh/catalog/compare/v0.6.1..v0.6.2
