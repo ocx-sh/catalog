@@ -15,13 +15,20 @@ contained to the build machine — it ships.
 
 `loadConfig` (`src/config/load.ts`) rejects any `sources[].url` whose
 protocol isn't `https:` — not "http or https". Two files a `url` source
-fetches, `/config.json` and `/c/index.json`, are never digest-verified
-against anything (there is nothing to verify them against; they are the
-starting point of trust, not a leaf under it). If either travelled over
-plain `http:`, a network attacker could rewrite the enumeration a build
+fetches, `/config.json` and `/c/index.json`, are the starting point of trust,
+not a leaf under it. The packages in `/c/index.json` point at digests, but
+nothing in the index points at the index itself.
+
+A published index is signed. The signature covers the exact bytes of
+`/c/index.json`, including its top-level `expires` field. Once `expires` has
+passed, a verifying consumer such as `ocx` refuses the index as expired.
+
+The catalog build does not check that signature. It reads `format_version`
+and the package list, and ignores `expires`. So transport integrity is the
+only integrity the build itself gives those two files. If either travelled
+over plain `http:`, a network attacker could rewrite the enumeration a build
 reads — and every downstream digest check would then verify each fetched
 package root against the *attacker's own* digests, and pass cleanly.
-Transport integrity is the only integrity those two files have.
 
 ## No redirects, ever
 
@@ -29,8 +36,8 @@ Every fetch `src/sources/walker.ts` makes sets `redirect: "manual"` and
 treats any 3xx response as a hard failure, naming the refused hop, rather
 than following it. This is an SSRF guard: a hostile configured `url` source
 could otherwise bounce the builder at a host it can reach but the operator
-never intended to expose — and those bytes would land in published,
-undigested `config.json`/`c/index.json` content. A redirect is a
+never intended to expose — and those bytes would land in published
+`config.json`/`c/index.json` content the build never verified. A redirect is a
 deterministic policy refusal here, not a transient failure, so it is never
 retried either.
 
